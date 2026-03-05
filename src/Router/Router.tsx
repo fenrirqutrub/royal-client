@@ -1,0 +1,69 @@
+import { Route, Routes } from "react-router";
+import Root from "../layout/Root";
+import Home from "../components/Home/Home";
+import AdminLogin from "../pages/Admin/Auth/AdminLogin";
+import Dashboard from "../pages/Admin/Dashboard";
+import AdminLayout from "../layout/AdminLayout";
+import NotFound from "../pages/NotFound/NotFound";
+import PrivateRoute from "./PrivateRoute";
+import Photography from "../pages/Photography/Photography";
+
+import ManagePhotos from "../pages/Admin/Management/ManagePhotos";
+import ManageArticles from "../pages/Admin/Management/ManageArticles";
+import ManageQuotes from "../pages/Admin/Management/ManageQuotes";
+import ManageHero from "../pages/Admin/Management/ManageHero";
+import AddWeeklyExam from "../pages/Admin/AddNewItem/AddWeeklyExam";
+import AddPhotography from "../pages/Admin/AddNewItem/AddPhotography";
+
+import AddQuotes from "../pages/Admin/AddNewItem/AddQuotes";
+import AddHero from "../pages/Admin/AddNewItem/AddHero";
+import DailyLesson from "../pages/DailyLesson/DailyLesson";
+import WeeklyExam from "../pages/WeeklyExam/WeeklyExam";
+
+const Router = () => {
+  return (
+    <Routes>
+      {/* ════════════════════ PUBLIC ROUTES ════════════════════ */}
+      <Route path="/" element={<Root />}>
+        <Route index element={<Home />} />
+
+        <Route path="/dailylesson" element={<DailyLesson />} />
+        <Route path="/weekly-exam" element={<WeeklyExam />} />
+        <Route path="/photography" element={<Photography />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
+
+      {/* ════════════════════ ADMIN LOGIN ════════════════════ */}
+      <Route path="/admin-login" element={<AdminLogin />} />
+
+      {/* ════════════════════ ADMIN PRIVATE ROUTES ════════════════════ */}
+      <Route
+        path="/dashboard"
+        element={
+          <PrivateRoute>
+            <AdminLayout />
+          </PrivateRoute>
+        }
+      >
+        <Route index element={<Dashboard />} />
+
+        {/* ── Content (Add New) Routes ── */}
+
+        <Route path="add-weekly-exam" element={<AddWeeklyExam />} />
+        <Route path="add-photography" element={<AddPhotography />} />
+        <Route path="add-quotes" element={<AddQuotes />} />
+        <Route path="add-hero" element={<AddHero />} />
+
+        {/* ── Management Routes ── */}
+        <Route path="management/articles" element={<ManageArticles />} />
+        <Route path="management/photos" element={<ManagePhotos />} />
+        <Route path="management/quotes" element={<ManageQuotes />} />
+        <Route path="management/heroes" element={<ManageHero />} />
+
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
+  );
+};
+
+export default Router;
