@@ -1,99 +1,48 @@
-import { useForm } from "react-hook-form";
+// src/pages/Admin/Auth/Login.tsx
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { Lock, Mail, Eye, EyeOff } from "lucide-react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation } from "react-router";
 import toast from "react-hot-toast";
 import { useTheme } from "../../../context/ThemeProvider";
+import { useAuth } from "../../../hooks/UseAuth";
 
 interface LoginForm {
   email: string;
   password: string;
 }
 
-const CREDENTIALS = {
-  email: ["hello@world.com", "mib@gmail.com"],
-  password: ["696969", "696969"],
-};
-
-export const AUTH_KEY = "admin_auth_token";
-
-// ─── Shared helper (used by ProfileButton too) ────────────────────────────
-export function getAuthToken(): {
-  email: string;
-  loginTime: number;
-  expireAt: number;
-} | null {
-  try {
-    const raw = localStorage.getItem(AUTH_KEY);
-    if (!raw) return null;
-    const decoded = JSON.parse(atob(raw));
-    if (Date.now() > decoded.expireAt) {
-      localStorage.removeItem(AUTH_KEY);
-      return null;
-    }
-    return decoded;
-  } catch {
-    localStorage.removeItem(AUTH_KEY);
-    return null;
-  }
-}
-
-const AdminLogin = () => {
-  const navigate = useNavigate();
+const Login = () => {
   const { theme } = useTheme();
+  const { isAuthenticated, login } = useAuth();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>();
 
-  const [email, password] = watch(["email", "password"]);
-
+  // already logged in → redirect to where they came from or dashboard
   useEffect(() => {
-    // already logged in → go home
-    if (getAuthToken()) {
-      navigate("/");
+    if (isAuthenticated) {
+      const from = (location.state as any)?.from?.pathname ?? "/dashboard";
+      window.location.replace(from);
     }
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
-  const isValidCredential = (email: string, password: string): boolean => {
-    const index = CREDENTIALS.email.indexOf(email);
-    return index !== -1 && CREDENTIALS.password[index] === password;
-  };
-
-  const LogOut_Time = 60 * 60 * 1000; // 1 hour
-
-  const onSubmit = (data: LoginForm) => {
-    if (isValidCredential(data.email, data.password)) {
-      const payload = {
-        email: data.email,
-        loginTime: Date.now(),
-        expireAt: Date.now() + LogOut_Time,
-      };
-
-      localStorage.setItem(AUTH_KEY, btoa(JSON.stringify(payload)));
-
-      toast.success("Welcome, Admin!");
-      navigate("/"); // ← go home after login
-    } else {
-      toast.error("Invalid credentials");
+  const onSubmit = async (data: LoginForm) => {
+    try {
+      // useAuth.login() calls /api/auth/login and sets cookie
+      await login(data.email, data.password);
+      toast.success("Welcome back!");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? "Invalid credentials";
+      toast.error(msg);
     }
   };
-
-  const hasInput = !!email && !!password;
-  const isValid = hasInput && isValidCredential(email, password);
-
-  const btnClass =
-    !hasInput || isSubmitting
-      ? "bg-gray-400 cursor-not-allowed"
-      : errors.email || errors.password || !isValid
-        ? "bg-gradient-to-r from-red-500 to-rose-600 text-white"
-        : theme === "dark"
-          ? "bg-white text-black hover:bg-gray-100"
-          : "bg-black text-white hover:bg-gray-900";
 
   return (
     <div
@@ -128,7 +77,7 @@ const AdminLogin = () => {
                 theme === "dark" ? "text-white" : "text-gray-800"
               }`}
             >
-              Admin Login
+              Login
             </h2>
             <p
               className={`text-sm ${
@@ -140,6 +89,7 @@ const AdminLogin = () => {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Email */}
             <div className="relative">
               <Mail
                 size={18}
@@ -180,6 +130,7 @@ const AdminLogin = () => {
               )}
             </div>
 
+            {/* Password */}
             <div className="relative">
               <Lock
                 size={18}
@@ -195,7 +146,7 @@ const AdminLogin = () => {
                 type={showPassword ? "text" : "password"}
                 {...register("password", {
                   required: "Password is required",
-                  minLength: { value: 6, message: "Min 6 characters" },
+                  minLength: { value: 4, message: "Min 4 characters" },
                 })}
                 className={`w-full border-2 rounded-xl pl-12 pr-12 py-3.5 outline-none ${
                   theme === "dark"
@@ -228,14 +179,16 @@ const AdminLogin = () => {
 
             <button
               type="submit"
-              disabled={!hasInput || isSubmitting}
-              className={`w-full uppercase tracking-[2px] text-sm font-bold py-3.5 rounded-lg transition-all ${btnClass}`}
+              disabled={isSubmitting}
+              className={`w-full uppercase tracking-[2px] text-sm font-bold py-3.5 rounded-lg transition-all ${
+                isSubmitting
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : theme === "dark"
+                    ? "bg-white text-black hover:bg-gray-100"
+                    : "bg-black text-white hover:bg-gray-900"
+              }`}
             >
-              {isSubmitting
-                ? "Signing In..."
-                : hasInput && !isValid && !isSubmitting
-                  ? "Invalid Credentials"
-                  : "Sign In"}
+              {isSubmitting ? "Signing In..." : "Sign In"}
             </button>
           </form>
         </div>
@@ -245,7 +198,7 @@ const AdminLogin = () => {
             theme === "dark" ? "text-slate-500" : "text-gray-600"
           }`}
         >
-          Secure admin access portal. Go back{" "}
+          Go back{" "}
           <Link
             to="/"
             className="text-blue-600 dark:text-blue-400 hover:underline"
@@ -258,4 +211,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin;
+export default Login;

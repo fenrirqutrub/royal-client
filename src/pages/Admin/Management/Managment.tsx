@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import ContentTypeSelect from "../Contenttypeselect";
-import ManageArticles from "./ManageArticles";
 import ManagePhotos from "./ManagePhotos";
-import ManageQuotes from "./ManageQuotes";
 import ManageHero from "./ManageHero";
+import ContentTypeSelect from "../Dashboard/Contenttypeselect";
 
 // ───────────────── TYPES ─────────────────
 

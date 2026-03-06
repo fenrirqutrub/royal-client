@@ -1,15 +1,38 @@
+// src/router/PrivateRoute.tsx
 import type { ReactNode } from "react";
-import { Navigate } from "react-router";
+import { Navigate, useLocation } from "react-router";
+import { useAuth } from "../hooks/UseAuth";
+import Loader from "../components/ui/Loader";
 
-const AUTH_KEY = "admin_auth_token";
+interface PrivateRouteProps {
+  children: ReactNode;
+  allowedRoles?: ("admin" | "principal" | "teacher")[];
+}
 
-const PrivateRoute = ({ children }: { children: ReactNode }) => {
-  const token = localStorage.getItem(AUTH_KEY);
+const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
 
-  if (!token) {
-    return <Navigate to="/admin-login" replace />;
+  // ── 1. Still fetching /me — show loader, don't redirect yet ──────────────
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] ">
+        <Loader />
+      </div>
+    );
   }
 
+  // ── 2. Not authenticated → send to login, remember where they were ────────
+  if (!user) {
+    return <Navigate to="/admin-login" state={{ from: location }} replace />;
+  }
+
+  // ── 3. Role restriction — if route requires specific roles ────────────────
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // ── 4. All good ───────────────────────────────────────────────────────────
   return <>{children}</>;
 };
 

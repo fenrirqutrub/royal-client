@@ -1,5 +1,5 @@
 import { Outlet } from "react-router";
-import AdminSidebar from "../pages/Admin/AdminSidebar";
+import AdminSidebar from "../pages/Admin/Dashboard/AdminSidebar";
 
 const AdminLayout = () => {
   return (

@@ -10,19 +10,18 @@ import {
   LogOut,
   ChevronDown,
   Folder,
-  FileText,
   ImageIcon,
-  Quote,
   Image,
   FilePlus,
   BookOpen,
   Camera,
   Star,
-  Layers,
+  HomeIcon,
 } from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
-import ThemeToggle from "../../components/Navbar/ThemeToggle";
+import ThemeToggle from "../../../components/Navbar/ThemeToggle";
+import { useAuth } from "../../../hooks/UseAuth";
 
 interface SubNavItem {
   name: string;
@@ -41,74 +40,81 @@ const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const location = useLocation();
+  const { user, logout } = useAuth();
+
+  const role = user?.role ?? "teacher";
+  const isPrivileged = role === "admin" || role === "principal";
 
   useEffect(() => {
-    if (window.innerWidth < 1024) {
-      setIsOpen(false);
-    }
+    if (window.innerWidth < 1024) setIsOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 1024) {
-        setIsOpen(false);
-      } else {
-        setIsOpen(true);
-      }
+      setIsOpen(window.innerWidth >= 1024);
     };
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // ── Nav definitions ──────────────────────────────────────────────────────────
+
   const navItems: NavItem[] = [
-    {
-      name: "Dashboard",
-      path: "/dashboard",
-      icon: LayoutDashboard,
-    },
+    { name: "হোম পেজ", path: "/", icon: HomeIcon },
+    // { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   ];
 
   const contentItems: NavItem = {
-    name: "Content",
+    name: "এখানে লিখুন",
     icon: Folder,
     subItems: [
       {
-        name: "Weekly Exam",
+        name: "সাপ্তাহিক পরিক্ষার প্রশ্ন",
         path: "/dashboard/add-weekly-exam",
         icon: FilePlus,
       },
-
-      // {
-      //   name: "Photography",
-      //   path: "/dashboard/add-photography",
-      //   icon: ImageIcon,
-      // },
-      // { name: "Quotes", path: "/dashboard/add-quotes", icon: Quote },
-      { name: "Hero", path: "/dashboard/add-hero", icon: Image },
+      ...(isPrivileged
+        ? [
+            {
+              name: "নতুন শিক্ষক যোগ করুন",
+              path: "/dashboard/add-teacher",
+              icon: ImageIcon,
+            },
+            { name: "Hero", path: "/dashboard/add-hero", icon: Image },
+          ]
+        : []),
     ],
   };
 
-  // ── নতুন Management group ──
+  // Management group — teacher sees only Weekly Exam; admin/principal see all
   const managementItems: NavItem = {
     name: "Management",
     icon: Settings,
     subItems: [
       {
-        name: "Articles",
-        path: "/dashboard/management/articles",
+        name: "Weekly Exam",
+        path: "/dashboard/management/weekly-exam",
         icon: BookOpen,
       },
-      {
-        name: "Categories",
-        path: "/dashboard/management/categories",
-        icon: Layers,
-      },
-      { name: "Photos", path: "/dashboard/management/photos", icon: Camera },
-      { name: "Quotes", path: "/dashboard/management/quotes", icon: Quote },
-      { name: "Heroes", path: "/dashboard/management/heroes", icon: Star },
+      ...(isPrivileged
+        ? [
+            {
+              name: "Photos",
+              path: "/dashboard/management/photos",
+              icon: Camera,
+            },
+            {
+              name: "Heroes",
+              path: "/dashboard/management/heroes",
+              icon: Star,
+            },
+          ]
+        : []),
     ],
   };
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -120,15 +126,35 @@ const AdminSidebar = () => {
     );
   };
 
-  const handleLogout = () => {
-    console.log("Logging out...");
+  // ── Role config ───────────────────────────────────────────────────────────────
+  const roleConfig: Record<
+    string,
+    { label: string; color: string; panelTitle: string }
+  > = {
+    admin: {
+      label: "Admin",
+      color: "#ef4444",
+      panelTitle: "Admin Panel",
+    },
+    principal: {
+      label: "Principal",
+      color: "#8b5cf6",
+      panelTitle: "Principal Panel",
+    },
+    teacher: {
+      label: "Teacher",
+      color: "#3b82f6",
+      panelTitle: "Teacher Panel",
+    },
   };
 
-  // ── Reusable collapsible group renderer ──
+  const config = roleConfig[role] ?? roleConfig.teacher;
+
+  // ── Collapsible group renderer ────────────────────────────────────────────────
   const renderCollapsibleGroup = (
     item: NavItem,
     groupKey: string,
-    activeColor: string = "emerald",
+    activeColor: "emerald" | "indigo" = "emerald",
   ) => {
     const isExpanded = expandedGroups.includes(groupKey);
 
@@ -213,8 +239,10 @@ const AdminSidebar = () => {
     );
   };
 
+  // ── JSX ───────────────────────────────────────────────────────────────────────
   return (
     <>
+      {/* Mobile toggle */}
       {!isOpen && (
         <motion.button
           onClick={() => setIsOpen(true)}
@@ -223,13 +251,12 @@ const AdminSidebar = () => {
           whileTap={{ scale: 0.95 }}
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
         >
           <Menu className="w-5 h-5" />
         </motion.button>
       )}
 
+      {/* Overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -243,11 +270,10 @@ const AdminSidebar = () => {
         )}
       </AnimatePresence>
 
+      {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{
-          x: isOpen ? 0 : window.innerWidth >= 1024 ? 0 : -300,
-        }}
+        animate={{ x: isOpen ? 0 : window.innerWidth >= 1024 ? 0 : -300 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="fixed lg:sticky top-0 left-0 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 z-40 w-[280px] flex flex-col"
       >
@@ -266,8 +292,9 @@ const AdminSidebar = () => {
                 >
                   <Triangle className="w-7 h-7 fill-emerald-600 text-emerald-600" />
                 </motion.div>
+                {/* ✅ Dynamic panel title based on role */}
                 <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
-                  Admin Panel
+                  {config.panelTitle}
                 </span>
               </Link>
             </div>
@@ -287,7 +314,7 @@ const AdminSidebar = () => {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
-          {/* Main nav items (Dashboard only) */}
+          {/* Dashboard */}
           {navItems.map((item, index) => {
             const Icon = item.icon;
             const active = item.path ? isActive(item.path) : false;
@@ -335,39 +362,50 @@ const AdminSidebar = () => {
             );
           })}
 
-          {/* Content group — emerald theme */}
+          {/* Content group */}
           {renderCollapsibleGroup(contentItems, "content", "emerald")}
 
-          {/* Management group — indigo theme */}
+          {/* Management group */}
           {renderCollapsibleGroup(managementItems, "management", "indigo")}
         </nav>
 
-        {/* Footer */}
+        {/* Footer — user info + logout */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
-          <motion.div
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all cursor-pointer group"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <motion.div
-              className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 flex items-center justify-center text-white text-sm font-bold shadow-lg"
-              whileHover={{ rotate: 360 }}
-              transition={{ duration: 0.5 }}
+          {/* User card */}
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+            {/* ✅ Avatar color uses role-specific color */}
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg flex-shrink-0"
+              style={{
+                background: `linear-gradient(135deg, ${config.color}aa, ${config.color})`,
+              }}
             >
-              AD
-            </motion.div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                Admin User
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                admin@example.com
-              </p>
+              {(user?.name ?? "U").charAt(0).toUpperCase()}
             </div>
-          </motion.div>
 
+            <Link to="/dashboard/profile">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                  {user?.name ?? "User"}
+                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {/* ✅ Role badge pill uses role-specific color */}
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide"
+                    style={{
+                      backgroundColor: config.color + "22",
+                      color: config.color,
+                    }}
+                  >
+                    {config.label}
+                  </span>
+                </div>
+              </div>
+            </Link>
+          </div>
+          {/* Logout */}
           <motion.button
-            onClick={handleLogout}
+            onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
             whileHover={{ x: 4 }}
             whileTap={{ scale: 0.97 }}

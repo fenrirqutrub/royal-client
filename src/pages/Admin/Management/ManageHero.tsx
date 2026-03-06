@@ -13,10 +13,10 @@ import {
 import { useState, useMemo } from "react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
-import { axiosPublic } from "../../../hooks/axiosPublic";
-import { SearchBar } from "../../../components/common/Searchbar";
-import { EmptyState } from "../../../components/common/Emptystate";
 import { Pagination } from "../../../components/common/Pagination";
+import { EmptyState } from "../../../components/common/Emptystate";
+import { SearchBar } from "../../../components/common/Searchbar";
+import axiosPublic from "../../../hooks/axiosPublic";
 
 interface Hero {
   _id: string;

@@ -8,8 +8,8 @@ import {
   IoCheckmarkCircle,
   IoTrashOutline,
 } from "react-icons/io5";
-import { axiosPublic } from "../../../hooks/axiosPublic";
 import toast from "react-hot-toast";
+import axiosPublic from "../../../hooks/axiosPublic";
 
 interface FileWithPreview {
   file: File;

@@ -1,12 +1,10 @@
 // AddWeeklyExam.tsx
 import { useForm, type SubmitHandler, Controller } from "react-hook-form";
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Loader2, ImagePlus, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { axiosPublic } from "../../../hooks/axiosPublic";
-
 import {
   MdOutlineClass,
   MdOutlineScience,
@@ -16,12 +14,11 @@ import { TbMath, TbLanguage } from "react-icons/tb";
 import { GiEarthAsiaOceania } from "react-icons/gi";
 import { FaBookOpen, FaFlask } from "react-icons/fa";
 import { PiChalkboardTeacherFill } from "react-icons/pi";
-
 import type { SelectOption } from "../../../components/common/SelectInput";
+import axiosPublic from "../../../hooks/axiosPublic";
 import SelectInput from "../../../components/common/SelectInput";
 
 // ─── Types ────────────────────────────────────────────────
-// date is removed — server uses createdAt automatically
 interface WeeklyExamFormData {
   subject: string;
   teacher: string;
@@ -32,148 +29,95 @@ interface WeeklyExamFormData {
   slug?: string;
 }
 
-// ─── Static data ──────────────────────────────────────────
-const CLASS_OPTIONS: SelectOption[] = [
-  { value: "৬ষ্ঠ শ্রেণি", label: "৬ষ্ঠ শ্রেণি", icon: <MdOutlineClass /> },
-  { value: "৭ম শ্রেণি", label: "৭ম শ্রেণি", icon: <MdOutlineClass /> },
-  { value: "৮ম শ্রেণি", label: "৮ম শ্রেণি", icon: <MdOutlineClass /> },
-  { value: "৯ম শ্রেণি", label: "৯ম শ্রেণি", icon: <MdOutlineClass /> },
-  { value: "১০ম শ্রেণি", label: "১০ম শ্রেণি", icon: <MdOutlineClass /> },
-];
+// ─── Static Data ──────────────────────────────────────────
+const CLASSES = ["৬ষ্ঠ", "৭ম", "৮ম", "৯ম", "১০ম"] as const;
+
+const CLASS_OPTIONS: SelectOption[] = CLASSES.map((c) => ({
+  value: `${c} শ্রেণি`,
+  label: `${c} শ্রেণি`,
+  icon: <MdOutlineClass />,
+}));
 
 const MARK_OPTIONS: SelectOption[] = [5, 10, 15, 20, 25, 30, 35, 40].map(
-  (n) => ({ value: String(n), label: String(n) }),
+  (n) => ({
+    value: String(n),
+    label: String(n),
+  }),
 );
 
-const SUBJECT_MAP: Record<string, SelectOption[]> = {
-  "৬ষ্ঠ শ্রেণি": [
-    { value: "বাংলা ১ম পত্র", label: "বাংলা ১ম পত্র", icon: <TbLanguage /> },
-    { value: "বাংলা ২য় পত্র", label: "বাংলা ২য় পত্র", icon: <TbLanguage /> },
-    { value: "ইংরেজি ১ম পত্র", label: "ইংরেজি ১ম পত্র", icon: <FaBookOpen /> },
-    { value: "গণিত", label: "গণিত", icon: <TbMath /> },
-  ],
-  "৭ম শ্রেণি": [
-    { value: "বাংলা ১ম পত্র", label: "বাংলা ১ম পত্র", icon: <TbLanguage /> },
-    { value: "ইংরেজি ১ম পত্র", label: "ইংরেজি ১ম পত্র", icon: <FaBookOpen /> },
-    { value: "গণিত", label: "গণিত", icon: <TbMath /> },
-    { value: "বিজ্ঞান", label: "বিজ্ঞান", icon: <MdOutlineScience /> },
-  ],
-  "৮ম শ্রেণি": [
-    { value: "বাংলা ১ম পত্র", label: "বাংলা ১ম পত্র", icon: <TbLanguage /> },
-    { value: "ইংরেজি ১ম পত্র", label: "ইংরেজি ১ম পত্র", icon: <FaBookOpen /> },
-    { value: "গণিত", label: "গণিত", icon: <TbMath /> },
-    { value: "বিজ্ঞান", label: "বিজ্ঞান", icon: <MdOutlineScience /> },
-    { value: "ইতিহাস", label: "ইতিহাস", icon: <MdOutlineHistoryEdu /> },
-  ],
-  "৯ম শ্রেণি": [
-    { value: "বাংলা ১ম পত্র", label: "বাংলা ১ম পত্র", icon: <TbLanguage /> },
-    { value: "বাংলা ২য় পত্র", label: "বাংলা ২য় পত্র", icon: <TbLanguage /> },
-    { value: "ইংরেজি ১ম পত্র", label: "ইংরেজি ১ম পত্র", icon: <FaBookOpen /> },
-    {
-      value: "ইংরেজি ২য় পত্র",
-      label: "ইংরেজি ২য় পত্র",
-      icon: <FaBookOpen />,
-    },
-    { value: "গণিত", label: "গণিত", icon: <TbMath /> },
-    { value: "পদার্থবিজ্ঞান", label: "পদার্থবিজ্ঞান", icon: <FaFlask /> },
-    { value: "রসায়ন", label: "রসায়ন", icon: <FaFlask /> },
-    { value: "জীববিজ্ঞান", label: "জীববিজ্ঞান", icon: <MdOutlineScience /> },
-    { value: "ভূগোল", label: "ভূগোল", icon: <GiEarthAsiaOceania /> },
-    { value: "ইতিহাস", label: "ইতিহাস", icon: <MdOutlineHistoryEdu /> },
-  ],
-  "১০ম শ্রেণি": [
-    { value: "বাংলা ১ম পত্র", label: "বাংলা ১ম পত্র", icon: <TbLanguage /> },
-    { value: "বাংলা ২য় পত্র", label: "বাংলা ২য় পত্র", icon: <TbLanguage /> },
-    { value: "ইংরেজি ১ম পত্র", label: "ইংরেজি ১ম পত্র", icon: <FaBookOpen /> },
-    {
-      value: "ইংরেজি ২য় পত্র",
-      label: "ইংরেজি ২য় পত্র",
-      icon: <FaBookOpen />,
-    },
-    { value: "গণিত", label: "গণিত", icon: <TbMath /> },
-    { value: "পদার্থবিজ্ঞান", label: "পদার্থবিজ্ঞান", icon: <FaFlask /> },
-    { value: "রসায়ন", label: "রসায়ন", icon: <FaFlask /> },
-    { value: "জীববিজ্ঞান", label: "জীববিজ্ঞান", icon: <MdOutlineScience /> },
-    { value: "ভূগোল", label: "ভূগোল", icon: <GiEarthAsiaOceania /> },
-    { value: "ইতিহাস", label: "ইতিহাস", icon: <MdOutlineHistoryEdu /> },
-  ],
-};
+const BASE_SUBJECTS: SelectOption[] = [
+  { value: "বাংলা ১ম ও ২য়", label: "বাংলা ১ম ও ২য়", icon: <TbLanguage /> },
+  { value: "ইংরেজি ১ম ও ২য়", label: "ইংরেজি ১ম ও ২য়", icon: <FaBookOpen /> },
+  { value: "গণিত", label: "গণিত", icon: <TbMath /> },
+  { value: "বিজ্ঞান", label: "বিজ্ঞান", icon: <MdOutlineScience /> },
+  {
+    value: "বাংলাদেশ ও বিশ্বপরিচয়",
+    label: "বাংলাদেশ ও বিশ্বপরিচয়",
+    icon: <MdOutlineScience />,
+  },
+  {
+    value: "তথ্য যোগাযোগ ও প্রযুক্তি",
+    label: "তথ্য যোগাযোগ ও প্রযুক্তি",
+    icon: <MdOutlineScience />,
+  },
+  { value: "ইসলাম শিক্ষা", label: "ইসলাম শিক্ষা", icon: <MdOutlineScience /> },
+  {
+    value: "হিন্দুধর্ম শিক্ষা",
+    label: "হিন্দুধর্ম শিক্ষা",
+    icon: <MdOutlineScience />,
+  },
+];
 
-const TEACHER_MAP: Record<string, SelectOption[]> = {
-  "৬ষ্ঠ শ্রেণি": [
-    {
-      value: "মোঃ রফিকুল ইসলাম",
-      label: "মোঃ রফিকুল ইসলাম",
-      icon: <PiChalkboardTeacherFill />,
-    },
-    {
-      value: "নাসরিন আক্তার",
-      label: "নাসরিন আক্তার",
-      icon: <PiChalkboardTeacherFill />,
-    },
-  ],
-  "৭ম শ্রেণি": [
-    {
-      value: "মোঃ কামরুল হাসান",
-      label: "মোঃ কামরুল হাসান",
-      icon: <PiChalkboardTeacherFill />,
-    },
-    {
-      value: "সুমাইয়া বেগম",
-      label: "সুমাইয়া বেগম",
-      icon: <PiChalkboardTeacherFill />,
-    },
-  ],
-  "৮ম শ্রেণি": [
-    {
-      value: "মোঃ আবুল কাশেম",
-      label: "মোঃ আবুল কাশেম",
-      icon: <PiChalkboardTeacherFill />,
-    },
-    {
-      value: "রাহেলা পারভীন",
-      label: "রাহেলা পারভীন",
-      icon: <PiChalkboardTeacherFill />,
-    },
-  ],
-  "৯ম শ্রেণি": [
-    {
-      value: "মোঃ রফিকুল ইসলাম",
-      label: "মোঃ রফিকুল ইসলাম",
-      icon: <PiChalkboardTeacherFill />,
-    },
-    {
-      value: "ড. শামীমা নাসরিন",
-      label: "ড. শামীমা নাসরিন",
-      icon: <PiChalkboardTeacherFill />,
-    },
-    {
-      value: "মোঃ জাহিদুল ইসলাম",
-      label: "মোঃ জাহিদুল ইসলাম",
-      icon: <PiChalkboardTeacherFill />,
-    },
-  ],
-  "১০ম শ্রেণি": [
-    {
-      value: "মোঃ সাইফুল ইসলাম",
-      label: "মোঃ সাইফুল ইসলাম",
-      icon: <PiChalkboardTeacherFill />,
-    },
-    {
-      value: "ফারহানা ইয়াসমিন",
-      label: "ফারহানা ইয়াসমিন",
-      icon: <PiChalkboardTeacherFill />,
-    },
-    {
-      value: "মোঃ রেজাউল করিম",
-      label: "মোঃ রেজাউল করিম",
-      icon: <PiChalkboardTeacherFill />,
-    },
-  ],
-};
+const ADVANCED_SUBJECTS: SelectOption[] = [
+  { value: "পদার্থবিজ্ঞান", label: "পদার্থবিজ্ঞান", icon: <FaFlask /> },
+  { value: "রসায়ন", label: "রসায়ন", icon: <FaFlask /> },
+  { value: "জীববিজ্ঞান", label: "জীববিজ্ঞান", icon: <MdOutlineScience /> },
+  { value: "উচ্চতর গণিত", label: "উচ্চতর গণিত", icon: <MdOutlineScience /> },
+  { value: "ভূগোল", label: "ভূগোল", icon: <GiEarthAsiaOceania /> },
+  { value: "ইতিহাস", label: "ইতিহাস", icon: <MdOutlineHistoryEdu /> },
+  { value: "অর্থনীতি", label: "অর্থনীতি", icon: <MdOutlineHistoryEdu /> },
+  { value: "পৌরনীতি", label: "পৌরনীতি", icon: <MdOutlineHistoryEdu /> },
+  {
+    value: "হিসাব বিজ্ঞান",
+    label: "হিসাব বিজ্ঞান",
+    icon: <MdOutlineHistoryEdu />,
+  },
+  {
+    value: "ব্যবসায় উদ্যোগ",
+    label: "ব্যবসায় উদ্যোগ",
+    icon: <MdOutlineHistoryEdu />,
+  },
+  {
+    value: "ফিন্যান্স ও ব্যাংকিং",
+    label: "ফিন্যান্স ও ব্যাংকিং",
+    icon: <MdOutlineHistoryEdu />,
+  },
+];
+
+const TEACHERS: SelectOption[] = [
+  "শাহরিয়ার হোসাইন",
+  "রনি আহমেদ",
+  "রিপন খুশ",
+  "স্বপ্না খাতুন",
+  "শিউলি খাতুন",
+  "মাসুদ",
+  "আসিফ",
+  "তুষার",
+  "আবু তালেব",
+].map((name) => ({
+  value: name,
+  label: name,
+  icon: <PiChalkboardTeacherFill />,
+}));
+
+// All classes share same teachers; 9th & 10th get extra subjects
+const getSubjects = (cls: string) =>
+  cls.startsWith("৯ম") || cls.startsWith("১০ম")
+    ? [...BASE_SUBJECTS, ...ADVANCED_SUBJECTS]
+    : BASE_SUBJECTS;
 
 // ─── Styles ───────────────────────────────────────────────
-const fieldVariants = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 18 },
   visible: (i: number) => ({
     opacity: 1,
@@ -182,15 +126,28 @@ const fieldVariants = {
   }),
 };
 
-const inputClass = (hasError: boolean) =>
-  `w-full px-4 py-3 rounded-xl border ${
-    hasError
-      ? "border-rose-400 focus:ring-rose-400"
-      : "border-gray-200 dark:border-gray-700 focus:ring-violet-500"
-  } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 text-sm`;
+const inputCls = (err: boolean) =>
+  `w-full px-4 py-3 rounded-xl border text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:border-transparent
+  bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400
+  ${err ? "border-rose-400 focus:ring-rose-400" : "border-gray-200 dark:border-gray-700 focus:ring-violet-500"}`;
 
-const labelClass =
+const labelCls =
   "block text-xs font-semibold tracking-wide uppercase text-gray-500 dark:text-gray-400 mb-1.5";
+
+const ErrorMsg = ({ msg }: { msg?: string }) => (
+  <AnimatePresence>
+    {msg && (
+      <motion.p
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: "auto" }}
+        exit={{ opacity: 0, height: 0 }}
+        className="text-rose-500 text-xs mt-1"
+      >
+        {msg}
+      </motion.p>
+    )}
+  </AnimatePresence>
+);
 
 // ─── Component ────────────────────────────────────────────
 const AddWeeklyExam = () => {
@@ -221,31 +178,24 @@ const AddWeeklyExam = () => {
   });
 
   const selectedClass = watch("class");
-  const subjectOptions = SUBJECT_MAP[selectedClass] ?? [];
-  const teacherOptions = TEACHER_MAP[selectedClass] ?? [];
 
-  // ── Image handlers ────────────────────────────────────
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    setImageFiles((prev) => [...prev, ...files]);
-    setPreviews((prev) => [
-      ...prev,
-      ...files.map((f) => URL.createObjectURL(f)),
-    ]);
+    setImageFiles((p) => [...p, ...files]);
+    setPreviews((p) => [...p, ...files.map((f) => URL.createObjectURL(f))]);
     e.target.value = "";
   };
 
-  const removeImage = (index: number) => {
-    URL.revokeObjectURL(previews[index]);
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
-    setPreviews((prev) => prev.filter((_, i) => i !== index));
+  const removeImage = (i: number) => {
+    URL.revokeObjectURL(previews[i]);
+    setImageFiles((p) => p.filter((_, j) => j !== i));
+    setPreviews((p) => p.filter((_, j) => j !== i));
   };
 
-  // ── Mutation ──────────────────────────────────────────
   const mutation = useMutation({
-    mutationFn: (formData: FormData) =>
-      axiosPublic.post("/api/weekly-exams", formData, {
+    mutationFn: (fd: FormData) =>
+      axiosPublic.post("/api/weekly-exams", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       }),
     onSuccess: () => {
@@ -257,25 +207,25 @@ const AddWeeklyExam = () => {
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 2500);
     },
-    onError: (err: unknown) => {
-      type AxiosErr = {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      const e = err as AxiosErr;
+    onError: (err: Error & { response?: { data?: { message?: string } } }) =>
       toast.error(
-        e?.response?.data?.message || e?.message || "Failed to create exam",
-      );
-    },
+        err?.response?.data?.message || err?.message || "Failed to create exam",
+      ),
   });
 
   const onSubmit: SubmitHandler<WeeklyExamFormData> = (data) => {
     const fd = new FormData();
-    (Object.keys(data) as (keyof WeeklyExamFormData)[]).forEach((key) => {
-      if (data[key] !== undefined) fd.append(key, String(data[key]));
+    (Object.keys(data) as (keyof WeeklyExamFormData)[]).forEach((k) => {
+      if (data[k] !== undefined) fd.append(k, String(data[k]));
     });
-    imageFiles.forEach((file) => fd.append("images", file));
+    imageFiles.forEach((f) => fd.append("images", f));
     mutation.mutate(fd);
+  };
+
+  const handleReset = () => {
+    reset();
+    setImageFiles([]);
+    setPreviews([]);
   };
 
   return (
@@ -314,7 +264,7 @@ const AddWeeklyExam = () => {
                 custom={0}
                 initial="hidden"
                 animate="visible"
-                variants={fieldVariants}
+                variants={fadeUp}
               >
                 <Controller
                   name="class"
@@ -337,12 +287,11 @@ const AddWeeklyExam = () => {
                   )}
                 />
               </motion.div>
-
               <motion.div
                 custom={1}
                 initial="hidden"
                 animate="visible"
-                variants={fieldVariants}
+                variants={fadeUp}
               >
                 <Controller
                   name="subject"
@@ -355,7 +304,7 @@ const AddWeeklyExam = () => {
                       placeholder={
                         selectedClass ? "বিষয় বেছে নিন" : "আগে শ্রেণি বেছে নিন"
                       }
-                      options={subjectOptions}
+                      options={getSubjects(selectedClass)}
                       value={field.value}
                       onChange={field.onChange}
                       disabled={!selectedClass}
@@ -371,7 +320,7 @@ const AddWeeklyExam = () => {
               custom={2}
               initial="hidden"
               animate="visible"
-              variants={fieldVariants}
+              variants={fadeUp}
             >
               <Controller
                 name="teacher"
@@ -384,7 +333,7 @@ const AddWeeklyExam = () => {
                     placeholder={
                       selectedClass ? "শিক্ষক বেছে নিন" : "আগে শ্রেণি বেছে নিন"
                     }
-                    options={teacherOptions}
+                    options={TEACHERS}
                     value={field.value}
                     onChange={field.onChange}
                     disabled={!selectedClass}
@@ -400,9 +349,9 @@ const AddWeeklyExam = () => {
                 custom={3}
                 initial="hidden"
                 animate="visible"
-                variants={fieldVariants}
+                variants={fadeUp}
               >
-                <label className={labelClass}>
+                <label className={labelCls}>
                   পরীক্ষা নম্বর{" "}
                   <span className="text-rose-500 normal-case tracking-normal">
                     *
@@ -415,27 +364,16 @@ const AddWeeklyExam = () => {
                   {...register("ExamNumber", {
                     required: "পরীক্ষা নম্বর আবশ্যিক",
                   })}
-                  className={inputClass(!!errors.ExamNumber)}
+                  className={inputCls(!!errors.ExamNumber)}
                 />
-                <AnimatePresence>
-                  {errors.ExamNumber && (
-                    <motion.p
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="text-rose-500 text-xs mt-1"
-                    >
-                      {errors.ExamNumber.message}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
+                <ErrorMsg msg={errors.ExamNumber?.message} />
               </motion.div>
 
               <motion.div
                 custom={4}
                 initial="hidden"
                 animate="visible"
-                variants={fieldVariants}
+                variants={fadeUp}
               >
                 <Controller
                   name="mark"
@@ -464,9 +402,9 @@ const AddWeeklyExam = () => {
               custom={5}
               initial="hidden"
               animate="visible"
-              variants={fieldVariants}
+              variants={fadeUp}
             >
-              <label className={labelClass}>
+              <label className={labelCls}>
                 বিষয়বস্তু / নির্দেশনা{" "}
                 <span className="text-rose-500 normal-case tracking-normal">
                   *
@@ -479,36 +417,25 @@ const AddWeeklyExam = () => {
                   required: "বিষয়বস্তু আবশ্যিক",
                   minLength: { value: 20, message: "কমপক্ষে ২০ অক্ষর লিখুন" },
                 })}
-                className={`${inputClass(!!errors.topics)} resize-none leading-relaxed`}
+                className={`${inputCls(!!errors.topics)} resize-none leading-relaxed`}
               />
-              <AnimatePresence>
-                {errors.topics && (
-                  <motion.p
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="text-rose-500 text-xs mt-1"
-                  >
-                    {errors.topics.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
+              <ErrorMsg msg={errors.topics?.message} />
             </motion.div>
 
-            {/* Row 5: Image upload */}
+            {/* Row 5: Image Upload */}
             <motion.div
               custom={6}
               initial="hidden"
               animate="visible"
-              variants={fieldVariants}
+              variants={fadeUp}
             >
-              <label className={labelClass}>ছবি সংযুক্ত করুন (ঐচ্ছিক)</label>
+              <label className={labelCls}>ছবি সংযুক্ত করুন (ঐচ্ছিক)</label>
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="cursor-pointer border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-violet-400 dark:hover:border-violet-500 rounded-xl p-6 flex flex-col items-center justify-center gap-2 transition-colors duration-200 group"
+                className="cursor-pointer border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-violet-400 dark:hover:border-violet-500 rounded-xl p-6 flex flex-col items-center gap-2 transition-colors group"
               >
                 <ImagePlus className="w-8 h-8 text-gray-400 group-hover:text-violet-500 transition-colors" />
-                <p className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-violet-500 transition-colors">
+                <p className="text-sm text-gray-500 group-hover:text-violet-500 transition-colors">
                   ক্লিক করুন বা ছবি টেনে আনুন
                 </p>
                 <p className="text-xs text-gray-400">
@@ -523,6 +450,7 @@ const AddWeeklyExam = () => {
                 className="hidden"
                 onChange={handleFileChange}
               />
+
               <AnimatePresence>
                 {previews.length > 0 && (
                   <motion.div
@@ -547,7 +475,7 @@ const AddWeeklyExam = () => {
                         <button
                           type="button"
                           onClick={() => removeImage(i)}
-                          className="absolute top-1 right-1 w-5 h-5 bg-black/60 hover:bg-rose-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200"
+                          className="absolute top-1 right-1 w-5 h-5 bg-black/60 hover:bg-rose-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
                         >
                           <X className="w-3 h-3 text-white" />
                         </button>
@@ -570,7 +498,7 @@ const AddWeeklyExam = () => {
               custom={7}
               initial="hidden"
               animate="visible"
-              variants={fieldVariants}
+              variants={fadeUp}
               className="flex flex-col sm:flex-row gap-3"
             >
               <button
@@ -618,13 +546,9 @@ const AddWeeklyExam = () => {
 
               <button
                 type="button"
+                onClick={handleReset}
                 disabled={mutation.isPending}
-                onClick={() => {
-                  reset();
-                  setImageFiles([]);
-                  setPreviews([]);
-                }}
-                className="sm:w-32 py-3 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-all duration-200 disabled:opacity-50"
+                className="sm:w-32 py-3 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-all disabled:opacity-50"
               >
                 রিসেট
               </button>
