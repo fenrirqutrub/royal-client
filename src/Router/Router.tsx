@@ -9,7 +9,6 @@ import PrivateRoute from "./PrivateRoute";
 import Photography from "../pages/Photography/Photography";
 
 import ManagePhotos from "../pages/Admin/Management/ManagePhotos";
-import ManageArticles from "../pages/Admin/Management/ManageArticles";
 import ManageQuotes from "../pages/Admin/Management/ManageQuotes";
 import ManageHero from "../pages/Admin/Management/ManageHero";
 import AddWeeklyExam from "../pages/Admin/AddNewItem/AddWeeklyExam";
@@ -55,7 +54,6 @@ const Router = () => {
         <Route path="add-hero" element={<AddHero />} />
 
         {/* ── Management Routes ── */}
-        <Route path="management/articles" element={<ManageArticles />} />
         <Route path="management/photos" element={<ManagePhotos />} />
         <Route path="management/quotes" element={<ManageQuotes />} />
         <Route path="management/heroes" element={<ManageHero />} />

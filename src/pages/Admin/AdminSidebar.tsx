@@ -85,7 +85,7 @@ const AdminSidebar = () => {
       //   icon: ImageIcon,
       // },
       // { name: "Quotes", path: "/dashboard/add-quotes", icon: Quote },
-      // { name: "Hero", path: "/dashboard/add-hero", icon: Image },
+      { name: "Hero", path: "/dashboard/add-hero", icon: Image },
     ],
   };
 

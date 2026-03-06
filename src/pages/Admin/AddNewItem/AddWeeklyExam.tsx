@@ -19,15 +19,14 @@ import { PiChalkboardTeacherFill } from "react-icons/pi";
 
 import type { SelectOption } from "../../../components/common/SelectInput";
 import SelectInput from "../../../components/common/SelectInput";
-import DatePicker from "../../../components/common/Datepicker";
 
 // ─── Types ────────────────────────────────────────────────
+// date is removed — server uses createdAt automatically
 interface WeeklyExamFormData {
   subject: string;
   teacher: string;
   class: string;
   mark: number;
-  date: string;
   ExamNumber: string;
   topics: string;
   slug?: string;
@@ -43,10 +42,7 @@ const CLASS_OPTIONS: SelectOption[] = [
 ];
 
 const MARK_OPTIONS: SelectOption[] = [5, 10, 15, 20, 25, 30, 35, 40].map(
-  (n) => ({
-    value: String(n),
-    label: String(n),
-  }),
+  (n) => ({ value: String(n), label: String(n) }),
 );
 
 const SUBJECT_MAP: Record<string, SelectOption[]> = {
@@ -176,7 +172,7 @@ const TEACHER_MAP: Record<string, SelectOption[]> = {
   ],
 };
 
-// ─── Animation ────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────
 const fieldVariants = {
   hidden: { opacity: 0, y: 18 },
   visible: (i: number) => ({
@@ -219,7 +215,6 @@ const AddWeeklyExam = () => {
       teacher: "",
       class: "",
       mark: 0,
-      date: "",
       ExamNumber: "",
       topics: "",
     },
@@ -233,12 +228,11 @@ const AddWeeklyExam = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-
     setImageFiles((prev) => [...prev, ...files]);
-    const newPreviews = files.map((f) => URL.createObjectURL(f));
-    setPreviews((prev) => [...prev, ...newPreviews]);
-
-    // reset input so same file can be re-added after removal
+    setPreviews((prev) => [
+      ...prev,
+      ...files.map((f) => URL.createObjectURL(f)),
+    ]);
     e.target.value = "";
   };
 
@@ -255,7 +249,7 @@ const AddWeeklyExam = () => {
         headers: { "Content-Type": "multipart/form-data" },
       }),
     onSuccess: () => {
-      toast.success("Weekly exam created!");
+      toast.success("পরীক্ষা সফলভাবে যোগ হয়েছে!");
       qc.invalidateQueries({ queryKey: ["weekly-exams"] });
       reset();
       setImageFiles([]);
@@ -287,7 +281,7 @@ const AddWeeklyExam = () => {
   return (
     <div className="min-h-screen bg-[var(--color-bg)] flex items-start justify-center py-10">
       <div className="w-full">
-        {/* ── Header ──────────────────────────────────── */}
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -306,7 +300,7 @@ const AddWeeklyExam = () => {
           </p>
         </motion.div>
 
-        {/* ── Card ────────────────────────────────────── */}
+        {/* Card */}
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -314,7 +308,7 @@ const AddWeeklyExam = () => {
           className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 sm:p-8"
         >
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* ── Row 1: Class + Subject ───────────────── */}
+            {/* Row 1: Class + Subject */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <motion.div
                 custom={0}
@@ -372,7 +366,7 @@ const AddWeeklyExam = () => {
               </motion.div>
             </div>
 
-            {/* ── Row 2: Teacher ───────────────────────── */}
+            {/* Row 2: Teacher */}
             <motion.div
               custom={2}
               initial="hidden"
@@ -400,7 +394,7 @@ const AddWeeklyExam = () => {
               />
             </motion.div>
 
-            {/* ── Row 3: ExamNumber + Mark ─────────────── */}
+            {/* Row 3: ExamNumber + Mark */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <motion.div
                 custom={3}
@@ -415,8 +409,9 @@ const AddWeeklyExam = () => {
                   </span>
                 </label>
                 <input
-                  type="text"
-                  placeholder="যেমন: ০১"
+                  type="number"
+                  min={1}
+                  placeholder="যেমন: 1"
                   {...register("ExamNumber", {
                     required: "পরীক্ষা নম্বর আবশ্যিক",
                   })}
@@ -464,33 +459,9 @@ const AddWeeklyExam = () => {
               </motion.div>
             </div>
 
-            {/* ── Row 4: Date ──────────────────────────── */}
+            {/* Row 4: Topics */}
             <motion.div
               custom={5}
-              initial="hidden"
-              animate="visible"
-              variants={fieldVariants}
-            >
-              <Controller
-                name="date"
-                control={control}
-                rules={{ required: "তারিখ আবশ্যিক" }}
-                render={({ field }) => (
-                  <DatePicker
-                    label="তারিখ"
-                    required
-                    placeholder="তারিখ বেছে নিন"
-                    value={field.value}
-                    onChange={field.onChange}
-                    error={errors.date?.message}
-                  />
-                )}
-              />
-            </motion.div>
-
-            {/* ── Row 5: Topics ────────────────────────── */}
-            <motion.div
-              custom={6}
               initial="hidden"
               animate="visible"
               variants={fieldVariants}
@@ -524,16 +495,14 @@ const AddWeeklyExam = () => {
               </AnimatePresence>
             </motion.div>
 
-            {/* ── Row 6: Image upload ──────────────────── */}
+            {/* Row 5: Image upload */}
             <motion.div
-              custom={7}
+              custom={6}
               initial="hidden"
               animate="visible"
               variants={fieldVariants}
             >
               <label className={labelClass}>ছবি সংযুক্ত করুন (ঐচ্ছিক)</label>
-
-              {/* Drop zone */}
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="cursor-pointer border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-violet-400 dark:hover:border-violet-500 rounded-xl p-6 flex flex-col items-center justify-center gap-2 transition-colors duration-200 group"
@@ -546,7 +515,6 @@ const AddWeeklyExam = () => {
                   PNG, JPG, WEBP • একাধিক ছবি বেছে নেওয়া যাবে
                 </p>
               </div>
-
               <input
                 ref={fileInputRef}
                 type="file"
@@ -555,8 +523,6 @@ const AddWeeklyExam = () => {
                 className="hidden"
                 onChange={handleFileChange}
               />
-
-              {/* Previews */}
               <AnimatePresence>
                 {previews.length > 0 && (
                   <motion.div
@@ -590,7 +556,6 @@ const AddWeeklyExam = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
-
               {previews.length > 0 && (
                 <p className="text-xs text-gray-400 mt-2">
                   {previews.length}টি ছবি নির্বাচিত
@@ -598,12 +563,11 @@ const AddWeeklyExam = () => {
               )}
             </motion.div>
 
-            {/* ── Divider ──────────────────────────────── */}
             <div className="border-t border-gray-100 dark:border-gray-800 pt-2" />
 
-            {/* ── Buttons ──────────────────────────────── */}
+            {/* Buttons */}
             <motion.div
-              custom={8}
+              custom={7}
               initial="hidden"
               animate="visible"
               variants={fieldVariants}

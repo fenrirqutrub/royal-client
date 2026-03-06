@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router";
-import ThemeToggle from "./ThemeToggle";
+import ProfileButton from "./ProfileButton";
 
 type MenuItem = { readonly name: string; readonly path: string };
 
@@ -166,6 +166,7 @@ const MobileNavItem = memo<NavItemProps>(({ item, isActive, onClick }) => {
 });
 MobileNavItem.displayName = "MobileNavItem";
 
+/* ─── Navbar ─────────────────────────────────────────────────────────────── */
 const Navbar = memo(() => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -191,10 +192,8 @@ const Navbar = memo(() => {
         rafRef.current = null;
       });
     };
-
     setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
-
     return () => {
       window.removeEventListener("scroll", onScroll);
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -253,6 +252,7 @@ const Navbar = memo(() => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between">
+            {/* ── Logo ── */}
             <button
               className="relative text-2xl md:text-3xl pacifico leading-none cursor-pointer outline-none select-none"
               aria-label="Go home"
@@ -260,7 +260,6 @@ const Navbar = memo(() => {
               style={{ color: "var(--color-text)" }}
             >
               <span className="hidden md:inline-block">Royal Academy</span>
-
               <span
                 className="md:hidden block relative"
                 style={{ lineHeight: 1 }}
@@ -285,6 +284,7 @@ const Navbar = memo(() => {
               </span>
             </button>
 
+            {/* ── Desktop nav links ── */}
             <ul className="hidden md:flex items-center space-x-1 relative">
               {MENU_CONFIG.map((item) => (
                 <NavItem
@@ -296,11 +296,12 @@ const Navbar = memo(() => {
               ))}
             </ul>
 
-            <div className="flex items-center space-x-3">
-              <div className="hidden md:block">
-                <ThemeToggle size={35} animationSpeed={0.5} />
-              </div>
+            {/* ── Right side ── */}
+            <div className="flex items-center space-x-2">
+              {/* ProfileButton — visible on both desktop & mobile */}
+              <ProfileButton size={35} />
 
+              {/* Hamburger — mobile only */}
               <button
                 onClick={toggleMobileMenu}
                 className="md:hidden p-2.5 rounded-lg z-[60] relative outline-none"
@@ -332,6 +333,7 @@ const Navbar = memo(() => {
         </div>
       </nav>
 
+      {/* ── Mobile Drawer ── */}
       <AnimatePresence mode="wait">
         {mobileMenuOpen && (
           <>
@@ -392,19 +394,12 @@ const Navbar = memo(() => {
                 </nav>
 
                 <div className="p-6 border-t" style={HEADER_BORDER_STYLE}>
-                  <div className="flex flex-col items-center space-y-4">
-                    <ThemeToggle
-                      size={42}
-                      animationSpeed={0.6}
-                      onClick={closeMobileMenu}
-                    />
-                    <p
-                      className="text-xs"
-                      style={{ color: "var(--color-gray)" }}
-                    >
-                      &copy; 2025 Masud ibn Belat. All rights reserved.
-                    </p>
-                  </div>
+                  <p
+                    className="text-xs text-center"
+                    style={{ color: "var(--color-gray)" }}
+                  >
+                    &copy; 2025 Masud ibn Belat. All rights reserved.
+                  </p>
                 </div>
               </div>
             </motion.div>

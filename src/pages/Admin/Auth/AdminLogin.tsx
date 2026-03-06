@@ -15,7 +15,28 @@ const CREDENTIALS = {
   password: ["696969", "696969"],
 };
 
-const AUTH_KEY = "admin_auth_token";
+export const AUTH_KEY = "admin_auth_token";
+
+// ─── Shared helper (used by ProfileButton too) ────────────────────────────
+export function getAuthToken(): {
+  email: string;
+  loginTime: number;
+  expireAt: number;
+} | null {
+  try {
+    const raw = localStorage.getItem(AUTH_KEY);
+    if (!raw) return null;
+    const decoded = JSON.parse(atob(raw));
+    if (Date.now() > decoded.expireAt) {
+      localStorage.removeItem(AUTH_KEY);
+      return null;
+    }
+    return decoded;
+  } catch {
+    localStorage.removeItem(AUTH_KEY);
+    return null;
+  }
+}
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -32,32 +53,18 @@ const AdminLogin = () => {
   const [email, password] = watch(["email", "password"]);
 
   useEffect(() => {
-    const token = localStorage.getItem(AUTH_KEY);
-
-    if (token) {
-      try {
-        const decoded = JSON.parse(atob(token));
-
-        if (Date.now() > decoded.expireAt) {
-          localStorage.removeItem(AUTH_KEY);
-          toast.error("Session expired. Please login again.");
-          navigate("/admin-login");
-        } else {
-          navigate("/dashboard");
-        }
-      } catch {
-        localStorage.removeItem(AUTH_KEY);
-      }
+    // already logged in → go home
+    if (getAuthToken()) {
+      navigate("/");
     }
   }, [navigate]);
 
-  // ✅ Helper: check if given email/password match a valid pair
   const isValidCredential = (email: string, password: string): boolean => {
     const index = CREDENTIALS.email.indexOf(email);
     return index !== -1 && CREDENTIALS.password[index] === password;
   };
 
-  const LogOut_Time = 60 * 60 * 1000;
+  const LogOut_Time = 60 * 60 * 1000; // 1 hour
 
   const onSubmit = (data: LoginForm) => {
     if (isValidCredential(data.email, data.password)) {
@@ -70,7 +77,7 @@ const AdminLogin = () => {
       localStorage.setItem(AUTH_KEY, btoa(JSON.stringify(payload)));
 
       toast.success("Welcome, Admin!");
-      navigate("/dashboard");
+      navigate("/"); // ← go home after login
     } else {
       toast.error("Invalid credentials");
     }
@@ -109,7 +116,7 @@ const AdminLogin = () => {
               <div
                 className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
                   theme === "dark"
-                    ? "bg-red-700 "
+                    ? "bg-red-700"
                     : "bg-gradient-to-br from-blue-400 to-indigo-500"
                 }`}
               >

@@ -31,11 +31,9 @@ const Hero: React.FC = () => {
   const heroes = useMemo(() => (data?.data ?? []) as HeroItem[], [data]);
   const total = heroes.length;
 
-  // Preload first 2 images via <link rel="preload"> for fastest LCP
   useEffect(() => {
     heroes.slice(0, 2).forEach(({ imageUrl }, idx) => {
       if (idx === 0) {
-        // First image: use <link rel="preload"> — highest browser priority
         const link = document.createElement("link");
         link.rel = "preload";
         link.as = "image";
@@ -84,7 +82,7 @@ const Hero: React.FC = () => {
 
   return (
     <section className="w-full bg-bgPrimary">
-      <div className="w-full pt-14 sm:pt-16 lg:pt-20">
+      <div className="w-full">
         <div className="relative">
           <Swiper
             effect={swiperEffect}
