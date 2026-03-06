@@ -13,9 +13,8 @@ export interface AuthUser {
 export function useAuth() {
   const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true); // true until /me resolves
+  const [loading, setLoading] = useState(true);
 
-  /* ── fetch current user from cookie on mount ── */
   useEffect(() => {
     axiosPublic
       .get("/api/auth/me")

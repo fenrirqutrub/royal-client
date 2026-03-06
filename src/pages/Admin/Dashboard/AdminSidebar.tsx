@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 
 import {
-  LayoutDashboard,
   Menu,
   Triangle,
   Settings,
@@ -61,7 +60,6 @@ const AdminSidebar = () => {
   // ── Nav definitions ──────────────────────────────────────────────────────────
 
   const navItems: NavItem[] = [
-    { name: "হোম পেজ", path: "/", icon: HomeIcon },
     // { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   ];
 
@@ -89,11 +87,11 @@ const AdminSidebar = () => {
 
   // Management group — teacher sees only Weekly Exam; admin/principal see all
   const managementItems: NavItem = {
-    name: "Management",
+    name: "প্রশ্ন দেখুন",
     icon: Settings,
     subItems: [
       {
-        name: "Weekly Exam",
+        name: "পরিক্ষার প্রশ্ন এডিট",
         path: "/dashboard/management/weekly-exam",
         icon: BookOpen,
       },
@@ -299,14 +297,23 @@ const AdminSidebar = () => {
               </Link>
             </div>
             <div className="flex items-center justify-between">
-              <motion.p
-                className="text-sm text-gray-600 dark:text-gray-400"
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
+                className="flex items-center gap-1.5"
               >
-                Manage your content
-              </motion.p>
+                <span
+                  className="text-sm font-bold px-2 py-0.5 rounded-full uppercase tracking-wide border"
+                  style={{
+                    backgroundColor: config.color + "18",
+                    color: config.color,
+                    borderColor: config.color + "44",
+                  }}
+                >
+                  Teacher ID: {user?.slug ?? "—"}
+                </span>
+              </motion.div>
               <ThemeToggle size={32} animationSpeed={0.5} />
             </div>
           </motion.div>
@@ -370,7 +377,7 @@ const AdminSidebar = () => {
         </nav>
 
         {/* Footer — user info + logout */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+        <div className="p-4 border-t border-[var(--color-gray)] space-y-2">
           {/* User card */}
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
             {/* ✅ Avatar color uses role-specific color */}
@@ -403,6 +410,16 @@ const AdminSidebar = () => {
               </div>
             </Link>
           </div>
+          <Link to="/">
+            <motion.h1
+              className="w-full flex text-center items-center gap-3 px-4 py-2.5 rounded-xl text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all"
+              whileHover={{ x: 4 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <HomeIcon />
+              Home
+            </motion.h1>
+          </Link>
           {/* Logout */}
           <motion.button
             onClick={logout}

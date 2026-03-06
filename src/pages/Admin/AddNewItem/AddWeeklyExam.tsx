@@ -1,10 +1,10 @@
 // AddWeeklyExam.tsx
 import { useForm, type SubmitHandler, Controller } from "react-hook-form";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Loader2, ImagePlus, X } from "lucide-react";
 import toast from "react-hot-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   MdOutlineClass,
   MdOutlineScience,
@@ -16,6 +16,7 @@ import { FaBookOpen, FaFlask } from "react-icons/fa";
 import { PiChalkboardTeacherFill } from "react-icons/pi";
 import type { SelectOption } from "../../../components/common/SelectInput";
 import axiosPublic from "../../../hooks/axiosPublic";
+import { useAuth } from "../../../hooks/UseAuth";
 import SelectInput from "../../../components/common/SelectInput";
 
 // ─── Types ────────────────────────────────────────────────
@@ -94,22 +95,6 @@ const ADVANCED_SUBJECTS: SelectOption[] = [
   },
 ];
 
-const TEACHERS: SelectOption[] = [
-  "শাহরিয়ার হোসাইন",
-  "রনি আহমেদ",
-  "রিপন খুশ",
-  "স্বপ্না খাতুন",
-  "শিউলি খাতুন",
-  "মাসুদ",
-  "আসিফ",
-  "তুষার",
-  "আবু তালেব",
-].map((name) => ({
-  value: name,
-  label: name,
-  icon: <PiChalkboardTeacherFill />,
-}));
-
 // All classes share same teachers; 9th & 10th get extra subjects
 const getSubjects = (cls: string) =>
   cls.startsWith("৯ম") || cls.startsWith("১০ম")
@@ -151,11 +136,36 @@ const ErrorMsg = ({ msg }: { msg?: string }) => (
 
 // ─── Component ────────────────────────────────────────────
 const AddWeeklyExam = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const [submitted, setSubmitted] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
+
+  // ── Fetch all teachers (admin only) ───────────────────
+  const { data: teacherList = [] } = useQuery<{ name: string; slug: string }[]>(
+    {
+      queryKey: ["teachers-list"],
+      queryFn: async () => {
+        const res = await axiosPublic.get("/api/teachers");
+        const payload = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.data ?? []);
+        return payload.filter((t: { role: string }) => t.role !== "admin");
+      },
+      enabled: isAdmin,
+      staleTime: 5 * 60 * 1000,
+    },
+  );
+
+  const teacherOptions: SelectOption[] = teacherList.map((t) => ({
+    value: t.name,
+    label: t.name,
+    icon: <PiChalkboardTeacherFill />,
+  }));
 
   const {
     register,
@@ -178,6 +188,13 @@ const AddWeeklyExam = () => {
   });
 
   const selectedClass = watch("class");
+
+  // non-admin: auto-set teacher to their own name
+  useEffect(() => {
+    if (!isAdmin && user?.name) {
+      setValue("teacher", user.name, { shouldValidate: true });
+    }
+  }, [isAdmin, user?.name, setValue]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -218,6 +235,11 @@ const AddWeeklyExam = () => {
     (Object.keys(data) as (keyof WeeklyExamFormData)[]).forEach((k) => {
       if (data[k] !== undefined) fd.append(k, String(data[k]));
     });
+
+    // ← guarantee teacher name is always sent
+    if (!isAdmin && user?.name) fd.set("teacher", user.name);
+
+    if (user?.slug) fd.append("teacherSlug", user.slug);
     imageFiles.forEach((f) => fd.append("images", f));
     mutation.mutate(fd);
   };
@@ -281,6 +303,7 @@ const AddWeeklyExam = () => {
                         field.onChange(val);
                         setValue("subject", "");
                         setValue("teacher", "");
+                        if (isAdmin) setValue("teacher", "");
                       }}
                       error={errors.class?.message}
                     />
@@ -322,25 +345,46 @@ const AddWeeklyExam = () => {
               animate="visible"
               variants={fadeUp}
             >
-              <Controller
-                name="teacher"
-                control={control}
-                rules={{ required: "শিক্ষকের নাম আবশ্যিক" }}
-                render={({ field }) => (
-                  <SelectInput
-                    label="শিক্ষকের নাম"
-                    required
-                    placeholder={
-                      selectedClass ? "শিক্ষক বেছে নিন" : "আগে শ্রেণি বেছে নিন"
-                    }
-                    options={TEACHERS}
-                    value={field.value}
-                    onChange={field.onChange}
-                    disabled={!selectedClass}
-                    error={errors.teacher?.message}
-                  />
-                )}
-              />
+              {isAdmin ? (
+                // Admin: dynamic dropdown from API
+                <Controller
+                  name="teacher"
+                  control={control}
+                  rules={{ required: "শিক্ষকের নাম আবশ্যিক" }}
+                  render={({ field }) => (
+                    <SelectInput
+                      label="শিক্ষকের নাম"
+                      required
+                      placeholder="শিক্ষক বেছে নিন"
+                      options={teacherOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={errors.teacher?.message}
+                    />
+                  )}
+                />
+              ) : (
+                // Teacher/Principal: read-only, auto-filled from session
+                <div>
+                  <label className={labelCls}>
+                    শিক্ষকের নাম{" "}
+                    <span className="text-rose-500 normal-case tracking-normal">
+                      *
+                    </span>
+                  </label>
+                  <div
+                    className={`${inputCls(false)} flex items-center gap-2 bg-gray-50 dark:bg-gray-800/60 cursor-not-allowed`}
+                  >
+                    <PiChalkboardTeacherFill className="w-4 h-4 text-violet-500 shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-200">
+                      {user?.name ?? "..."}
+                    </span>
+                    <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300 font-medium uppercase tracking-wide">
+                      {user?.role}
+                    </span>
+                  </div>
+                </div>
+              )}
             </motion.div>
 
             {/* Row 3: ExamNumber + Mark */}

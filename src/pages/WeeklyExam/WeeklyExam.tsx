@@ -127,7 +127,7 @@ const ClassGroupTitle = ({
         duration: 0.45,
         ease: [0.22, 1, 0.36, 1],
       }}
-      className="relative flex items-center gap-0 mb-5 mt-20 overflow-hidden rounded-2xl bangla"
+      className="relative flex items-center gap-0 mb-5 mt-20 overflow-hidden rounded-lg bangla"
     >
       <div
         className="w-1.5 self-stretch rounded-l-2xl shrink-0"
@@ -136,11 +136,11 @@ const ClassGroupTitle = ({
         }}
       />
       <div
-        className="flex-1 flex items-center justify-between px-5 py-4"
+        className="flex-1 flex items-center justify-between px-5 py-2"
         style={{ background: `linear-gradient(105deg, ${color.soft}, white)` }}
       >
         <h2
-          className="text-2xl md:text-4xl font-extrabold leading-tight"
+          className="text-xl md:text-2xl font-extrabold leading-tight"
           style={{ color: color.text }}
         >
           {className}
@@ -150,7 +150,7 @@ const ClassGroupTitle = ({
           style={{ background: color.from }}
         />
         <p
-          className="text-2xl md:text-4xl font-black tabular-nums leading-tight"
+          className="text-xl md:text-2xl font-black tabular-nums leading-tight"
           style={{ color: color.from }}
         >
           পরীক্ষা নং: {toBn(examNumber)}
@@ -162,11 +162,12 @@ const ClassGroupTitle = ({
 
 // ─── Marquee items ────────────────────────────────────────
 const MARQUEE_ITEMS = [
+  "সাপ্তাহিক পরীক্ষা:",
   "লিখিত: ৭০",
   "বহুনির্বাচনী: ৩০",
   "পূর্ণমান: ১০০",
   "সময়: ৩ ঘন্টা",
-  "পরিক্ষার ফি: ৫০ টাকা",
+  "পরিক্ষার ফি ও আনুসাঙ্গিক বাবদ: ৫০ টাকা",
 ];
 
 // ─── Component ────────────────────────────────────────────
@@ -183,7 +184,10 @@ const WeeklyExam = () => {
     queryKey: ["weekly-exams"],
     queryFn: async () => {
       const res = await axiosPublic.get("/api/weekly-exams");
-      return res.data.data;
+      const payload = res.data;
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload?.data)) return payload.data;
+      return [];
     },
   });
 
@@ -252,25 +256,23 @@ const WeeklyExam = () => {
       </header>
 
       {/* ── Marquee banner ── */}
-      <div className="flex items-stretch rounded-xl overflow-hidden bangla">
+      <div className="flex items-stretch rounded overflow-hidden bangla">
         {/* Solid "বিজ্ঞপ্তি" badge */}
-        <div className="shrink-0 flex items-center justify-center px-5 bg-violet-600">
-          <span className="text-white font-black text-base md:text-lg tracking-wide whitespace-nowrap">
+        <div className="shrink-0 flex items-center justify-center px-5 bg-[var(--color-text)]">
+          <span className="text-[var(--color-bg)] font-black text-base md:text-lg tracking-wide whitespace-nowrap">
             বিজ্ঞপ্তি
           </span>
         </div>
 
         {/* Soft scrolling area */}
         <div className="flex-1 bg-violet-50 dark:bg-violet-950/30 overflow-hidden">
-          <Marquee speed={50} gradient={false} pauseOnHover>
+          <Marquee speed={40} gradient={false} pauseOnHover>
             {MARQUEE_ITEMS.map((item, i) => (
               <span key={i} className="inline-flex items-center">
-                <span className="inline-block text-violet-700 dark:text-violet-300 font-bold text-lg md:text-2xl py-3 mx-10">
+                <span className="inline-block text-[var(--color-text)] font-bold text-lg md:text-xl py-3 mx-10">
                   {item}
                 </span>
-                <span className="text-2xl font-extrabold text-violet-700 ">
-                  •
-                </span>
+                <span className="text-2xl font-extrabold  ">•</span>
               </span>
             ))}
           </Marquee>
@@ -295,7 +297,7 @@ const WeeklyExam = () => {
                   examNumber={activeExamNumber!}
                   index={groupIndex}
                 />
-                <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 mb-10">
+                <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 mb-10">
                   {exams.map((exam, i) => (
                     <WeeklyExamCard
                       key={exam._id}
