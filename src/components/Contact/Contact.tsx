@@ -22,7 +22,7 @@ const Contact = () => {
           <p className="text-[0.8rem] sm:text-[0.9rem] text-[var(--color-gray)] py-0 rubik-regular">
             &copy; 2021 All Rights Reserved by{" "}
             <Link to="/admin-login" className="pacifico font-semibold">
-              Masud ibn Belat
+              Royal Academy
             </Link>
           </p>
         </div>

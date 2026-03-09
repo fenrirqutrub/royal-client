@@ -4,10 +4,12 @@ import { useNavigate } from "react-router";
 import axiosPublic from "./axiosPublic";
 
 export interface AuthUser {
+  id: string; // ✅ added
   email: string;
   name: string;
   role: "teacher" | "principal" | "admin";
   slug: string;
+  isHardcoded: boolean; // ✅ added
 }
 
 export function useAuth() {
@@ -30,7 +32,7 @@ export function useAuth() {
         email,
         password,
       });
-      setUser(data.user);
+      setUser(data.user); // data.user now includes id + isHardcoded
       navigate("/dashboard");
     },
     [navigate],
