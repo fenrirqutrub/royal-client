@@ -7,7 +7,7 @@ export interface AuthUser {
   id: string; // ✅ added
   email: string;
   name: string;
-  role: "teacher" | "principal" | "admin";
+  role: "teacher" | "principal" | "admin" | "super-admin";
   slug: string;
   isHardcoded: boolean; // ✅ added
 }

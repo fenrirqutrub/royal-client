@@ -1,127 +1,141 @@
+// DailyLessonCard.tsx
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { FaCalendarAlt, FaBookOpen } from "react-icons/fa";
-import { HiOutlineAcademicCap } from "react-icons/hi";
+import { Copy, Check, Calendar, BookOpen, Folder } from "lucide-react";
 
-const DailyLessonCard = () => {
+import { COLORS, toBn } from "../../utility/shared";
+import DailyLessonModal from "./DailyLessonModal";
+
+// ─── Types ────────────────────────────────────────────────
+export interface DailyLessonItem {
+  _id: string;
+  subject: string;
+  teacher: string;
+  class: string;
+  mark: number;
+  chapterNumber: string;
+  topics: string;
+  images: { url: string; public_id: string }[];
+  date: string;
+  createdAt: string;
+  slug?: string;
+}
+
+interface DailyLessonCardProps {
+  lesson: DailyLessonItem;
+  index: number;
+}
+
+// ─── Component ────────────────────────────────────────────
+const DailyLessonCard = ({ lesson, index }: DailyLessonCardProps) => {
+  const [showModal, setShowModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const color = COLORS[index % COLORS.length];
+
+  const handleCopy = () => {
+    const text = `অধ্যায় নং = ${lesson.chapterNumber}\n${lesson.class} | ${lesson.subject}\n\n${lesson.topics}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2200);
+  };
+
   return (
-    <main className="flex items-center gap-5 flex-col md:flex-row ">
+    <>
       <motion.div
-        initial={{ opacity: 0, y: 50 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        whileHover={{ y: -8 }}
-        className="relative group w-full  mx-auto"
+        transition={{
+          delay: index * 0.07,
+          duration: 0.48,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        whileHover={{ y: -4, transition: { duration: 0.2 } }}
+        className="group overflow-hidden rounded-2xl bg-[var(--color-bg)] text-[var(--color-text)] shadow-md shadow-slate-200/50 dark:shadow-black/40 border border-[var(--color-active-border)]/60 hover:shadow-xl hover:border-[var(--color-active-border)]/90 transition-all duration-300 bangla"
+        style={{ fontFamily: "'Hind Siliguri', sans-serif" }}
       >
-        {/* gradient glow */}
-        <div className="absolute -inset-[1px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl blur opacity-40 group-hover:opacity-70 transition"></div>
+        {/* Top color accent bar */}
+        <div
+          className="h-1.5 w-full"
+          style={{
+            background: `linear-gradient(90deg, ${color.from}, ${color.to})`,
+          }}
+        />
 
-        <div className="relative backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/30 dark:border-neutral-700 rounded-2xl shadow-xl p-5 sm:p-7 space-y-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-200 dark:border-neutral-700 pb-4">
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-              <FaCalendarAlt className="text-blue-500" />
-              <span className="text-sm sm:text-base">05-03-2026</span>
+        <div className="p-5 space-y-4">
+          {/* Header row */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 space-y-1.5">
+              <h3 className="text-xl md:text-2xl font-bold leading-tight bangla tracking-tight text-[var(--color-text)]">
+                {lesson.subject}
+              </h3>
+              <div className="flex flex-wrap  items-center gap-x-4 gap-y-1.5 text-sm text-[var(--color-gray)]">
+                <div className="flex items-center gap-1.5">
+                  <BookOpen className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate ">{lesson.class}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <BookOpen className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate ">
+                    অধ্যায় {toBn(lesson.chapterNumber)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Folder className="h-4 w-4 shrink-0" />
+                  <span className="truncate ">{lesson.teacher || "—"}</span>
+                </div>
+                <div className="flex items-center gap-1.5 bangla">
+                  <Calendar className="h-4 w-4 shrink-0" />
+                  <span>{lesson.date}</span>
+                </div>
+              </div>
             </div>
 
-            {/* Class */}
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-gray-700 dark:text-gray-200">
-                Thursday
-              </span>
-            </div>
-
-            <span className="w-fit text-xs sm:text-sm font-semibold px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow">
-              Class 9
-            </span>
+            {/* Copy button */}
+            <button
+              onClick={handleCopy}
+              aria-label={copied ? "কপি সম্পন্ন" : "কপি করুন"}
+              className={`p-2.5 rounded-xl transition-all duration-200 ${
+                copied
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                  : "text-slate-500 hover:text-[var(--color-text)] hover:bg-black/5 dark:hover:bg-white/8"
+              }`}
+            >
+              {copied ? (
+                <Check className="h-5 w-5" />
+              ) : (
+                <Copy className="h-5 w-5" />
+              )}
+            </button>
           </div>
 
-          {/* Content */}
-          <div className="space-y-4">
-            {/* Subject */}
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/40">
-                <FaBookOpen className="text-green-600 text-lg" />
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">
-                Bangla 1st Paper
-              </h2>
-            </div>
-
-            {/* Topic */}
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/40">
-                <HiOutlineAcademicCap className="text-orange-600 text-lg" />
-              </div>
-
-              <p className="text-sm sm:text-base leading-relaxed text-gray-600 dark:text-gray-400">
-                Lorem ipsum dolor sit amet consectetur adipisicing elit. Numquam
-                corporis eos tenetur minus asperiores alias saepe adipisci esse
-                ipsam voluptas praesentium rerum tempore soluta dolorum ipsum
-                quaerat officia unde temporibus.
-              </p>
-            </div>
+          {/* Topics preview */}
+          <div className="relative bangla">
+            <p className="text-[0.94rem] leading-relaxed text-[var(--color-gray)] line-clamp-4">
+              {lesson.topics}
+            </p>
+            <button
+              onClick={() => setShowModal(true)}
+              className="absolute bottom-0 right-0 font-bold underline underline-offset-2 hover:opacity-75 transition-opacity duration-150 text-[0.94rem] leading-relaxed pl-1"
+              style={{
+                color: color.text,
+                background: "var(--color-bg)",
+              }}
+            >
+              ...বিস্তারিত
+            </button>
           </div>
         </div>
       </motion.div>
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        whileHover={{ y: -8 }}
-        className="relative group w-full mx-auto"
-      >
-        {/* gradient glow */}
-        <div className="absolute -inset-[1px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl blur opacity-40 group-hover:opacity-70 transition"></div>
 
-        <div className="relative backdrop-blur-xl bg-white/80 dark:bg-neutral-900/80 border border-white/30 dark:border-neutral-700 rounded-2xl shadow-xl p-5 sm:p-7 space-y-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-200 dark:border-neutral-700 pb-4">
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-              <FaCalendarAlt className="text-blue-500" />
-              <span className="text-sm sm:text-base">05-03-2026</span>
-            </div>
-
-            {/* Class */}
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-gray-700 dark:text-gray-200">
-                Thursday
-              </span>
-            </div>
-
-            <span className="w-fit text-xs sm:text-sm font-semibold px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow">
-              Class 9
-            </span>
-          </div>
-
-          {/* Content */}
-          <div className="space-y-4">
-            {/* Subject */}
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/40">
-                <FaBookOpen className="text-green-600 text-lg" />
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">
-                Bangla 1st Paper
-              </h2>
-            </div>
-
-            {/* Topic */}
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/40">
-                <HiOutlineAcademicCap className="text-orange-600 text-lg" />
-              </div>
-
-              <p className="text-sm sm:text-base leading-relaxed text-gray-600 dark:text-gray-400">
-                Lorem ipsum dolor sit amet consectetur adipisicing elit. Numquam
-                corporis eos tenetur minus asperiores alias saepe adipisci esse
-                ipsam voluptas praesentium rerum tempore soluta dolorum ipsum
-                quaerat officia unde temporibus.
-              </p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    </main>
+      {showModal && (
+        <DailyLessonModal
+          lesson={lesson}
+          color={color}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+    </>
   );
 };
 

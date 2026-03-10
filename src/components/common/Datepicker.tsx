@@ -44,6 +44,7 @@ const formatDisplay = (date: Date) =>
 interface DatePickerProps {
   value?: string; // stored value — Bengali formatted string
   onChange: (value: string) => void;
+  onDateChange?: (date: Date) => void; // ← add this
   label?: string;
   required?: boolean;
   placeholder?: string;
@@ -57,6 +58,7 @@ interface DatePickerProps {
 const DatePicker = ({
   value,
   onChange,
+  onDateChange, // ← add this
   label,
   required,
   placeholder = "তারিখ বেছে নিন",
@@ -89,8 +91,6 @@ const DatePicker = ({
       setSelected(null);
       return;
     }
-    // value is the Bengali display string — just keep selected in sync visually
-    // (no reverse-parse needed; we store Date internally)
   }, [value]);
 
   // ── Navigation ──────────────────────────────────────────
@@ -116,7 +116,7 @@ const DatePicker = ({
     ...Array(firstDay).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
-  // pad to complete last row
+
   while (cells.length % 7 !== 0) cells.push(null);
 
   const isDisabled = (day: number) => {
@@ -142,6 +142,7 @@ const DatePicker = ({
     const date = new Date(viewYear, viewMonth, day);
     setSelected(date);
     onChange(formatDisplay(date));
+    onDateChange?.(date);
     setOpen(false);
   };
 

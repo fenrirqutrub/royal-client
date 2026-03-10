@@ -18,6 +18,9 @@ import AddTeacher from "../pages/Admin/AddNewItem/AddTeacher";
 import Dashboard from "../pages/Admin/Dashboard/Dashboard";
 import Login from "../pages/Admin/Auth/Login";
 import Profile from "../pages/Admin/Dashboard/Profile";
+import AddDailyLesson from "../pages/Admin/AddNewItem/AddDailyLesson";
+import NoticeBoard from "../pages/Notice/NoticeBoard";
+import AddNotice from "../pages/Admin/AddNewItem/AddNotice";
 
 const Router = () => {
   return (
@@ -27,6 +30,7 @@ const Router = () => {
         <Route index element={<Home />} />
         <Route path="dailylesson" element={<DailyLesson />} />
         <Route path="weekly-exam" element={<WeeklyExam />} />
+        <Route path="notice" element={<NoticeBoard />} />
         <Route path="photography" element={<Photography />} />
         <Route path="*" element={<NotFound />} />
       </Route>
@@ -75,6 +79,24 @@ const Router = () => {
           element={
             <PrivateRoute allowedRoles={["admin", "principal"]}>
               <AddHero />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="add-notice"
+          element={
+            <PrivateRoute allowedRoles={["admin", "principal"]}>
+              <AddNotice />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="add-daily-lesson"
+          element={
+            <PrivateRoute
+              allowedRoles={["admin", "principal", "teacher", "super-admin"]}
+            >
+              <AddDailyLesson />
             </PrivateRoute>
           }
         />

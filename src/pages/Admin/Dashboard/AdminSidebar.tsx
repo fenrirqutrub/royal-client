@@ -42,7 +42,8 @@ const AdminSidebar = () => {
   const { user, logout } = useAuth();
 
   const role = user?.role ?? "teacher";
-  const isPrivileged = role === "admin" || role === "principal";
+  const isPrivileged =
+    role === "admin" || role === "principal" || role === "super-admin";
 
   useEffect(() => {
     if (window.innerWidth < 1024) setIsOpen(false);
@@ -67,11 +68,18 @@ const AdminSidebar = () => {
     name: "এখানে লিখুন",
     icon: Folder,
     subItems: [
+      // সবাই দেখতে পাবে
+      {
+        name: "আজকের পড়া লিখুন",
+        path: "/dashboard/add-daily-lesson",
+        icon: BookOpen,
+      },
       {
         name: "সাপ্তাহিক পরিক্ষার প্রশ্ন",
         path: "/dashboard/add-weekly-exam",
         icon: FilePlus,
       },
+
       ...(isPrivileged
         ? [
             {
@@ -80,6 +88,7 @@ const AdminSidebar = () => {
               icon: ImageIcon,
             },
             { name: "Hero", path: "/dashboard/add-hero", icon: Image },
+            { name: "Add Notice", path: "/dashboard/add-notice", icon: Image },
           ]
         : []),
     ],
@@ -102,6 +111,7 @@ const AdminSidebar = () => {
               path: "/dashboard/management/photos",
               icon: Camera,
             },
+
             {
               name: "Heroes",
               path: "/dashboard/management/heroes",

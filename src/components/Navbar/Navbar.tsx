@@ -10,6 +10,7 @@ const MENU_CONFIG: MenuItem[] = [
   { name: "home", path: "/" },
   { name: "daily lesson", path: "/dailylesson" },
   { name: "Weekly Exam", path: "/weekly-exam" },
+  { name: "Notice", path: "/notice" },
   { name: "photography", path: "/photography" },
 ];
 

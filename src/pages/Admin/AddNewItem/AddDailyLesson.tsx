@@ -1,0 +1,484 @@
+// AddDailyLesso.tsx
+import { useForm, type SubmitHandler, Controller } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  MdOutlineClass,
+  MdOutlineScience,
+  MdOutlineHistoryEdu,
+} from "react-icons/md";
+import { TbMath, TbLanguage } from "react-icons/tb";
+import { GiEarthAsiaOceania } from "react-icons/gi";
+import { FaBookOpen, FaFlask } from "react-icons/fa";
+import { PiChalkboardTeacherFill } from "react-icons/pi";
+import type { SelectOption } from "../../../components/common/SelectInput";
+import axiosPublic from "../../../hooks/axiosPublic";
+import { useAuth } from "../../../hooks/UseAuth";
+import SelectInput from "../../../components/common/SelectInput";
+
+// ─── Types ────────────────────────────────────────────────
+interface DailyLessonFormData {
+  subject: string;
+  teacher: string;
+  class: string;
+  mark: number;
+  chapterNumber: string;
+  topics: string;
+  slug?: string;
+}
+
+// ─── Static Data ──────────────────────────────────────────
+const CLASSES = ["৬ষ্ঠ", "৭ম", "৮ম", "৯ম", "১০ম"] as const;
+
+const CLASS_OPTIONS: SelectOption[] = CLASSES.map((c) => ({
+  value: `${c} শ্রেণি`,
+  label: `${c} শ্রেণি`,
+  icon: <MdOutlineClass />,
+}));
+
+const BASE_SUBJECTS: SelectOption[] = [
+  { value: "বাংলা ১ম ও ২য়", label: "বাংলা ১ম ও ২য়", icon: <TbLanguage /> },
+  { value: "ইংরেজি ১ম ও ২য়", label: "ইংরেজি ১ম ও ২য়", icon: <FaBookOpen /> },
+  { value: "গণিত", label: "গণিত", icon: <TbMath /> },
+  { value: "বিজ্ঞান", label: "বিজ্ঞান", icon: <MdOutlineScience /> },
+  {
+    value: "বাংলাদেশ ও বিশ্বপরিচয়",
+    label: "বাংলাদেশ ও বিশ্বপরিচয়",
+    icon: <MdOutlineScience />,
+  },
+  {
+    value: "তথ্য যোগাযোগ ও প্রযুক্তি",
+    label: "তথ্য যোগাযোগ ও প্রযুক্তি",
+    icon: <MdOutlineScience />,
+  },
+  { value: "ইসলাম শিক্ষা", label: "ইসলাম শিক্ষা", icon: <MdOutlineScience /> },
+  {
+    value: "হিন্দুধর্ম শিক্ষা",
+    label: "হিন্দুধর্ম শিক্ষা",
+    icon: <MdOutlineScience />,
+  },
+];
+
+const ADVANCED_SUBJECTS: SelectOption[] = [
+  { value: "পদার্থবিজ্ঞান", label: "পদার্থবিজ্ঞান", icon: <FaFlask /> },
+  { value: "রসায়ন", label: "রসায়ন", icon: <FaFlask /> },
+  { value: "জীববিজ্ঞান", label: "জীববিজ্ঞান", icon: <MdOutlineScience /> },
+  { value: "উচ্চতর গণিত", label: "উচ্চতর গণিত", icon: <MdOutlineScience /> },
+  { value: "ভূগোল", label: "ভূগোল", icon: <GiEarthAsiaOceania /> },
+  { value: "ইতিহাস", label: "ইতিহাস", icon: <MdOutlineHistoryEdu /> },
+  { value: "অর্থনীতি", label: "অর্থনীতি", icon: <MdOutlineHistoryEdu /> },
+  { value: "পৌরনীতি", label: "পৌরনীতি", icon: <MdOutlineHistoryEdu /> },
+  {
+    value: "হিসাব বিজ্ঞান",
+    label: "হিসাব বিজ্ঞান",
+    icon: <MdOutlineHistoryEdu />,
+  },
+  {
+    value: "ব্যবসায় উদ্যোগ",
+    label: "ব্যবসায় উদ্যোগ",
+    icon: <MdOutlineHistoryEdu />,
+  },
+  {
+    value: "ফিন্যান্স ও ব্যাংকিং",
+    label: "ফিন্যান্স ও ব্যাংকিং",
+    icon: <MdOutlineHistoryEdu />,
+  },
+];
+
+// All classes share same teachers; 9th & 10th get extra subjects
+const getSubjects = (cls: string) =>
+  cls.startsWith("৯ম") || cls.startsWith("১০ম")
+    ? [...BASE_SUBJECTS, ...ADVANCED_SUBJECTS]
+    : BASE_SUBJECTS;
+
+// ─── Styles ───────────────────────────────────────────────
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 18 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.07, duration: 0.38, ease: "easeOut" },
+  }),
+};
+
+const inputCls = (err: boolean) =>
+  `w-full px-4 py-3 rounded-xl border text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:border-transparent
+  bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400
+  ${err ? "border-rose-400 focus:ring-rose-400" : "border-gray-200 dark:border-gray-700 focus:ring-violet-500"}`;
+
+const labelCls =
+  "block text-xs font-semibold tracking-wide uppercase text-gray-500 dark:text-gray-400 mb-1.5";
+
+const ErrorMsg = ({ msg }: { msg?: string }) => (
+  <AnimatePresence>
+    {msg && (
+      <motion.p
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: "auto" }}
+        exit={{ opacity: 0, height: 0 }}
+        className="text-rose-500 text-xs mt-1"
+      >
+        {msg}
+      </motion.p>
+    )}
+  </AnimatePresence>
+);
+
+// ─── Component ────────────────────────────────────────────
+const AddDailyLesson = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  const [submitted, setSubmitted] = useState(false);
+
+  const qc = useQueryClient();
+
+  // ── Fetch all teachers (admin only) ───────────────────
+  const { data: teacherList = [] } = useQuery<{ name: string; slug: string }[]>(
+    {
+      queryKey: ["teachers-list"],
+      queryFn: async () => {
+        const res = await axiosPublic.get("/api/teachers");
+        const payload = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.data ?? []);
+        return payload.filter((t: { role: string }) => t.role !== "admin");
+      },
+      enabled: isAdmin,
+      staleTime: 5 * 60 * 1000,
+    },
+  );
+
+  const teacherOptions: SelectOption[] = teacherList.map((t) => ({
+    value: t.name,
+    label: t.name,
+    icon: <PiChalkboardTeacherFill />,
+  }));
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    watch,
+    setValue,
+    formState: { errors, isValid },
+  } = useForm<DailyLessonFormData>({
+    mode: "onChange",
+    defaultValues: {
+      subject: "",
+      teacher: "",
+      class: "",
+      mark: 0,
+      chapterNumber: "",
+      topics: "",
+    },
+  });
+
+  const selectedClass = watch("class");
+
+  // non-admin: auto-set teacher to their own name
+  useEffect(() => {
+    if (!isAdmin && user?.name) {
+      setValue("teacher", user.name, { shouldValidate: true });
+    }
+  }, [isAdmin, user?.name, setValue]);
+
+  const mutation = useMutation({
+    mutationFn: (fd: FormData) =>
+      axiosPublic.post("/api/daily-lesson", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }),
+    onSuccess: () => {
+      toast.success("প্রতিদিনের পড়া সফলভাবে যোগ হয়েছে!");
+      qc.invalidateQueries({ queryKey: ["daily-lesson"] });
+      reset();
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 2500);
+    },
+    onError: (err: Error & { response?: { data?: { message?: string } } }) =>
+      toast.error(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to create daily lesson",
+      ),
+  });
+
+  const onSubmit: SubmitHandler<DailyLessonFormData> = (data) => {
+    const fd = new FormData();
+    (Object.keys(data) as (keyof DailyLessonFormData)[]).forEach((k) => {
+      if (data[k] !== undefined) fd.append(k, String(data[k]));
+    });
+
+    // ← guarantee teacher name is always sent
+    if (!isAdmin && user?.name) fd.set("teacher", user.name);
+
+    if (user?.slug) fd.append("teacherSlug", user.slug);
+
+    mutation.mutate(fd);
+  };
+
+  const handleReset = () => {
+    reset();
+  };
+
+  return (
+    <div className="min-h-screen bg-[var(--color-bg)] flex items-start justify-center py-10">
+      <div className="w-full">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-1 h-8 rounded-full bg-gradient-to-b from-violet-500 to-fuchsia-500" />
+            <h1 className="text-2xl font-bold text-[var(--color-text)] tracking-tight">
+              আজকের পড়া যোগ করুন
+            </h1>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 ml-4 pl-3">
+            নিচের ফর্মটি পূরণ করুন। সকল <span className="text-rose-500">*</span>{" "}
+            চিহ্নিত ঘর আবশ্যিক।
+          </p>
+        </motion.div>
+
+        {/* Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 sm:p-8"
+        >
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Row 1: Class + Subject */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <motion.div
+                custom={0}
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+              >
+                <Controller
+                  name="class"
+                  control={control}
+                  rules={{ required: "শ্রেণি আবশ্যিক" }}
+                  render={({ field }) => (
+                    <SelectInput
+                      label="শ্রেণি"
+                      required
+                      placeholder="শ্রেণি বেছে নিন"
+                      options={CLASS_OPTIONS}
+                      value={field.value}
+                      onChange={(val) => {
+                        field.onChange(val);
+                        setValue("subject", "");
+                        setValue("teacher", "");
+                        if (isAdmin) setValue("teacher", "");
+                      }}
+                      error={errors.class?.message}
+                    />
+                  )}
+                />
+              </motion.div>
+              <motion.div
+                custom={1}
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+              >
+                <Controller
+                  name="subject"
+                  control={control}
+                  rules={{ required: "বিষয় আবশ্যিক" }}
+                  render={({ field }) => (
+                    <SelectInput
+                      label="বিষয়"
+                      required
+                      placeholder={
+                        selectedClass ? "বিষয় বেছে নিন" : "আগে শ্রেণি বেছে নিন"
+                      }
+                      options={getSubjects(selectedClass)}
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={!selectedClass}
+                      error={errors.subject?.message}
+                    />
+                  )}
+                />
+              </motion.div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Row 2: Teacher */}
+              <motion.div
+                custom={2}
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+              >
+                {isAdmin ? (
+                  // Admin: dynamic dropdown from API
+                  <Controller
+                    name="teacher"
+                    control={control}
+                    rules={{ required: "শিক্ষকের নাম আবশ্যিক" }}
+                    render={({ field }) => (
+                      <SelectInput
+                        label="শিক্ষকের নাম"
+                        required
+                        placeholder="শিক্ষক বেছে নিন"
+                        options={teacherOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        error={errors.teacher?.message}
+                      />
+                    )}
+                  />
+                ) : (
+                  // Teacher/Principal: read-only, auto-filled from session
+                  <div>
+                    <label className={labelCls}>
+                      শিক্ষকের নাম{" "}
+                      <span className="text-rose-500 normal-case tracking-normal">
+                        *
+                      </span>
+                    </label>
+                    <div
+                      className={`${inputCls(false)} flex items-center gap-2 bg-gray-50 dark:bg-gray-800/60 cursor-not-allowed`}
+                    >
+                      <PiChalkboardTeacherFill className="w-4 h-4 text-violet-500 shrink-0" />
+                      <span className="text-gray-700 dark:text-gray-200">
+                        {user?.name ?? "..."}
+                      </span>
+                      <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300 font-medium uppercase tracking-wide">
+                        {user?.role}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+
+              <motion.div
+                custom={3}
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+              >
+                <label className={labelCls}>
+                  অধ্যায়{" "}
+                  <span className="text-rose-500 normal-case tracking-normal">
+                    *
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="যেমন: 1"
+                  {...register("chapterNumber", {
+                    required: "পরীক্ষা নম্বর আবশ্যিক",
+                  })}
+                  className={inputCls(!!errors.chapterNumber)}
+                />
+                <ErrorMsg msg={errors.chapterNumber?.message} />
+              </motion.div>
+            </div>
+            {/* Row 4: Topics */}
+            <motion.div
+              custom={5}
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+            >
+              <label className={labelCls}>
+                বিষয়বস্তু / নির্দেশনা{" "}
+                <span className="text-rose-500 normal-case tracking-normal">
+                  *
+                </span>
+              </label>
+              <textarea
+                rows={5}
+                placeholder="পরীক্ষার বিষয়বস্তু লিখুন..."
+                {...register("topics", {
+                  required: "বিষয়বস্তু আবশ্যিক",
+                  minLength: { value: 20, message: "কমপক্ষে ২০ অক্ষর লিখুন" },
+                })}
+                className={`${inputCls(!!errors.topics)} resize-none leading-relaxed`}
+              />
+              <ErrorMsg msg={errors.topics?.message} />
+            </motion.div>
+
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-2" />
+
+            {/* Buttons */}
+            <motion.div
+              custom={7}
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+              className="flex flex-col sm:flex-row gap-3"
+            >
+              <button
+                type="submit"
+                disabled={!isValid || mutation.isPending}
+                className={`flex-1 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+                  isValid && !mutation.isPending
+                    ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white shadow-md shadow-violet-200 dark:shadow-violet-900/30 hover:shadow-lg hover:-translate-y-0.5"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
+                }`}
+              >
+                <AnimatePresence mode="wait">
+                  {mutation.isPending ? (
+                    <motion.span
+                      key="loading"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex items-center gap-2"
+                    >
+                      <Loader2 className="w-4 h-4 animate-spin" /> সংরক্ষণ
+                      হচ্ছে…
+                    </motion.span>
+                  ) : submitted ? (
+                    <motion.span
+                      key="done"
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      ✓ সফলভাবে যোগ হয়েছে
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="idle"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      পরীক্ষা যোগ করুন
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={mutation.isPending}
+                className="sm:w-32 py-3 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-all disabled:opacity-50"
+              >
+                রিসেট
+              </button>
+            </motion.div>
+          </form>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+
+export default AddDailyLesson;

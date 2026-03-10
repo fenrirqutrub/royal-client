@@ -6,14 +6,13 @@ import Loader from "../components/ui/Loader";
 
 interface PrivateRouteProps {
   children: ReactNode;
-  allowedRoles?: ("admin" | "principal" | "teacher")[];
+  allowedRoles?: ("admin" | "principal" | "teacher" | "super-admin")[];
 }
 
 const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  // ── 1. Still fetching /me — show loader, don't redirect yet ──────────────
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] ">
@@ -22,17 +21,14 @@ const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
     );
   }
 
-  // ── 2. Not authenticated → send to login, remember where they were ────────
   if (!user) {
     return <Navigate to="/admin-login" state={{ from: location }} replace />;
   }
 
-  // ── 3. Role restriction — if route requires specific roles ────────────────
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // ── 4. All good ───────────────────────────────────────────────────────────
   return <>{children}</>;
 };
 
