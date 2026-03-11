@@ -65,7 +65,7 @@ const NoticeModal = ({ noticeSlug, onClose }: NoticeModalProps) => {
           exit={{ opacity: 0, scale: 0.94, y: 20 }}
           transition={{ type: "spring", stiffness: 320, damping: 30 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-3xl flex flex-col rounded-2xl overflow-hidden border border-[var(--color-active-border)] bg-[var(--color-bg)] shadow-[0_25px_60px_var(--color-shadow-md)]"
+          className="w-full flex flex-col rounded-2xl overflow-hidden border border-[var(--color-active-border)] bg-[var(--color-bg)] shadow-[0_25px_60px_var(--color-shadow-md)]"
           style={{ height: "88vh" }}
         >
           {/* ── top bar ── */}
