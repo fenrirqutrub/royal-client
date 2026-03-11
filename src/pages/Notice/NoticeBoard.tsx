@@ -7,6 +7,7 @@ import NoticeModal, { type NoticeItem } from "./NoticeModal";
 import { EmptyState } from "../../components/common/Emptystate";
 import ErrorState from "../../components/ui/Errorstate";
 import Loader from "../../components/ui/Loader";
+import { toBn } from "../../utility/shared";
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleDateString("en-BD", {
@@ -25,71 +26,115 @@ const NoticeRow = ({
   index: number;
   onClick: () => void;
 }) => {
+  const [hovered, setHovered] = useState(false);
+
   return (
-    <motion.button
+    <motion.div
+      initial={{ opacity: 0, x: -24 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{
+        delay: index * 0.07,
+        duration: 0.45,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+    >
+      <motion.button
+        onClick={onClick}
+        onHoverStart={() => setHovered(true)}
+        onHoverEnd={() => setHovered(false)}
+        className="w-full text-left relative overflow-hidden"
+        style={{ outline: "none", background: "none", border: "none" }}
+        whileTap={{ scale: 0.99 }}
+      >
+        {/* Hover fill */}
+        <motion.div
+          initial={false}
+          animate={{
+            scaleX: hovered ? 1 : 0,
+            opacity: hovered ? 1 : 0,
+          }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundColor: "var(--color-active-bg)",
+            transformOrigin: "left",
+            borderRadius: "10px",
+          }}
+        />
+
+        <div
+          className="relative flex items-center gap-5 px-4 py-4 sm:py-5"
+          style={{ borderBottom: "1px solid var(--color-active-border)" }}
+        >
+          {/* Animated index number */}
+          <motion.span
+            animate={{
+              color: hovered ? "var(--color-text)" : "var(--color-gray)",
+              scale: hovered ? 1.15 : 1,
+            }}
+            transition={{ duration: 0.2 }}
+            className="shrink-0 w-7 text-sm bangla tabular-nums select-none font-bold"
+          >
+            {toBn(String(index + 1).padStart(2, "0"))}
+          </motion.span>
+
+          {/* Notice text */}
+          <motion.p
+            animate={{ x: hovered ? 4 : 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="flex-1 min-w-0 text-sm sm:text-[15px] leading-snug font-medium truncate"
+            style={{ color: "var(--color-text)" }}
+          >
+            {item.notice}
+          </motion.p>
+
+          {/* Date */}
+          <motion.span
+            animate={{ opacity: hovered ? 1 : 0.45 }}
+            transition={{ duration: 0.2 }}
+            className="shrink-0 hidden sm:block text-xs font-mono tabular-nums"
+            style={{ color: "var(--color-gray)" }}
+          >
+            {fmt(item.expiresAt)}
+          </motion.span>
+
+          {/* Arrow — slides in on hover */}
+          <motion.span
+            initial={false}
+            animate={{
+              opacity: hovered ? 1 : 0,
+              x: hovered ? 0 : -6,
+            }}
+            transition={{ duration: 0.2 }}
+            className="shrink-0 text-sm font-bold"
+            style={{ color: "var(--color-text)" }}
+          >
+            →
+          </motion.span>
+        </div>
+      </motion.button>
+    </motion.div>
+  );
+};
+
+// ── Animated counter ──────────────────────────────────────────────────────────
+const Counter = ({ value }: { value: number }) => {
+  return (
+    <motion.span
+      key={value}
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.3 }}
-      onClick={onClick}
-      className="w-full text-left group"
+      transition={{ duration: 0.4, delay: 0.5 }}
     >
-      <div
-        className="grid items-center gap-4 px-5 py-4 border-b transition-colors duration-150"
-        style={{
-          borderColor: "var(--color-active-border)",
-          gridTemplateColumns: "2rem 1fr auto",
-          backgroundColor: "transparent",
-        }}
-        onMouseEnter={(e) =>
-          ((e.currentTarget as HTMLDivElement).style.backgroundColor =
-            "var(--color-active-bg)")
-        }
-        onMouseLeave={(e) =>
-          ((e.currentTarget as HTMLDivElement).style.backgroundColor =
-            "transparent")
-        }
-      >
-        {/* SL */}
-        <span
-          className="text-xs tabular-nums font-mono text-right select-none"
-          style={{ color: "var(--color-active-border)" }}
-        >
-          {String(index + 1).padStart(2, "0")}
-        </span>
-
-        {/* Notice text */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="min-w-0">
-            <p
-              className="text-sm truncate leading-snug transition-colors"
-              style={{ color: "var(--color-text)" }}
-            >
-              {item.notice}
-            </p>
-            <p
-              className="text-[10px] mt-0.5 font-mono tracking-wider"
-              style={{ color: "var(--color-gray)" }}
-            >
-              {item.noticeSlug}
-            </p>
-          </div>
-        </div>
-
-        {/* Date */}
-        <div className="text-right shrink-0 hidden sm:block">
-          <span className="text-[11px] font-mono tabular-nums">
-            {fmt(item.expiresAt)}
-          </span>
-        </div>
-      </div>
-    </motion.button>
+      {toBn(value)}
+    </motion.span>
   );
 };
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const NoticeBoard = () => {
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const [selectedNotice, setSelectedNotice] = useState<NoticeItem | null>(null);
 
   const {
     data: notices,
@@ -104,45 +149,62 @@ const NoticeBoard = () => {
   });
 
   return (
-    <div className="min-h-screen px-4 py-10 sm:py-14 bg-[var(--color-bg)] text-[var(--color-text)]">
+    <div
+      className="min-h-screen px-4 sm:px-8 py-12 sm:py-20"
+      style={{ backgroundColor: "var(--color-bg)", color: "var(--color-text)" }}
+    >
       <div className="w-full mx-auto">
         {/* ── Header ── */}
         <motion.div
-          initial={{ opacity: 0, y: -12 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="mb-8"
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-8 rounded-2xl px-6 py-6 sm:px-8 sm:py-7"
+          style={{
+            backgroundColor: "var(--color-active-bg)",
+            border: "1px solid var(--color-active-border)",
+          }}
         >
-          {/* Title row */}
-          <div className="flex items-end justify-between gap-4 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-none">
-              Notice Board
-            </h1>
-          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <motion.h1
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.45 }}
+                className="text-3xl sm:text-4xl font-bold  leading-none text-[var(--color-text)] bangla tracking-wider"
+              >
+                নোটিশ বোর্ড
+              </motion.h1>
+            </div>
 
-          {/* Divider */}
-          <div className="mt-4 h-px bg-[var(--color-active-border)] " />
+            {/* Count */}
+            {!isLoading && !isError && notices?.length ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{
+                  delay: 0.4,
+                  duration: 0.4,
+                  type: "spring",
+                  bounce: 0.4,
+                }}
+                className="flex flex-col items-center justify-center rounded-xl px-4 py-3"
+                style={{
+                  border: "1px solid var(--color-active-border)",
+                  backgroundColor: "var(--color-bg)",
+                  minWidth: "56px",
+                }}
+              >
+                <span
+                  className="text-2xl sm:text-3xl font-bold font-mono tabular-nums leading-none"
+                  style={{ color: "var(--color-text)" }}
+                >
+                  <Counter value={notices.length} />
+                </span>
+              </motion.div>
+            ) : null}
+          </div>
         </motion.div>
-
-        {/* ── Table header ── */}
-        {!isLoading && !isError && notices?.length ? (
-          <div
-            className="grid items-center gap-4 px-5 pb-2 mb-1"
-            style={{
-              gridTemplateColumns: "2rem 1fr auto",
-            }}
-          >
-            <span className="text-sm tracking-[0.2em] uppercase font-mono text-right text-[var(--color-active-border)] ">
-              SL
-            </span>
-            <span className="text-sm tracking-[0.2em] uppercase font-mono text-center text-[var(--color-active-border)] ">
-              Notice
-            </span>
-            <span className="text-sm tracking-[0.2em] uppercase font-mono hidden sm:block text-right text-[var(--color-active-border)] ">
-              Date
-            </span>
-          </div>
-        ) : null}
 
         {/* ── Content ── */}
         {isLoading ? (
@@ -163,48 +225,55 @@ const NoticeBoard = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="rounded-xl overflow-hidden border"
-            style={{
-              borderColor: "var(--color-active-border)",
-              backgroundColor: "var(--color-bg)",
-              boxShadow: "0 8px 32px var(--color-shadow)",
-            }}
+            transition={{ duration: 0.3, delay: 0.3 }}
           >
+            {/* Column header */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.3 }}
+              className="flex items-center gap-5 px-4 py-3 rounded-lg bg-[var(--color-active-bg)] border border-[var(--color-active-border)] mb-4 text-xl bangla"
+            >
+              <span
+                className="w-7 shrink-0 text-lg   tracking-widest"
+                style={{ color: "var(--color-gray)", opacity: 0.5 }}
+              >
+                নং
+              </span>
+              <span
+                className="flex-1 text-center   tracking-widest"
+                style={{ color: "var(--color-gray)", opacity: 0.5 }}
+              >
+                নোটিশ
+              </span>
+              <span
+                className="hidden sm:block shrink-0   tracking-widest"
+                style={{ color: "var(--color-gray)", opacity: 0.5 }}
+              >
+                মেয়াদ
+              </span>
+              <span className="w-5 shrink-0" />
+            </motion.div>
+
+            {/* Rows */}
             <AnimatePresence initial={false}>
               {notices.map((item, i) => (
                 <NoticeRow
                   key={item._id}
                   item={item}
                   index={i}
-                  onClick={() => setSelectedSlug(item.noticeSlug)}
+                  onClick={() => setSelectedNotice(item)}
                 />
               ))}
             </AnimatePresence>
-
-            {/* Footer */}
-            <div
-              className="px-5 py-2.5 flex items-center justify-between"
-              style={{
-                backgroundColor: "var(--color-active-bg)",
-                borderTop: "1px solid var(--color-active-border)",
-              }}
-            >
-              <span
-                className="text-[10px] font-mono"
-                style={{ color: "var(--color-active-border)" }}
-              >
-                {notices.length} total
-              </span>
-            </div>
           </motion.div>
         )}
       </div>
 
       {/* ── Modal ── */}
       <NoticeModal
-        noticeSlug={selectedSlug}
-        onClose={() => setSelectedSlug(null)}
+        notice={selectedNotice}
+        onClose={() => setSelectedNotice(null)}
       />
     </div>
   );

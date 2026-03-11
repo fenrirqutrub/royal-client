@@ -51,6 +51,10 @@
   display: none;
 }
 
+.hide-scroll::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
 /* ── Light (default) ── */
 :root {
   /* App */
