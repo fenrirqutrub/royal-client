@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, Check, BookOpen } from "lucide-react";
-import { toBn, type Color } from "../../utility/shared";
+import { X, Copy, Check } from "lucide-react";
+import { toBn, type ColorConfig as Color } from "../../utility/shared";
 import type { DailyLessonItem } from "./DailyLessonCard";
 import book from "../../assets/images/book-cover.png";
 

@@ -20,7 +20,7 @@ import {
 
 import type { LucideIcon } from "lucide-react";
 import ThemeToggle from "../../../components/Navbar/ThemeToggle";
-import { useAuth } from "../../../hooks/UseAuth";
+import { useAuth } from "../../../context/AuthContext";
 
 interface SubNavItem {
   name: string;

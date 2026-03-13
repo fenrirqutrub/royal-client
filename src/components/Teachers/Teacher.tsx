@@ -63,7 +63,7 @@ const Teacher = () => {
         >
           শিক্ষক মন্ডলী
         </h2>
-        <p className="text-lg mt-2 bangla text-[var(--color-gray)] ">
+        <p className="text-xl md:text-2xl mt-2 bangla text-[var(--color-gray)] ">
           আমাদের অভিজ্ঞ ও দক্ষ শিক্ষকবৃন্দ
         </p>
       </motion.div>

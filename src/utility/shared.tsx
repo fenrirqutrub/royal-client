@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 export interface ExamImage {
   url: string;
+  imageUrl?: string;
   publicId?: string;
 }
 
@@ -55,7 +56,7 @@ export const AnimatedSlide = ({
   isActive,
   className = "",
 }: AnimatedSlideProps) => {
-  const src = typeof img === "string" ? img : img.url;
+  const src = typeof img === "string" ? img : (img.url ?? img.imageUrl ?? "");
 
   return (
     <motion.img

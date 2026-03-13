@@ -3,7 +3,7 @@ import { IoCaretForwardOutline } from "react-icons/io5";
 
 const Principal = () => {
   return (
-    <section className="bangla relative pt-12 px-3 md:px-0">
+    <section className="bangla relative pt-12 ">
       <div
         className="absolute inset-0 opacity-[0.03] pointer-events-none"
         style={{

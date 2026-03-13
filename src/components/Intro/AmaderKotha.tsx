@@ -1,6 +1,6 @@
 const AmaderKotha = () => {
   return (
-    <section className="bg-[var(--color-bg)] text-[var(--color-text)]  px-3 bangla">
+    <section className="bg-[var(--color-bg)] text-[var(--color-text)]  bangla">
       <div className="w-full mx-auto text-left">
         <h2 className="text-3xl md:text-4xl font-bold text-purple-700 mb-6">
           আমাদের কথাঃ

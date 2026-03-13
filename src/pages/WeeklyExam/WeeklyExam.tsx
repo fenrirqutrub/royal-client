@@ -52,6 +52,11 @@ const formatCreatedAt = (iso: string): string => {
   return `${BN_DAYS[d.getDay()]}, ${toBn(d.getDate())} ${BN_MONTHS[d.getMonth()]} ${toBn(d.getFullYear())}`;
 };
 
+const normalizeImages = (
+  images: { imageUrl: string; publicId: string }[],
+): { url: string; publicId: string }[] =>
+  images.map(({ imageUrl, publicId }) => ({ url: imageUrl, publicId }));
+
 const CLASS_ORDER: Record<string, number> = {
   "৬ষ্ঠ শ্রেণি": 1,
   "৭ম শ্রেণি": 2,
@@ -162,7 +167,7 @@ const ClassGroupTitle = ({
 
 // ─── Marquee items ────────────────────────────────────────
 const MARQUEE_ITEMS = [
-  "সাপ্তাহিক পরীক্ষা:",
+  "সাপ্তাহিক পরীক্ষা:-",
   "লিখিত: ৭০",
   "বহুনির্বাচনী: ৩০",
   "পূর্ণমান: ১০০",
@@ -247,7 +252,7 @@ const WeeklyExam = () => {
     <div>
       {/* Page title */}
       <header className="text-center bangla mb-4">
-        <h1 className="text-xl md:text-5xl font-bold text-[var(--color-text)]">
+        <h1 className="text-3xl md:text-5xl font-bold text-[var(--color-text)]">
           সাপ্তাহিক পরীক্ষার ধারণা
         </h1>
         <p className="text-xl md:text-3xl font-bold text-[var(--color-gray)] my-3">
@@ -256,20 +261,20 @@ const WeeklyExam = () => {
       </header>
 
       {/* ── Marquee banner ── */}
-      <div className="flex items-stretch rounded overflow-hidden bangla">
+      <div className="flex items-stretch rounded overflow-hidden bangla mt-10">
         {/* Solid "বিজ্ঞপ্তি" badge */}
         <div className="shrink-0 flex items-center justify-center px-5 bg-[var(--color-text)]">
-          <span className="text-[var(--color-bg)] font-black text-base md:text-lg tracking-wide whitespace-nowrap">
+          <span className="text-[var(--color-bg)] font-black text-lg md:text-xl tracking-wide whitespace-nowrap">
             বিজ্ঞপ্তি
           </span>
         </div>
 
         {/* Soft scrolling area */}
-        <div className="flex-1 bg-violet-50 dark:bg-violet-950/30 overflow-hidden">
+        <div className="flex-1 bg-[var(--color-active-bg)] overflow-hidden">
           <Marquee speed={40} gradient={false} pauseOnHover>
             {MARQUEE_ITEMS.map((item, i) => (
               <span key={i} className="inline-flex items-center">
-                <span className="inline-block text-[var(--color-text)] font-bold text-lg md:text-xl py-3 mx-10">
+                <span className="inline-block text-[var(--color-text)] text-lg md:text-xl font-medium py-2 mx-10">
                   {item}
                 </span>
                 <span className="text-2xl font-extrabold  ">•</span>
@@ -301,7 +306,11 @@ const WeeklyExam = () => {
                   {exams.map((exam, i) => (
                     <WeeklyExamCard
                       key={exam._id}
-                      exam={{ ...exam, date: formatCreatedAt(exam.createdAt) }}
+                      exam={{
+                        ...exam,
+                        date: formatCreatedAt(exam.createdAt),
+                        images: normalizeImages(exam.images),
+                      }}
                       index={i}
                     />
                   ))}

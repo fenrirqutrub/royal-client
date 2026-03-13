@@ -102,7 +102,7 @@ const Contact = () => (
     `}</style>
     <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full bg-yellow-800/5 blur-3xl pointer-events-none" />
 
-    <div className="relative z-10 w-full px-3 md:px-0 mx-auto pt-14 pb-10">
+    <div className="relative z-10 w-full px-3 md:px-0 mx-auto pt-14 pb-5">
       <FadeUp>
         <div className="mb-12 flex flex-col items-center sm:flex-row sm:items-end sm:justify-between gap-4">
           {/* Left: Academy name — center on mobile, left on desktop */}
@@ -183,24 +183,25 @@ const Contact = () => (
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7 }}
-        className="mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3"
-        style={{ borderTop: "1px solid var(--color-active-border)" }}
+        className="mt-12  pt-6  border-t border-[var(--color-active-border)] "
       >
-        <p className="text-base" style={{ color: "var(--color-gray)" }}>
-          &copy; ২০২৫ সর্বস্বত্ব সংরক্ষিত —{" "}
-          <Link to="/admin-login" className="font-semibold transition-colors">
-            রয়েল একাডেমি
-          </Link>
-        </p>
-        <p className="text-base" style={{ color: "var(--color-gray)" }}>
-          Developed by{" "}
-          <span
-            className="font-extrabold pacifico"
-            style={{ color: "var(--color-gray)" }}
-          >
-            Masud Ibn Belat
-          </span>
-        </p>
+        <div className="md:mx-16 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-base text-[var(--color-gray)]">
+            &copy; ২০২৪ সর্বস্বত্ব সংরক্ষিত —{" "}
+            <Link to="/admin-login" className="font-semibold transition-colors">
+              রয়েল একাডেমি
+            </Link>
+          </p>
+          <p className="text-base text-[var(--color-gray)]">
+            Developed by{" "}
+            <Link
+              to="https://masudibnbelat.vercel.app"
+              className="font-extrabold pacifico text-[var(--color-gray)] tracking-[5px] "
+            >
+              MiB
+            </Link>
+          </p>
+        </div>
       </motion.div>
     </div>
   </footer>

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import axiosPublic from "../../../hooks/axiosPublic";
 import Loader from "../../../components/ui/Loader";
-import { useAuth } from "../../../hooks/UseAuth";
+import { useAuth } from "../../../context/AuthContext";
 
 /* ─── helpers ─────────────────────────────────────────────────────────── */
 const safe = (d: unknown) => (Array.isArray(d) ? d : []);

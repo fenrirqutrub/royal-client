@@ -3,7 +3,7 @@ import { IoCaretForwardOutline } from "react-icons/io5";
 
 const VicePrincipal = () => {
   return (
-    <section className="bangla py-12 px-6 md:px-16">
+    <section className="bangla py-12 ">
       <div className="text-center md:text-right mb-10">
         <h2 className="text-4xl md:text-5xl font-bold text-[var(--color-text)]">
           উপাধ্যক্ষের বাণী

@@ -1,11 +1,11 @@
 // src/pages/Admin/Auth/Login.tsx
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Lock, Mail, Eye, EyeOff } from "lucide-react";
-import { Link, useLocation } from "react-router";
+import { Link } from "react-router";
 import toast from "react-hot-toast";
 import { useTheme } from "../../../context/ThemeProvider";
-import { useAuth } from "../../../hooks/UseAuth";
+import { useAuth } from "../../../context/AuthContext";
 
 interface LoginForm {
   email: string;
@@ -14,8 +14,8 @@ interface LoginForm {
 
 const Login = () => {
   const { theme } = useTheme();
-  const { isAuthenticated, login } = useAuth();
-  const location = useLocation();
+  const { login } = useAuth();
+
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -24,18 +24,8 @@ const Login = () => {
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>();
 
-  // already logged in → redirect to where they came from or dashboard
-  useEffect(() => {
-    if (isAuthenticated) {
-      const from = (location.state as any)?.from?.pathname ?? "/dashboard";
-      window.location.replace(from);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
-
   const onSubmit = async (data: LoginForm) => {
     try {
-      // useAuth.login() calls /api/auth/login and sets cookie
       await login(data.email, data.password);
       toast.success("Welcome back!");
     } catch (err: any) {

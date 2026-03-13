@@ -56,7 +56,7 @@ const Notice = () => {
       {/* Marquee */}
       <Marquee direction="left" speed={50} gradient={false} pauseOnHover={true}>
         <span
-          className="text-xl md:text-2xl font-medium mx-8"
+          className="text-xl md:text-2xl font-medium "
           style={{ color: "var(--color-text)" }}
         >
           {displayText}

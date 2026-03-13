@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import axiosPublic from "../../../hooks/axiosPublic";
-import { useAuth } from "../../../hooks/UseAuth";
+import { useAuth } from "../../../context/AuthContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role = "teacher" | "principal" | "admin";

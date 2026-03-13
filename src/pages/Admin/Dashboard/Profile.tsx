@@ -14,10 +14,11 @@ import {
   ShieldCheck,
   AlertCircle,
   Loader2,
+  GraduationCap,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import axiosPublic from "../../../hooks/axiosPublic";
-import { useAuth } from "../../../hooks/UseAuth";
+import { useAuth } from "../../../context/AuthContext";
 
 /* ─── role config ─────────────────────────────────────────────────────── */
 const ROLE_COLOR: Record<string, string> = {
@@ -176,9 +177,11 @@ const Profile = () => {
   };
 
   /* ── missing count ── */
-  const missingFields = [profile?.phone, profile?.address].filter(
-    (v) => !v,
-  ).length;
+  const missingFields = [
+    profile?.phone,
+    profile?.address,
+    profile?.qualification,
+  ].filter((v) => !v).length;
 
   if (isLoading)
     return (
@@ -374,7 +377,7 @@ const Profile = () => {
             icon={<Mail className="w-4 h-4 text-gray-500" />}
             label="Email"
             value={profile?.email ?? user?.email}
-            editing={false} // email is read-only here
+            editing={false}
             name="email"
             onChange={handleChange}
           />
@@ -397,6 +400,15 @@ const Profile = () => {
             placeholder="Your address"
             onChange={handleChange}
             multiline
+          />
+          <Field
+            icon={<GraduationCap className="w-4 h-4 text-gray-500" />}
+            label="Qualification"
+            value={profile?.qualification}
+            editing={editing}
+            name="qualification"
+            placeholder="e.g. B.Ed, M.Sc in Mathematics"
+            onChange={handleChange}
           />
         </motion.div>
       </main>

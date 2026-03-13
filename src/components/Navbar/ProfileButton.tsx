@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { FaUserAlt } from "react-icons/fa";
 import ThemeToggle from "./ThemeToggle";
-import { useAuth } from "../../hooks/UseAuth";
+import { useAuth } from "../../context/AuthContext";
 
 interface ProfileButtonProps {
   onLogout?: () => void;

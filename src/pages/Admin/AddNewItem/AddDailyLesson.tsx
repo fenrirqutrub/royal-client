@@ -16,8 +16,9 @@ import { FaBookOpen, FaFlask } from "react-icons/fa";
 import { PiChalkboardTeacherFill } from "react-icons/pi";
 import type { SelectOption } from "../../../components/common/SelectInput";
 import axiosPublic from "../../../hooks/axiosPublic";
-import { useAuth } from "../../../hooks/UseAuth";
+
 import SelectInput from "../../../components/common/SelectInput";
+import { useAuth } from "../../../context/AuthContext";
 
 // ─── Types ────────────────────────────────────────────────
 interface DailyLessonFormData {

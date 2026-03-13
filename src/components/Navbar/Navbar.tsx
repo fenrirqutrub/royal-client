@@ -3,6 +3,7 @@ import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router";
 import ProfileButton from "./ProfileButton";
+import logo from "../../assets/logo 2.png";
 
 type MenuItem = { readonly name: string; readonly path: string };
 
@@ -60,30 +61,24 @@ const DRAWER_STYLE: React.CSSProperties = {
 };
 
 const BACKDROP_STYLE: React.CSSProperties = { willChange: "opacity" };
-
 const HAMBURGER_STYLE: React.CSSProperties = {
   backgroundColor: "var(--color-active-bg)",
   color: "var(--color-text)",
 };
-
 const ACTIVE_TAB_STYLE: React.CSSProperties = {
   backgroundColor: "var(--color-active-bg)",
   borderColor: "var(--color-active-border)",
 };
-
 const MOBILE_ACTIVE_STYLE: React.CSSProperties = {
   backgroundColor: "var(--color-active-bg)",
 };
-
 const HEADER_BORDER_STYLE: React.CSSProperties = {
   borderColor: "var(--color-active-border)",
 };
-
 const CLOSE_BTN_STYLE: React.CSSProperties = {
   backgroundColor: "var(--color-active-bg)",
   color: "var(--color-text)",
 };
-
 const ICON_SPAN_STYLE: React.CSSProperties = {
   willChange: "transform, opacity",
 };
@@ -112,7 +107,6 @@ const NavItem = memo<NavItemProps>(({ item, isActive, onClick }) => {
       >
         {item.name}
       </button>
-
       {isActive && (
         <motion.div
           layoutId="desktopActiveTab"
@@ -253,36 +247,18 @@ const Navbar = memo(() => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between">
-            {/* ── Logo ── */}
+            {/* ── Logo image ── */}
             <button
-              className="relative text-2xl md:text-3xl pacifico leading-none cursor-pointer outline-none select-none"
+              className="cursor-pointer outline-none select-none"
               aria-label="Go home"
               onClick={handleLogo}
-              style={{ color: "var(--color-text)" }}
             >
-              <span className="hidden md:inline-block">Royal Academy</span>
-              <span
-                className="md:hidden block relative"
-                style={{ lineHeight: 1 }}
-              >
-                {(
-                  [
-                    { x: 0.6, y: 0.6 },
-                    { x: -0.6, y: -0.6 },
-                    { x: 0, y: 0.9 },
-                  ] as const
-                ).map((o, i) => (
-                  <span
-                    key={i}
-                    aria-hidden
-                    className="absolute inset-0"
-                    style={{ transform: `translate(${o.x}px,${o.y}px)` }}
-                  >
-                    MiB
-                  </span>
-                ))}
-                <span className="relative z-10">MiB</span>
-              </span>
+              <img
+                src={logo}
+                alt="Royal Academy"
+                className="h-10 md:h-12 w-auto object-contain"
+                draggable={false}
+              />
             </button>
 
             {/* ── Desktop nav links ── */}
@@ -299,10 +275,7 @@ const Navbar = memo(() => {
 
             {/* ── Right side ── */}
             <div className="flex items-center space-x-2">
-              {/* ProfileButton — visible on both desktop & mobile */}
               <ProfileButton size={35} />
-
-              {/* Hamburger — mobile only */}
               <button
                 onClick={toggleMobileMenu}
                 className="md:hidden p-2.5 rounded-lg z-[60] relative outline-none"
@@ -363,12 +336,13 @@ const Navbar = memo(() => {
                   className="flex items-center justify-between p-6 border-b"
                   style={HEADER_BORDER_STYLE}
                 >
-                  <h2
-                    className="text-2xl font-bold pacifico"
-                    style={{ color: "var(--color-text)" }}
-                  >
-                    MiB
-                  </h2>
+                  {/* Logo in drawer header */}
+                  <img
+                    src={logo}
+                    alt="Royal Academy"
+                    className="h-9 w-auto object-contain"
+                    draggable={false}
+                  />
                   <motion.button
                     onClick={closeMobileMenu}
                     className="p-2 rounded-full outline-none"
@@ -412,5 +386,4 @@ const Navbar = memo(() => {
 });
 
 Navbar.displayName = "Navbar";
-
 export default Navbar;

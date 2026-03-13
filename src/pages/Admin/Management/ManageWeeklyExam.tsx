@@ -27,7 +27,7 @@ import { FaBookOpen, FaFlask } from "react-icons/fa";
 import axiosPublic from "../../../hooks/axiosPublic";
 import SelectInput from "../../../components/common/SelectInput";
 import type { SelectOption } from "../../../components/common/SelectInput";
-import { useAuth } from "../../../hooks/UseAuth";
+import { useAuth } from "../../../context/AuthContext";
 
 // ─── Types ────────────────────────────────────────────────
 interface WeeklyExam {
