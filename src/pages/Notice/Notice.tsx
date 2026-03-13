@@ -2,7 +2,7 @@
 import Marquee from "react-fast-marquee";
 import { useQuery } from "@tanstack/react-query";
 import axiosPublic from "../../hooks/axiosPublic";
-import { Link } from "react-router";
+// import { Link } from "react-router";
 
 // ── Default notice shown when no active DB notice exists ──────────────────────
 const DEFAULT_NOTICE =
@@ -64,7 +64,7 @@ const Notice = () => {
       </Marquee>
 
       {/* Label — right */}
-      <Link to="/notice">
+      {/* <Link to="/notice">
         <div
           className="shrink-0 px-4 py-2 font-bold text-xl md:text-2xl tracking-wide z-10 transition-opacity duration-150 hover:opacity-80"
           style={{
@@ -74,7 +74,7 @@ const Notice = () => {
         >
           বিস্তারিত
         </div>
-      </Link>
+      </Link> */}
     </div>
   );
 };

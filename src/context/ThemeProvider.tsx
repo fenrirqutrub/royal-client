@@ -75,19 +75,26 @@ const readAnimColors = (): AnimColors => {
   };
 };
 
+// const getInitialTheme = (): Theme => {
+//   try {
+//     console.log(THEME_STORAGE_KEY);
+//     localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+//     // const saved = localStorage.getItem(THEME_STORAGE_KEY);
+//     // if (saved === "light" || saved === "dark") return saved;
+//   } catch (error) {
+//     /* blocked */
+//     console.error("theme not chngebanding", error);
+//   }
+//   if (typeof window !== "undefined" && window.matchMedia) {
+//     return window.matchMedia("(prefers-color-scheme: dark)").matches
+//       ? "dark"
+//       : "light";
+//   }
+//   return "light";
+// };
+
 const getInitialTheme = (): Theme => {
-  try {
-    const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    if (saved === "light" || saved === "dark") return saved;
-  } catch {
-    /* blocked */
-  }
-  if (typeof window !== "undefined" && window.matchMedia) {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
-  return "dark";
+  return "light";
 };
 
 /* ─── Context ────────────────────────────────────────────────────────────── */

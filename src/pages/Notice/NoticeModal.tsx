@@ -1,9 +1,10 @@
 // NoticeModal.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, Printer, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import axiosPublic from "../../hooks/axiosPublic";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export interface NoticeItem {
   _id: string;
@@ -27,25 +28,115 @@ interface NoticeModalProps {
   onClose: () => void;
 }
 
+// ── PDF Viewer (PDF.js canvas renderer) ──────────────────────────────────────
+const PdfViewer = ({ url }: { url: string }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const render = async () => {
+      setStatus("loading");
+      try {
+        // Load PDF.js from CDN
+        const pdfjsLib = await import(
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs"
+        );
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
+
+        // Fetch PDF as arraybuffer via axiosPublic (carries auth headers)
+        const res = await axiosPublic.get(url.replace(API_URL, ""), {
+          responseType: "arraybuffer",
+        });
+
+        if (cancelled) return;
+
+        const pdf = await pdfjsLib.getDocument({ data: res.data }).promise;
+
+        if (!containerRef.current || cancelled) return;
+        containerRef.current.innerHTML = "";
+
+        // Render every page
+        for (let i = 1; i <= pdf.numPages; i++) {
+          if (cancelled) break;
+          const page = await pdf.getPage(i);
+          const containerWidth = containerRef.current?.clientWidth || 360;
+          const viewport = page.getViewport({ scale: 1 });
+          const scale = containerWidth / viewport.width;
+          const scaled = page.getViewport({ scale });
+
+          const canvas = document.createElement("canvas");
+          canvas.width = scaled.width;
+          canvas.height = scaled.height;
+          canvas.style.width = "100%";
+          canvas.style.display = "block";
+          canvas.style.marginBottom = "4px";
+
+          containerRef.current?.appendChild(canvas);
+
+          await page.render({
+            canvasContext: canvas.getContext("2d")!,
+            viewport: scaled,
+          }).promise;
+        }
+
+        if (!cancelled) setStatus("done");
+      } catch (e) {
+        if (!cancelled) setStatus("error");
+        console.error("PDF render error:", e);
+      }
+    };
+
+    render();
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  return (
+    <div className="w-full">
+      {status === "loading" && (
+        <div
+          className="flex items-center justify-center py-16 text-sm"
+          style={{ color: "var(--color-gray)" }}
+        >
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            <span>Loading PDF…</span>
+          </div>
+        </div>
+      )}
+      {status === "error" && (
+        <div
+          className="flex items-center justify-center py-16 text-sm"
+          style={{ color: "var(--color-gray)" }}
+        >
+          Failed to load PDF.
+        </div>
+      )}
+      <div ref={containerRef} className="w-full" />
+    </div>
+  );
+};
+
+// ── Main Modal ────────────────────────────────────────────────────────────────
 const NoticeModal = ({ notice, onClose }: NoticeModalProps) => {
   if (!notice) return null;
 
   const pdfUrl = `${API_URL}/api/notices/${notice.noticeSlug}/pdf`;
   const expired = isExpired(notice.expiresAt);
 
-  // Print — open PDF in new tab
-  const handlePrint = () => {
-    window.open(pdfUrl, "_blank");
-  };
+  const handlePrint = () => window.open(pdfUrl, "_blank");
 
-  // Download — fetch blob via axiosPublic and trigger save
   const handleDownload = async () => {
     try {
       const res = await axiosPublic.get(
         `/api/notices/${notice.noticeSlug}/pdf`,
-        {
-          responseType: "blob",
-        },
+        { responseType: "blob" },
       );
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
@@ -91,8 +182,8 @@ const NoticeModal = ({ notice, onClose }: NoticeModalProps) => {
             border: "1px solid var(--color-active-border)",
             backgroundColor: "var(--color-bg)",
             boxShadow: "0 -8px 60px var(--color-shadow)",
-            scrollbarWidth: "none", // Firefox
-            msOverflowStyle: "none", // IE/Edge
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
           }}
         >
           {/* ── Drag handle (mobile) ── */}
@@ -159,12 +250,19 @@ const NoticeModal = ({ notice, onClose }: NoticeModalProps) => {
             </div>
 
             {/* Row 2: notice text */}
-            <p
-              className="text-sm sm:text-[15px] leading-relaxed font-medium line-clamp-2"
+            <div
+              className="text-sm sm:text-[15px] leading-relaxed font-medium"
               style={{ color: "var(--color-text)" }}
             >
-              {notice.notice}
-            </p>
+              <p>
+                এতদ্বারা সকলের অবগতির জন্য জানানো যাইতেছে যে, {notice.notice}
+              </p>
+              <p>
+                যোগাযোগঃ রয়েল একাডেমি, বেলকুচি মুকুন্দগাতী বাজার, বেলকুচি,
+                সিরাজগঞ্জ
+              </p>
+              <p>মোবাইলঃ{` ০১৬৫০-০৩৩১৮১ ${" || "} ০১৮০৪-৫৫৮২২৬`}</p>
+            </div>
 
             {/* Row 3: dates + action buttons */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -176,7 +274,6 @@ const NoticeModal = ({ notice, onClose }: NoticeModalProps) => {
               </span>
 
               <div className="flex items-center gap-2">
-                {/* Print */}
                 <button
                   onClick={handlePrint}
                   className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all"
@@ -197,7 +294,6 @@ const NoticeModal = ({ notice, onClose }: NoticeModalProps) => {
                   <span>Print</span>
                 </button>
 
-                {/* Download */}
                 <button
                   onClick={handleDownload}
                   className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
@@ -213,7 +309,7 @@ const NoticeModal = ({ notice, onClose }: NoticeModalProps) => {
             </div>
           </div>
 
-          {/* ── PDF Preview ── */}
+          {/* ── PDF Preview (PDF.js — works on all devices) ── */}
           <div className="flex flex-col">
             <div
               className="shrink-0 flex items-center gap-2 px-5 py-2"
@@ -226,13 +322,9 @@ const NoticeModal = ({ notice, onClose }: NoticeModalProps) => {
                 PDF Preview
               </span>
             </div>
-            <iframe
-              id="notice-pdf-iframe"
-              src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-              className="w-full border-0"
-              style={{ height: "200vh", flexShrink: 0 }}
-              title={`PDF — ${notice.noticeSlug}`}
-            />
+            <div className="p-3">
+              <PdfViewer url={pdfUrl} />
+            </div>
           </div>
         </motion.div>
       </motion.div>

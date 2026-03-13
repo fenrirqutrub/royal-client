@@ -4,12 +4,17 @@ import { useNavigate } from "react-router";
 import axiosPublic from "./axiosPublic";
 
 export interface AuthUser {
-  id: string; // ✅ added
+  id: string;
   email: string;
   name: string;
   role: "teacher" | "principal" | "admin" | "super-admin";
   slug: string;
-  isHardcoded: boolean; // ✅ added
+  isHardcoded: boolean;
+  avatar: {
+    // ✅ এটাই missing ছিল
+    url: string | null;
+    publicId: string | null;
+  };
 }
 
 export function useAuth() {
@@ -25,20 +30,18 @@ export function useAuth() {
       .finally(() => setLoading(false));
   }, []);
 
-  /* ── login ── */
   const login = useCallback(
     async (email: string, password: string) => {
       const { data } = await axiosPublic.post("/api/auth/login", {
         email,
         password,
       });
-      setUser(data.user); // data.user now includes id + isHardcoded
+      setUser(data.user);
       navigate("/dashboard");
     },
     [navigate],
   );
 
-  /* ── logout ── */
   const logout = useCallback(async () => {
     await axiosPublic.post("/api/auth/logout").catch(() => {});
     setUser(null);

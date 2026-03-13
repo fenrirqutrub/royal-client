@@ -8,7 +8,6 @@ import "swiper/css";
 import "swiper/css/pagination";
 import {
   AnimatedSlide,
-  CopyBtn,
   SlideDots,
   SlideProgress,
   toBn,

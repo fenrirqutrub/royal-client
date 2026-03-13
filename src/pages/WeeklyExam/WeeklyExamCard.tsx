@@ -96,7 +96,7 @@ const WeeklyExamCard = ({ exam, index }: WeeklyExamCardProps) => {
                     <AnimatedSlide
                       img={img}
                       isActive={i === activeSlide}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                      className="h-full w-full object-cover transition-transform duration-700 "
                     />
                   </div>
                 </SwiperSlide>

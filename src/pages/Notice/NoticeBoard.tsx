@@ -1,13 +1,18 @@
 // NoticeBoard.tsx
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate, useLocation } from "react-router";
 import axiosPublic from "../../hooks/axiosPublic";
 import NoticeModal, { type NoticeItem } from "./NoticeModal";
 import { EmptyState } from "../../components/common/Emptystate";
 import ErrorState from "../../components/ui/Errorstate";
 import Loader from "../../components/ui/Loader";
+import { Pagination } from "../../components/common/Pagination";
 import { toBn } from "../../utility/shared";
+
+const HOME_LIMIT = 5;
+const PAGE_LIMIT = 10;
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleDateString("en-BD", {
@@ -49,10 +54,7 @@ const NoticeRow = ({
         {/* Hover fill */}
         <motion.div
           initial={false}
-          animate={{
-            scaleX: hovered ? 1 : 0,
-            opacity: hovered ? 1 : 0,
-          }}
+          animate={{ scaleX: hovered ? 1 : 0, opacity: hovered ? 1 : 0 }}
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           style={{
             position: "absolute",
@@ -67,7 +69,7 @@ const NoticeRow = ({
           className="relative flex items-center gap-5 px-4 py-4 sm:py-5"
           style={{ borderBottom: "1px solid var(--color-active-border)" }}
         >
-          {/* Animated index number */}
+          {/* Index */}
           <motion.span
             animate={{
               color: hovered ? "var(--color-text)" : "var(--color-gray)",
@@ -99,13 +101,10 @@ const NoticeRow = ({
             {fmt(item.expiresAt)}
           </motion.span>
 
-          {/* Arrow — slides in on hover */}
+          {/* Arrow */}
           <motion.span
             initial={false}
-            animate={{
-              opacity: hovered ? 1 : 0,
-              x: hovered ? 0 : -6,
-            }}
+            animate={{ opacity: hovered ? 1 : 0, x: hovered ? 0 : -6 }}
             transition={{ duration: 0.2 }}
             className="shrink-0 text-sm font-bold"
             style={{ color: "var(--color-text)" }}
@@ -119,22 +118,25 @@ const NoticeRow = ({
 };
 
 // ── Animated counter ──────────────────────────────────────────────────────────
-const Counter = ({ value }: { value: number }) => {
-  return (
-    <motion.span
-      key={value}
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.5 }}
-    >
-      {toBn(value)}
-    </motion.span>
-  );
-};
+const Counter = ({ value }: { value: number }) => (
+  <motion.span
+    key={value}
+    initial={{ opacity: 0, y: 6 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, delay: 0.5 }}
+  >
+    {toBn(value)}
+  </motion.span>
+);
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const NoticeBoard = () => {
   const [selectedNotice, setSelectedNotice] = useState<NoticeItem | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isNoticePage = location.pathname === "/notice";
 
   const {
     data: notices,
@@ -148,63 +150,91 @@ const NoticeBoard = () => {
     },
   });
 
+  // ── Pagination logic (only for /notice) ──────────────────────────────────
+  const totalPages = useMemo(
+    () => Math.ceil((notices?.length ?? 0) / PAGE_LIMIT),
+    [notices],
+  );
+
+  const visibleNotices = useMemo(() => {
+    if (!notices) return [];
+    if (!isNoticePage) return notices.slice(0, HOME_LIMIT);
+    const start = (currentPage - 1) * PAGE_LIMIT;
+    return notices.slice(start, start + PAGE_LIMIT);
+  }, [notices, isNoticePage, currentPage]);
+
+  const hasMore = !isNoticePage && (notices?.length ?? 0) > HOME_LIMIT;
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div
-      className="min-h-screen px-4 sm:px-8 py-12 sm:py-20"
+      className=" pt-3"
       style={{ backgroundColor: "var(--color-bg)", color: "var(--color-text)" }}
     >
+      <div
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(var(--color-text) 1px, transparent 1px), linear-gradient(90deg, var(--color-text) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }}
+      />
+
       <div className="w-full mx-auto">
         {/* ── Header ── */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-8 rounded-2xl px-6 py-6 sm:px-8 sm:py-7"
-          style={{
-            backgroundColor: "var(--color-active-bg)",
-            border: "1px solid var(--color-active-border)",
-          }}
-        >
-          <div className="flex items-center justify-between gap-4">
-            <div>
+        {isNoticePage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-8 rounded-2xl px-6 py-6 sm:px-8 sm:py-7"
+            style={{
+              backgroundColor: "var(--color-active-bg)",
+              border: "1px solid var(--color-active-border)",
+            }}
+          >
+            <div className="flex items-center justify-between gap-4">
               <motion.h1
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.45 }}
-                className="text-3xl sm:text-4xl font-bold  leading-none text-[var(--color-text)] bangla tracking-wider"
+                className="text-3xl sm:text-4xl font-bold leading-none text-[var(--color-text)] bangla tracking-wider"
               >
                 নোটিশ বোর্ড
               </motion.h1>
-            </div>
 
-            {/* Count */}
-            {!isLoading && !isError && notices?.length ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{
-                  delay: 0.4,
-                  duration: 0.4,
-                  type: "spring",
-                  bounce: 0.4,
-                }}
-                className="flex flex-col items-center justify-center rounded-xl px-4 py-3"
-                style={{
-                  border: "1px solid var(--color-active-border)",
-                  backgroundColor: "var(--color-bg)",
-                  minWidth: "56px",
-                }}
-              >
-                <span
-                  className="text-2xl sm:text-3xl font-bold font-mono tabular-nums leading-none"
-                  style={{ color: "var(--color-text)" }}
+              {!isLoading && !isError && notices?.length ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    delay: 0.4,
+                    duration: 0.4,
+                    type: "spring",
+                    bounce: 0.4,
+                  }}
+                  className="flex flex-col items-center justify-center rounded-xl px-4 py-3"
+                  style={{
+                    border: "1px solid var(--color-active-border)",
+                    backgroundColor: "var(--color-bg)",
+                    minWidth: "56px",
+                  }}
                 >
-                  <Counter value={notices.length} />
-                </span>
-              </motion.div>
-            ) : null}
-          </div>
-        </motion.div>
+                  <span
+                    className="text-2xl sm:text-3xl font-bold font-mono tabular-nums leading-none"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    <Counter value={notices.length} />
+                  </span>
+                </motion.div>
+              ) : null}
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Content ── */}
         {isLoading ? (
@@ -235,19 +265,19 @@ const NoticeBoard = () => {
               className="flex items-center gap-5 px-4 py-3 rounded-lg bg-[var(--color-active-bg)] border border-[var(--color-active-border)] mb-4 text-xl bangla"
             >
               <span
-                className="w-7 shrink-0 text-lg   tracking-widest"
+                className="w-7 shrink-0 text-lg tracking-widest"
                 style={{ color: "var(--color-gray)", opacity: 0.5 }}
               >
                 নং
               </span>
               <span
-                className="flex-1 text-center   tracking-widest"
+                className="flex-1 text-center tracking-widest"
                 style={{ color: "var(--color-gray)", opacity: 0.5 }}
               >
                 নোটিশ
               </span>
               <span
-                className="hidden sm:block shrink-0   tracking-widest"
+                className="hidden sm:block shrink-0 tracking-widest"
                 style={{ color: "var(--color-gray)", opacity: 0.5 }}
               >
                 মেয়াদ
@@ -257,15 +287,43 @@ const NoticeBoard = () => {
 
             {/* Rows */}
             <AnimatePresence initial={false}>
-              {notices.map((item, i) => (
+              {visibleNotices.map((item, i) => (
                 <NoticeRow
                   key={item._id}
                   item={item}
-                  index={i}
+                  index={isNoticePage ? (currentPage - 1) * PAGE_LIMIT + i : i}
                   onClick={() => setSelectedNotice(item)}
                 />
               ))}
             </AnimatePresence>
+
+            {/* ── Show More (homepage only) ── */}
+            {hasMore && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.35 }}
+                className="mt-6 flex justify-end"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => navigate("/notice")}
+                  className="px-6 py-2.5 rounded-xl text-sm font-semibold bangla transition-all bg-[var(--color-active-bg)] text-[var(--color-text)] border border-[1px solid var(--color-active-border)] "
+                >
+                  আরও দেখুন →
+                </motion.button>
+              </motion.div>
+            )}
+
+            {/* ── Pagination (/notice page only) ── */}
+            {isNoticePage && totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            )}
           </motion.div>
         )}
       </div>

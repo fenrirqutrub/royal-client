@@ -1,11 +1,11 @@
 import React from "react";
 import { IoMdMail } from "react-icons/io";
-import { FaFacebook, FaTelegram } from "react-icons/fa";
+import { FaFacebook, FaWhatsapp } from "react-icons/fa";
+import { motion } from "framer-motion";
 
 interface SocialItem {
   key: string;
   Icon: React.ComponentType<{ className?: string }>;
-  name: string;
   color: string;
   link: string;
 }
@@ -14,49 +14,58 @@ const socials: SocialItem[] = [
   {
     key: "facebook",
     Icon: FaFacebook,
-    name: "Facebook",
     color: "#1877f2",
-    link: "https://www.facebook.com/masudibnbelat/",
-  },
-
-  {
-    key: "telegram",
-    Icon: FaTelegram,
-    name: "Telegram",
-    color: "#24a1de",
-    link: "https://t.me/mrprofessor666",
+    link: "https://www.facebook.com/royalacademybelkuchi",
   },
   {
-    key: "email",
+    key: "whatsapp",
+    Icon: FaWhatsapp,
+    color: "#25d366",
+    link: "https://wa.me/8801804558226",
+  },
+  {
+    key: "gmail",
     Icon: IoMdMail,
-    name: "e-Mail",
     color: "#ea4335",
-    link: "mailto:masudibnbelat@gmail.com",
+    link: "mailto:royalacademybelkuchi@gmail.com",
   },
 ];
 
-const SocialButton: React.FC<{ item: SocialItem }> = ({ item }) => (
-  <a href={item.link} target="_blank" rel="noopener noreferrer">
-    <button
-      className="group flex items-center justify-start w-10 h-10 md:w-[45px] md:h-[45px] border-none rounded-full cursor-pointer relative overflow-hidden transition-all duration-300 shadow-[1px_1px_5px_rgba(0,0,0,0.2)] md:shadow-[2px_2px_10px_rgba(0,0,0,0.2)] hover:w-[120px] md:hover:w-[135px] lg:hover:w-[150px] hover:rounded-[30px] md:hover:rounded-[40px] bg-[var(--color)] active:translate-x-0.5 active:translate-y-0.5"
-      style={
-        { "--color": item.color } as React.CSSProperties & { "--color": string }
-      }
-    >
-      <div className="w-full transition-all duration-300 flex items-center justify-center group-hover:w-[30%] group-hover:pl-2 md:group-hover:pl-[10px] relative z-10">
-        <item.Icon className="w-5 h-5 md:w-[25px] md:h-[25px] group-hover:w-5 md:group-hover:w-[25px] text-[#E9EBED]" />
-      </div>
-      <div className="absolute right-0 w-0 opacity-0 text-white text-base md:text-lg font-semibold transition-all duration-300 group-hover:opacity-100 group-hover:w-[70%] pr-2 md:group-hover:pr-[10px] whitespace-nowrap">
-        {item.name}
-      </div>
-    </button>
-  </a>
+const SocialButton: React.FC<{ item: SocialItem; index: number }> = ({
+  item,
+  index,
+}) => (
+  <motion.a
+    href={item.link}
+    target="_blank"
+    rel="noopener noreferrer"
+    initial={{ opacity: 0, scale: 0.5 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ duration: 0.4, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+    whileHover={{ scale: 1.15 }}
+    whileTap={{ scale: 0.92 }}
+    className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full border border-gray-500 text-gray-400 transition-colors duration-300"
+    onMouseEnter={(e) => {
+      const el = e.currentTarget as HTMLElement;
+      el.style.color = "#fff";
+      el.style.borderColor = item.color;
+      el.style.backgroundColor = item.color;
+    }}
+    onMouseLeave={(e) => {
+      const el = e.currentTarget as HTMLElement;
+      el.style.color = "";
+      el.style.borderColor = "";
+      el.style.backgroundColor = "";
+    }}
+  >
+    <item.Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+  </motion.a>
 );
 
 const Social: React.FC = () => (
-  <div className="flex flex-wrap items-center justify-center gap-2 p-4 md:p-8 w-full mx-auto">
-    {socials.map((item) => (
-      <SocialButton key={item.key} item={item} />
+  <div className="flex items-center justify-end gap-2 sm:gap-3 pt-3">
+    {socials.map((item, index) => (
+      <SocialButton key={item.key} item={item} index={index} />
     ))}
   </div>
 );
