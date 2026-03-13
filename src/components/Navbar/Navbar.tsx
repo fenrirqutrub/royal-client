@@ -8,11 +8,11 @@ import logo from "../../assets/logo 2.png";
 type MenuItem = { readonly name: string; readonly path: string };
 
 const MENU_CONFIG: MenuItem[] = [
-  { name: "home", path: "/" },
-  { name: "daily lesson", path: "/dailylesson" },
-  { name: "Weekly Exam", path: "/weekly-exam" },
-  { name: "Notice", path: "/notice" },
-  { name: "photography", path: "/photography" },
+  { name: "হোম", path: "/" },
+  { name: "প্রতিদিনের পড়া", path: "/dailylesson" },
+  { name: "সাপ্তাহিক পরিক্ষা", path: "/weekly-exam" },
+  { name: "নোটিশ", path: "/notice" },
+  { name: "ফটোগ্রাফি", path: "/photography" },
 ];
 
 const SPRING_TRANSITION = {
@@ -172,10 +172,10 @@ const Navbar = memo(() => {
 
   const activeItem = useMemo(() => {
     const path = location.pathname;
-    if (path === "/") return "home";
     return (
-      MENU_CONFIG.find((m) => m.path !== "/" && path.startsWith(m.path))
-        ?.name ?? "home"
+      MENU_CONFIG.find((m) =>
+        m.path === "/" ? path === "/" : path.startsWith(m.path),
+      )?.name ?? ""
     );
   }, [location.pathname]);
 
@@ -373,7 +373,7 @@ const Navbar = memo(() => {
                     className="text-xs text-center"
                     style={{ color: "var(--color-gray)" }}
                   >
-                    &copy; 2025 Masud ibn Belat. All rights reserved.
+                    &copy; ২০২৪ সর্বস্বত্ব সংরক্ষিত — রয়েল একাডেমি
                   </p>
                 </div>
               </div>

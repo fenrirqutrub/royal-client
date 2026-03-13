@@ -16,7 +16,7 @@ interface WeeklyExamData {
   mark: number;
   ExamNumber: string;
   topics: string;
-  images: { imageUrl: string; publicId: string }[];
+  images: (string | { imageUrl?: string; url?: string; publicId?: string })[];
   createdAt: string;
 }
 
@@ -52,10 +52,15 @@ const formatCreatedAt = (iso: string): string => {
   return `${BN_DAYS[d.getDay()]}, ${toBn(d.getDate())} ${BN_MONTHS[d.getMonth()]} ${toBn(d.getFullYear())}`;
 };
 
+type RawImage = string | { imageUrl?: string; url?: string; publicId?: string };
+
 const normalizeImages = (
-  images: { imageUrl: string; publicId: string }[],
+  images: RawImage[],
 ): { url: string; publicId: string }[] =>
-  images.map(({ imageUrl, publicId }) => ({ url: imageUrl, publicId }));
+  images.map((img) => {
+    if (typeof img === "string") return { url: img, publicId: "" };
+    return { url: img.imageUrl ?? img.url ?? "", publicId: img.publicId ?? "" };
+  });
 
 const CLASS_ORDER: Record<string, number> = {
   "৬ষ্ঠ শ্রেণি": 1,
@@ -67,7 +72,6 @@ const CLASS_ORDER: Record<string, number> = {
 const classOrder = (cls: string) => CLASS_ORDER[cls] ?? 99;
 const sortExamNumbers = (nums: string[]): string[] =>
   [...nums].sort((a, b) => Number(a) - Number(b));
-const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
 const CLASS_COLORS: Record<
   string,
@@ -181,10 +185,6 @@ const WeeklyExam = () => {
     null,
   );
 
-  useEffect(() => {
-    scrollToTop();
-  }, []);
-
   const { data, isLoading, isError } = useQuery<WeeklyExamData[]>({
     queryKey: ["weekly-exams"],
     queryFn: async () => {
@@ -195,6 +195,10 @@ const WeeklyExam = () => {
       return [];
     },
   });
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
 
   const examNumbers = useMemo(() => {
     if (!data) return [];
@@ -229,7 +233,6 @@ const WeeklyExam = () => {
 
   const handlePageSelect = (examNumber: string) => {
     setSelectedExamNumber(examNumber);
-    scrollToTop();
   };
 
   if (isLoading) {

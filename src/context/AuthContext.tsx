@@ -13,7 +13,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  role: "teacher" | "principal" | "admin" | "super-admin";
+  role: "teacher" | "principal" | "admin" | "owner";
   slug: string;
   isHardcoded: boolean;
   avatar: {

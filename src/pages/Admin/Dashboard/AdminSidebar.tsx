@@ -43,7 +43,7 @@ const AdminSidebar = () => {
 
   const role = user?.role ?? "teacher";
   const isPrivileged =
-    role === "admin" || role === "principal" || role === "super-admin";
+    role === "admin" || role === "principal" || role === "owner";
 
   useEffect(() => {
     if (window.innerWidth < 1024) setIsOpen(false);
@@ -87,8 +87,16 @@ const AdminSidebar = () => {
               path: "/dashboard/add-teacher",
               icon: ImageIcon,
             },
-            { name: "Hero", path: "/dashboard/add-hero", icon: Image },
-            { name: "Add Notice", path: "/dashboard/add-notice", icon: Image },
+            {
+              name: "স্লাইডার যোগ করুন",
+              path: "/dashboard/add-hero",
+              icon: Image,
+            },
+            {
+              name: "নোটিশ যোগ করুন",
+              path: "/dashboard/add-notice",
+              icon: Image,
+            },
           ]
         : []),
     ],
@@ -96,7 +104,7 @@ const AdminSidebar = () => {
 
   // Management group — teacher sees only Weekly Exam; admin/principal see all
   const managementItems: NavItem = {
-    name: "প্রশ্ন দেখুন",
+    name: "ব্যবস্থাপনা দেখুন",
     icon: Settings,
     subItems: [
       {
@@ -107,14 +115,19 @@ const AdminSidebar = () => {
       ...(isPrivileged
         ? [
             {
-              name: "Photos",
+              name: "ছবি ডিলিট করুন",
               path: "/dashboard/management/photos",
               icon: Camera,
             },
 
             {
-              name: "Heroes",
+              name: "স্লাইডার মুছুন",
               path: "/dashboard/management/heroes",
+              icon: Star,
+            },
+            {
+              name: "নোটিশ মুছুন",
+              path: "/dashboard/management/notice",
               icon: Star,
             },
           ]
@@ -127,11 +140,7 @@ const AdminSidebar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const toggleGroup = (groupName: string) => {
-    setExpandedGroups((prev) =>
-      prev.includes(groupName)
-        ? prev.filter((g) => g !== groupName)
-        : [...prev, groupName],
-    );
+    setExpandedGroups((prev) => (prev.includes(groupName) ? [] : [groupName]));
   };
 
   // ── Role config ───────────────────────────────────────────────────────────────
@@ -139,6 +148,11 @@ const AdminSidebar = () => {
     string,
     { label: string; color: string; panelTitle: string }
   > = {
+    owner: {
+      label: "Owner",
+      color: "#f59e0b",
+      panelTitle: "Owner Panel",
+    },
     admin: {
       label: "Admin",
       color: "#ef4444",
@@ -164,12 +178,14 @@ const AdminSidebar = () => {
     groupKey: string,
     activeColor: "emerald" | "indigo" = "emerald",
   ) => {
+    const isGroupActive =
+      item.subItems?.some((sub) => isActive(sub.path)) ?? false;
     const isExpanded = expandedGroups.includes(groupKey);
 
     const activeClass =
       activeColor === "emerald"
-        ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium"
-        : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium";
+        ? "bg-[var(--color-active-bg)] text-[var(--color-text)] font-medium"
+        : "bg-[var(--color-active-bg)] text-[var(--color-text)] font-medium";
 
     const Icon = item.icon;
 
@@ -182,7 +198,13 @@ const AdminSidebar = () => {
       >
         <motion.button
           onClick={() => toggleGroup(groupKey)}
-          className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all"
+          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
+            isGroupActive
+              ? activeColor === "emerald"
+                ? "bg-[var(--color-active-bg)] text-[var(--color-text)] font-semibold"
+                : "bg-[var(--color-active-bg)] text-[var(--color-text)] font-semibold"
+              : "text-[var(--color-gray)]  "
+          }`}
           whileHover={{ x: 4 }}
           whileTap={{ scale: 0.97 }}
         >

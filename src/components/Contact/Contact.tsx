@@ -79,7 +79,7 @@ const MapEmbed = () => {
       <iframe
         className="w-full h-full"
         style={{ filter: "grayscale(30%) sepia(6%)" }}
-        src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d114.0!2d89.6959005!3d24.2923009!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sbn!2sbd!4v1"
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d11793.382884739878!2d89.69099807507429!3d24.291718047188315!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39fddd7ceed131f3%3A0xffb9c03604af7e4a!2sBelkuchi!5e0!3m2!1sen!2sbd!4v1773423884411!5m2!1sen!2sbd"
         loading="lazy"
         title="Royal Academy Location"
         allowFullScreen
@@ -187,10 +187,7 @@ const Contact = () => (
       >
         <div className="md:mx-16 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-base text-[var(--color-gray)]">
-            &copy; ২০২৪ সর্বস্বত্ব সংরক্ষিত —{" "}
-            <Link to="/admin-login" className="font-semibold transition-colors">
-              রয়েল একাডেমি
-            </Link>
+            &copy; ২০২৪ সর্বস্বত্ব সংরক্ষিত — রয়েল একাডেমি
           </p>
           <p className="text-base text-[var(--color-gray)]">
             Developed by{" "}

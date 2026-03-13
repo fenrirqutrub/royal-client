@@ -46,7 +46,9 @@ const Teacher = () => {
     },
   });
 
-  const teachers = (data ?? []).filter((t) => t.role !== "owner");
+  const teachers = (data ?? []).filter(
+    (t) => t.role !== "super-admin" && t.role !== "owner",
+  );
 
   return (
     <section className="py-12" style={{ backgroundColor: "var(--color-bg)" }}>
