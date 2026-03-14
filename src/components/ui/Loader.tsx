@@ -1,14 +1,10 @@
-import Lottie from "lottie-react";
-import infinityDark from "../../../public/infinity-dark.json";
-import infinityLight from "../../../public/infinity-light.json";
-import { useTheme } from "../../context/ThemeProvider";
+import { LoaderCircle } from "lucide-react";
 
 interface LoaderProps {
   fullScreen?: boolean;
 }
 
 const Loader = ({ fullScreen = true }: LoaderProps) => {
-  const { theme } = useTheme();
   return (
     <div
       role="status"
@@ -18,12 +14,7 @@ const Loader = ({ fullScreen = true }: LoaderProps) => {
         ${fullScreen ? "min-h-screen flex " : "py-10"}
       `}
     >
-      <Lottie
-        animationData={theme === "dark" ? infinityDark : infinityLight}
-        loop={true}
-        autoplay={true}
-        className=" text-primary  w-64 h-64 "
-      />
+      <LoaderCircle className="text-primary  w-10 h-10 animate-spin" />
     </div>
   );
 };

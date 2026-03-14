@@ -1,16 +1,14 @@
 const AmaderKotha = () => {
   return (
-    <section className="bg-[var(--color-bg)] text-[var(--color-text)]  bangla">
+    <section className=" pt-5 md:pt-14 bg-[var(--color-bg)] text-[var(--color-text)]  bangla">
       <div className="w-full mx-auto text-left">
-        <h2 className="text-3xl md:text-4xl font-bold text-purple-700 mb-6">
-          আমাদের কথাঃ
-        </h2>
+        <h2 className="text-3xl md:text-4xl font-bold  mb-6">আমাদের কথাঃ</h2>
 
-        <p className="text-lg md:text-xl text-gray-700 leading-relaxed  ">
+        <p className="text-lg md:text-xl  leading-relaxed  ">
           বেলকুচির সনামধন্য শিক্ষা প্রতিষ্ঠান{" "}
-          <span className="font-semibold text-purple-700">রয়েল একাডেমি</span> এর
-          পক্ষ থেকে আপনাকে জানাই আন্তরিক আসসালামু আলাইকুম। আমাদের ওয়েবসাইটে
-          আপনাকে স্বাগতম।
+          <span className="font-semibold ">রয়েল একাডেমি</span> এর পক্ষ থেকে
+          আপনাকে জানাই আন্তরিক আসসালামু আলাইকুম। আমাদের ওয়েবসাইটে আপনাকে
+          স্বাগতম।
         </p>
 
         <p className="text-lg md:text-xl text-gray-700 leading-relaxed text-justify ">

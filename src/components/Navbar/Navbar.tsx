@@ -262,7 +262,7 @@ const Navbar = memo(() => {
             </button>
 
             {/* ── Desktop nav links ── */}
-            <ul className="hidden md:flex items-center space-x-1 relative">
+            <ul className="hidden md:flex items-center space-x-1 relative bangla">
               {MENU_CONFIG.map((item) => (
                 <NavItem
                   key={item.name}
