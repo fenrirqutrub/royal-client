@@ -135,6 +135,11 @@ const AdminSidebar = () => {
               path: "/dashboard/management/notice",
               icon: Star,
             },
+            {
+              name: "প্রতিদিনের পড়া দেখুন",
+              path: "/dashboard/management/manage-daily-lesson",
+              icon: Star,
+            },
           ]
         : []),
     ],

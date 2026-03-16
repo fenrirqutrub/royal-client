@@ -22,6 +22,7 @@ import AddDailyLesson from "../pages/Admin/AddNewItem/AddDailyLesson";
 import NoticeBoard from "../pages/Notice/NoticeBoard";
 import AddNotice from "../pages/Admin/AddNewItem/AddNotice";
 import ManageNotice from "../pages/Admin/Management/ManageNotice";
+import ManageDailyLesson from "../pages/Admin/Management/ManageDailyLesson";
 
 const Router = () => {
   return (
@@ -112,10 +113,14 @@ const Router = () => {
         <Route
           path="management/notice"
           element={
-            <PrivateRoute allowedRoles={["admin", "principal"]}>
+            <PrivateRoute>
               <ManageNotice />
             </PrivateRoute>
           }
+        />
+        <Route
+          path="management/manage-daily-lesson"
+          element={<ManageDailyLesson />}
         />
 
         <Route path="*" element={<NotFound />} />

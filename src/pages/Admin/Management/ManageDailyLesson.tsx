@@ -1,9 +1,47 @@
+// src/pages/Admin/Management/ManageDailyLesson.tsx
+import { useAuth } from "../../../context/AuthContext";
+import ExamManageShell from "./ManagementShell";
+import type { ManagedRecord, ShellConfig } from "./ManagementShell";
+
 const ManageDailyLesson = () => {
-  return (
-    <div>
-      <h2> ManageDailyLesson Page: {} </h2>
-    </div>
-  );
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  const config: ShellConfig = {
+    title: "দৈনিক পাঠ পরিচালনা",
+    apiPath: "/api/daily-lesson",
+    queryKey: isAdmin ? ["daily-lessons"] : ["daily-lessons", user?.slug ?? ""],
+    groupLabel: "অধ্যায়", // used in card badge: "অধ্যায় #3"
+    groupField: "chapterNumber",
+    hasImages: false,
+    updateMethod: "patch",
+    useDateFilter: true, // ← DatePicker instead of ExamPagination
+
+    mapRecord: (raw): ManagedRecord => ({
+      _id: raw._id as string,
+      subject: raw.subject as string,
+      teacher: raw.teacher as string,
+      teacherSlug: raw.teacherSlug as string | undefined,
+      class: raw.class as string,
+      groupKey: raw.chapterNumber as string,
+      topics: raw.topics as string,
+      images: undefined,
+      createdAt: raw.createdAt as string,
+    }),
+
+    buildFormData: (data, original) => {
+      const fd = new FormData();
+      fd.append("subject", data.subject);
+      fd.append("class", data.class);
+      fd.append("chapterNumber", data.groupKey);
+      fd.append("topics", data.topics);
+      fd.append("teacher", original.teacher);
+      if (original.teacherSlug) fd.append("teacherSlug", original.teacherSlug);
+      return fd;
+    },
+  };
+
+  return <ExamManageShell config={config} />;
 };
 
 export default ManageDailyLesson;
