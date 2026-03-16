@@ -97,6 +97,11 @@ const AdminSidebar = () => {
               path: "/dashboard/add-notice",
               icon: Image,
             },
+            {
+              name: "ছবি যোগ করুন",
+              path: "/dashboard/add-photography",
+              icon: Image,
+            },
           ]
         : []),
     ],

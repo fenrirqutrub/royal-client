@@ -137,7 +137,7 @@ const Hero: React.FC = () => {
                       </div>
 
                       {/* Title */}
-                      <h2 className="text-white font-black leading-[1.02] tracking-tight font-hero hero-title">
+                      <h2 className="text-white font-black leading-[1.02] tracking-tight font-hero hero-title bangla">
                         {h.title.split(" ").map((w, j) => (
                           <span
                             key={j}

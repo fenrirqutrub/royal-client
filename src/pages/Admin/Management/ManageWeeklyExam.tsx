@@ -1,5 +1,5 @@
 // ManageWeeklyExam.tsx
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useForm, Controller, type SubmitHandler } from "react-hook-form";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,8 +28,14 @@ import axiosPublic from "../../../hooks/axiosPublic";
 import SelectInput from "../../../components/common/SelectInput";
 import type { SelectOption } from "../../../components/common/SelectInput";
 import { useAuth } from "../../../context/AuthContext";
+import ExamPagination from "../../../components/common/ExamPagination";
 
 // ─── Types ────────────────────────────────────────────────
+interface ExamImage {
+  imageUrl: string;
+  publicId: string;
+}
+
 interface WeeklyExam {
   _id: string;
   slug: string;
@@ -40,7 +46,8 @@ interface WeeklyExam {
   mark: number;
   ExamNumber: string;
   topics: string;
-  images?: string[];
+  // images can be plain URL strings (legacy) OR objects from the model
+  images?: (string | ExamImage)[];
   createdAt: string;
 }
 
@@ -50,6 +57,10 @@ interface EditFormData {
   ExamNumber: string;
   topics: string;
 }
+
+// ─── Helper: resolve image src regardless of shape ────────
+const imgSrc = (img: string | ExamImage): string =>
+  typeof img === "string" ? img : img.imageUrl;
 
 // ─── Static Data ──────────────────────────────────────────
 const CLASSES = ["৬ষ্ঠ", "৭ম", "৮ম", "৯ম", "১০ম"] as const;
@@ -255,10 +266,19 @@ const EditModal = ({
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>(exam.images ?? []);
-  const [existingImages, setExistingImages] = useState<string[]>(
-    exam.images ?? [],
+
+  // Normalise existing images to { url, publicId } shape for internal use
+  const initialExisting = (exam.images ?? []).map((img) =>
+    typeof img === "string" ? { imageUrl: img, publicId: "" } : img,
   );
+  const [existingImages, setExistingImages] =
+    useState<{ imageUrl: string; publicId: string }[]>(initialExisting);
+  const [newPreviews, setNewPreviews] = useState<string[]>([]);
+
+  const allPreviews = [
+    ...existingImages.map((i) => i.imageUrl),
+    ...newPreviews,
+  ];
 
   const {
     register,
@@ -283,20 +303,20 @@ const EditModal = ({
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
     setImageFiles((p) => [...p, ...files]);
-    setPreviews((p) => [...p, ...files.map((f) => URL.createObjectURL(f))]);
+    setNewPreviews((p) => [...p, ...files.map((f) => URL.createObjectURL(f))]);
     e.target.value = "";
   };
 
   const removeImage = (i: number) => {
-    const isNew = i >= existingImages.length;
-    if (isNew) {
-      const newIdx = i - existingImages.length;
-      URL.revokeObjectURL(previews[i]);
-      setImageFiles((p) => p.filter((_, j) => j !== newIdx));
-    } else {
+    const existingCount = existingImages.length;
+    if (i < existingCount) {
       setExistingImages((p) => p.filter((_, j) => j !== i));
+    } else {
+      const newIdx = i - existingCount;
+      URL.revokeObjectURL(newPreviews[newIdx]);
+      setNewPreviews((p) => p.filter((_, j) => j !== newIdx));
+      setImageFiles((p) => p.filter((_, j) => j !== newIdx));
     }
-    setPreviews((p) => p.filter((_, j) => j !== i));
   };
 
   const mutation = useMutation({
@@ -306,12 +326,11 @@ const EditModal = ({
       fd.append("class", data.class);
       fd.append("ExamNumber", data.ExamNumber);
       fd.append("topics", data.topics);
-      // keep teacher & teacherSlug unchanged
       fd.append("teacher", exam.teacher);
       if (exam.teacherSlug) fd.append("teacherSlug", exam.teacherSlug);
-      // existing images that weren't removed
-      existingImages.forEach((url) => fd.append("existingImages", url));
-      // new image files
+      existingImages.forEach((img) =>
+        fd.append("existingImages", img.imageUrl),
+      );
       imageFiles.forEach((f) => fd.append("images", f));
       return axiosPublic.put(`/api/weekly-exams/${exam._id}`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -341,7 +360,7 @@ const EditModal = ({
     >
       <motion.div
         variants={modalV}
-        className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 w-full max-w-xl my-auto"
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 w-full  my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -464,14 +483,14 @@ const EditModal = ({
             />
 
             <AnimatePresence>
-              {previews.length > 0 && (
+              {allPreviews.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-3"
                 >
-                  {previews.map((src, i) => (
+                  {allPreviews.map((src, i) => (
                     <motion.div
                       key={src}
                       initial={{ opacity: 0, scale: 0.8 }}
@@ -496,9 +515,9 @@ const EditModal = ({
                 </motion.div>
               )}
             </AnimatePresence>
-            {previews.length > 0 && (
+            {allPreviews.length > 0 && (
               <p className="text-xs text-gray-400 mt-2">
-                {previews.length}টি ছবি
+                {allPreviews.length}টি ছবি
               </p>
             )}
           </div>
@@ -595,15 +614,19 @@ const ExamCard = ({
       {exam.topics}
     </p>
 
-    {/* Images strip */}
+    {/* ── Images strip — FIXED: unwrap imageUrl from object ── */}
     {exam.images && exam.images.length > 0 && (
-      <div className="flex gap-2">
-        {exam.images.slice(0, 4).map((src, i) => (
+      <div className="flex gap-2 flex-wrap">
+        {exam.images.slice(0, 4).map((img, i) => (
           <div
             key={i}
             className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700 shrink-0"
           >
-            <img src={src} alt="" className="w-full h-full object-cover" />
+            <img
+              src={imgSrc(img)}
+              alt=""
+              className="w-full h-full object-cover"
+            />
           </div>
         ))}
         {exam.images.length > 4 && (
@@ -621,6 +644,8 @@ const ManageWeeklyExam = () => {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [filterClass, setFilterClass] = useState("");
+  // ── NEW: selected ExamNumber for pagination (empty = show all) ──
+  const [selectedExamNumber, setSelectedExamNumber] = useState<string>("");
   const [editTarget, setEditTarget] = useState<WeeklyExam | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<WeeklyExam | null>(null);
   const qc = useQueryClient();
@@ -652,18 +677,21 @@ const ManageWeeklyExam = () => {
     enabled: !!user && (isAdmin || !!user.slug),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => axiosPublic.delete(`/api/weekly-exams/${id}`),
-    onSuccess: () => {
-      toast.success("পরীক্ষা মুছে ফেলা হয়েছে");
-      qc.invalidateQueries({ queryKey });
-      setDeleteTarget(null);
-    },
-    onError: (err: Error & { response?: { data?: { message?: string } } }) =>
-      toast.error(
-        err?.response?.data?.message || err?.message || "মুছতে ব্যর্থ হয়েছে",
-      ),
-  });
+  // ── Sorted unique exam numbers for pagination ──────────
+  const sortedExamNumbers = useMemo(() => {
+    const unique = [...new Set(exams.map((e) => e.ExamNumber))];
+    return unique.sort((a, b) => Number(a) - Number(b));
+  }, [exams]);
+
+  // Auto-select the latest exam number on first load
+  const effectiveExamNumber =
+    selectedExamNumber || sortedExamNumbers[sortedExamNumbers.length - 1] || "";
+
+  const handleExamNumberSelect = (num: string) => {
+    setSelectedExamNumber(num);
+    // Clear text search when switching exam numbers
+    setSearch("");
+  };
 
   const filtered = exams.filter((e) => {
     const q = search.toLowerCase();
@@ -673,7 +701,10 @@ const ManageWeeklyExam = () => {
       e.topics.toLowerCase().includes(q) ||
       e.ExamNumber.includes(q);
     const matchClass = !filterClass || e.class === filterClass;
-    return matchSearch && matchClass;
+    // ── NEW: filter by selected exam number ──
+    const matchExamNumber =
+      !effectiveExamNumber || e.ExamNumber === effectiveExamNumber;
+    return matchSearch && matchClass && matchExamNumber;
   });
 
   const stats = [
@@ -845,6 +876,17 @@ const ManageWeeklyExam = () => {
             ))}
           </div>
         </>
+      )}
+
+      {/* ── ExamPagination — shown below the grid ── */}
+      {!isLoading && !isError && sortedExamNumbers.length > 1 && (
+        <ExamPagination
+          examNumbers={sortedExamNumbers}
+          selected={effectiveExamNumber}
+          onSelect={handleExamNumberSelect}
+          hint={`পরীক্ষা নং বেছে নিন • মোট ${sortedExamNumbers.length}টি`}
+          windowSize={7}
+        />
       )}
 
       {/* Modals */}

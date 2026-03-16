@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Marquee from "react-fast-marquee";
 import axiosPublic from "../../hooks/axiosPublic";
 import TeacherCard, { type TeacherData } from "./TeacherCard";
+import Card from "./Card";
 
 // ── Skeleton Card ─────────────────────────────────────────────────────────────
 const SkeletonCard = () => (
@@ -51,7 +52,7 @@ const Teacher = () => {
   );
 
   return (
-    <section className="py-12" style={{ backgroundColor: "var(--color-bg)" }}>
+    <section className="py-12 bg-[var(--color-bg)] ">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -16 }}
@@ -72,10 +73,7 @@ const Teacher = () => {
 
       {/* Content */}
       {isError ? (
-        <p
-          className="text-center text-sm bangla"
-          style={{ color: "var(--color-gray)" }}
-        >
+        <p className="text-center text-sm bangla text-[var(--color-gray)] ">
           তথ্য লোড করতে সমস্যা হয়েছে।
         </p>
       ) : (
@@ -83,13 +81,16 @@ const Teacher = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-5"
         >
           <Marquee pauseOnHover speed={40} gradient={false}>
             {isLoading
               ? skeletons.map((_, i) => <SkeletonCard key={i} />)
               : teachers.map((t) => <TeacherCard key={t._id} teacher={t} />)}
           </Marquee>
+          <div>
+            <Card />
+          </div>
         </motion.div>
       )}
     </section>

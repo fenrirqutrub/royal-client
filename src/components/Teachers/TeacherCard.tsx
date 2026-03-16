@@ -60,7 +60,7 @@ const TeacherCard = ({ teacher }: { teacher: TeacherData }) => {
   return (
     <motion.div
       ref={cardRef}
-      className="relative mx-3 cursor-pointer select-none overflow-hidden rounded-2xl flex flex-row gap-4 p-4"
+      className="relative mx-3 cursor-pointer select-none overflow-hidden rounded-2xl flex flex-row gap-4 px-4 py-2"
       style={{
         width: "clamp(260px, 28vw, 340px)",
         minWidth: "260px",
@@ -94,10 +94,8 @@ const TeacherCard = ({ teacher }: { teacher: TeacherData }) => {
 
       {/* Avatar */}
       <div
-        className="shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
+        className="shrink-0 rounded-full overflow-hidden flex items-center justify-center h-20 w-20"
         style={{
-          width: "72px",
-          height: "72px",
           background: `linear-gradient(135deg, ${color}22, ${color}44)`,
           border: `1.5px solid ${color}44`,
         }}
