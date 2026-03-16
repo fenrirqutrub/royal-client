@@ -1,16 +1,19 @@
-// src/pages/.../ManageWeeklyExam.tsx
+// src/pages/Admin/Management/ManageWeeklyExam.tsx
 import { useAuth } from "../../../context/AuthContext";
-import type { ManagedRecord, ShellConfig } from "./ManagementShell";
 import ExamManageShell from "./ManagementShell";
+import type { ManagedRecord, ShellConfig } from "./ManagementShell";
 
 const ManageWeeklyExam = () => {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const canSeeAll =
+    user?.role === "admin" ||
+    user?.role === "principal" ||
+    user?.role === "owner";
 
   const config: ShellConfig = {
     title: "সাপ্তাহিক পরীক্ষা পরিচালনা",
     apiPath: "/api/weekly-exams",
-    queryKey: isAdmin ? ["weekly-exams"] : ["weekly-exams", user?.slug ?? ""],
+    queryKey: canSeeAll ? ["weekly-exams"] : ["weekly-exams", user?.slug ?? ""],
     groupLabel: "পরীক্ষা",
     groupField: "ExamNumber",
     hasImages: true,

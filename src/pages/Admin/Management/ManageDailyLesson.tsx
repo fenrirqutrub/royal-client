@@ -5,17 +5,22 @@ import type { ManagedRecord, ShellConfig } from "./ManagementShell";
 
 const ManageDailyLesson = () => {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const canSeeAll =
+    user?.role === "admin" ||
+    user?.role === "principal" ||
+    user?.role === "owner";
 
   const config: ShellConfig = {
     title: "দৈনিক পাঠ পরিচালনা",
     apiPath: "/api/daily-lesson",
-    queryKey: isAdmin ? ["daily-lessons"] : ["daily-lessons", user?.slug ?? ""],
-    groupLabel: "অধ্যায়", // used in card badge: "অধ্যায় #3"
+    queryKey: canSeeAll
+      ? ["daily-lessons"]
+      : ["daily-lessons", user?.slug ?? ""],
+    groupLabel: "অধ্যায়",
     groupField: "chapterNumber",
     hasImages: false,
     updateMethod: "patch",
-    useDateFilter: true, // ← DatePicker instead of ExamPagination
+    useDateFilter: true,
 
     mapRecord: (raw): ManagedRecord => ({
       _id: raw._id as string,

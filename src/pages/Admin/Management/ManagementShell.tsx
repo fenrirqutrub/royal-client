@@ -1,4 +1,4 @@
-// src/components/examManage/ExamManageShell.tsx
+// src/pages/Admin/Management/ManagementShell.tsx
 import { useState, useMemo, useRef } from "react";
 import { useForm, Controller, type SubmitHandler } from "react-hook-form";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
@@ -27,12 +27,13 @@ import { FaBookOpen, FaFlask } from "react-icons/fa";
 import type { SelectOption } from "../../../components/common/SelectInput";
 import axiosPublic from "../../../hooks/axiosPublic";
 import SelectInput from "../../../components/common/SelectInput";
-import { useAuth } from "../../../context/AuthContext";
+
 import ExamPagination from "../../../components/common/ExamPagination";
+import { useAuth } from "../../../context/AuthContext";
 import DatePicker from "../../../components/common/Datepicker";
 
 // ═══════════════════════════════════════════════════════════
-// TYPES
+// TYPES  — exported via named export only (no duplicate export)
 // ═══════════════════════════════════════════════════════════
 export interface ExamImage {
   imageUrl: string;
@@ -45,7 +46,7 @@ export interface ManagedRecord {
   teacher: string;
   teacherSlug?: string;
   class: string;
-  groupKey: string; // ExamNumber or chapterNumber
+  groupKey: string;
   topics: string;
   images?: (string | ExamImage)[];
   createdAt: string;
@@ -62,13 +63,10 @@ export interface ShellConfig {
   title: string;
   apiPath: string;
   queryKey: string[];
-  /** Label shown in badges/pagination e.g. "পরীক্ষা" | "অধ্যায়" */
   groupLabel: string;
-  /** API field name for groupKey e.g. "ExamNumber" | "chapterNumber" */
   groupField: string;
   hasImages?: boolean;
   updateMethod?: "put" | "patch";
-  /** Replace ExamPagination with a DatePicker filter (for date-based records) */
   useDateFilter?: boolean;
   mapRecord: (raw: Record<string, unknown>) => ManagedRecord;
   buildFormData: (
@@ -78,6 +76,36 @@ export interface ShellConfig {
     newFiles: File[],
   ) => FormData;
 }
+
+// ═══════════════════════════════════════════════════════════
+// BENGALI DATE HELPERS  (for default "today" display)
+// ═══════════════════════════════════════════════════════════
+const BN_MONTHS = [
+  "জানুয়ারি",
+  "ফেব্রুয়ারি",
+  "মার্চ",
+  "এপ্রিল",
+  "মে",
+  "জুন",
+  "জুলাই",
+  "আগস্ট",
+  "সেপ্টেম্বর",
+  "অক্টোবর",
+  "নভেম্বর",
+  "ডিসেম্বর",
+];
+const BN_DAYS_FULL = [
+  "রবিবার",
+  "সোমবার",
+  "মঙ্গলবার",
+  "বুধবার",
+  "বৃহস্পতিবার",
+  "শুক্রবার",
+  "শনিবার",
+];
+const toBn = (n: number) => String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[+d]);
+const toBnDateStr = (d: Date) =>
+  `${BN_DAYS_FULL[d.getDay()]}, ${toBn(d.getDate())} ${BN_MONTHS[d.getMonth()]}`;
 
 // ═══════════════════════════════════════════════════════════
 // STATIC DATA
@@ -448,7 +476,7 @@ const EditModal = ({
             />
           </div>
 
-          {/* Group key (ExamNumber / chapterNumber) */}
+          {/* Group key */}
           <div>
             <label className={labelCls}>
               {config.groupLabel} নম্বর <span className="text-rose-500">*</span>
@@ -482,7 +510,7 @@ const EditModal = ({
             <ErrMsg msg={errors.topics?.message} />
           </div>
 
-          {/* Images (optional) */}
+          {/* Images */}
           {config.hasImages && (
             <div>
               <label className={labelCls}>ছবি (ঐচ্ছিক)</label>
@@ -676,21 +704,32 @@ const RecordCard = ({
 // ═══════════════════════════════════════════════════════════
 // MAIN SHELL
 // ═══════════════════════════════════════════════════════════
-const ExamManageShell = ({ config }: { config: ShellConfig }) => {
+const ManagementShell = ({ config }: { config: ShellConfig }) => {
   const { user } = useAuth();
   const qc = useQueryClient();
+
+  // ── date filter: default to today when useDateFilter is on ──
+  const today = new Date();
+  const [filterDateStr, setFilterDateStr] = useState<string>(
+    config.useDateFilter ? toBnDateStr(today) : "",
+  );
+  const [filterDateObj, setFilterDateObj] = useState<Date | null>(
+    config.useDateFilter ? today : null,
+  );
 
   const [search, setSearch] = useState("");
   const [filterClass, setFilterClass] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
-  const [filterDateStr, setFilterDateStr] = useState(""); // Bengali display string
-  const [filterDateObj, setFilterDateObj] = useState<Date | null>(null); // actual Date
   const [editTarget, setEditTarget] = useState<ManagedRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ManagedRecord | null>(null);
 
-  const isAdmin = user?.role === "admin";
+  // admin / principal / owner → all records; teacher → own only
+  const canSeeAll =
+    user?.role === "admin" ||
+    user?.role === "principal" ||
+    user?.role === "owner";
 
-  const queryUrl = isAdmin
+  const queryUrl = canSeeAll
     ? config.apiPath
     : `${config.apiPath}?teacherSlug=${user?.slug ?? ""}`;
 
@@ -712,7 +751,7 @@ const ExamManageShell = ({ config }: { config: ShellConfig }) => {
             : [];
       return raw.map(config.mapRecord);
     },
-    enabled: !!user && (isAdmin || !!user.slug),
+    enabled: !!user && (canSeeAll || !!user.slug),
   });
 
   const sortedKeys = useMemo(() => {
@@ -724,7 +763,7 @@ const ExamManageShell = ({ config }: { config: ShellConfig }) => {
 
   const filtered = records.filter((r) => {
     const q = search.toLowerCase();
-    // date match: same calendar day as filterDateObj
+
     const matchDate =
       !filterDateObj ||
       (() => {
@@ -735,16 +774,18 @@ const ExamManageShell = ({ config }: { config: ShellConfig }) => {
           d.getDate() === filterDateObj.getDate()
         );
       })();
+
+    const matchKey = config.useDateFilter
+      ? true
+      : !effectiveKey || r.groupKey === effectiveKey;
+
     return (
       (!q ||
         r.subject.toLowerCase().includes(q) ||
         r.topics.toLowerCase().includes(q) ||
         r.groupKey.includes(q)) &&
       (!filterClass || r.class === filterClass) &&
-      // only apply groupKey filter when NOT using date filter
-      ((!config.useDateFilter &&
-        (!effectiveKey || r.groupKey === effectiveKey)) ||
-        config.useDateFilter) &&
+      matchKey &&
       matchDate
     );
   });
@@ -775,7 +816,7 @@ const ExamManageShell = ({ config }: { config: ShellConfig }) => {
       icon: <Award className="w-4 h-4" />,
       color: "text-blue-600 bg-blue-50 dark:bg-blue-900/20",
     },
-    isAdmin
+    canSeeAll
       ? {
           label: "শিক্ষক",
           value: new Set(records.map((r) => r.teacher)).size,
@@ -807,20 +848,29 @@ const ExamManageShell = ({ config }: { config: ShellConfig }) => {
         </div>
         <div className="ml-4 pl-3 flex items-center gap-2 flex-wrap">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {isAdmin
+            {canSeeAll
               ? "সকল ডেটা দেখুন, সম্পাদনা করুন বা মুছে ফেলুন"
               : "আপনার যোগ করা ডেটা দেখুন ও পরিচালনা করুন"}
           </p>
-          {isAdmin ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 uppercase tracking-wide">
+          {user?.role === "admin" && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100   dark:bg-rose-900/30   text-rose-600   dark:text-rose-400   uppercase tracking-wide">
               admin
             </span>
-          ) : (
-            user?.role && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 uppercase tracking-wide">
-                {user.role}
-              </span>
-            )
+          )}
+          {user?.role === "owner" && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100  dark:bg-amber-900/30  text-amber-600  dark:text-amber-400  uppercase tracking-wide">
+              owner
+            </span>
+          )}
+          {user?.role === "principal" && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 uppercase tracking-wide">
+              principal
+            </span>
+          )}
+          {user?.role === "teacher" && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 uppercase tracking-wide">
+              teacher
+            </span>
           )}
         </div>
       </motion.div>
@@ -892,14 +942,18 @@ const ExamManageShell = ({ config }: { config: ShellConfig }) => {
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
-        {/* DatePicker — only for date-based pages like ManageDailyLesson */}
         {config.useDateFilter && (
-          <div className="sm:w-64 relative">
+          <div className="sm:w-64">
             <DatePicker
               value={filterDateStr}
-              onChange={setFilterDateStr}
+              onChange={(val) => {
+                setFilterDateStr(val);
+                // when cleared (val=""), remove date filter → show all
+                if (!val) setFilterDateObj(null);
+              }}
               onDateChange={(d) => setFilterDateObj(d)}
               placeholder="তারিখ ফিল্টার করুন"
+              maxDate={new Date()}
             />
           </div>
         )}
@@ -922,8 +976,8 @@ const ExamManageShell = ({ config }: { config: ShellConfig }) => {
         >
           <BookOpen className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
           <p className="text-gray-500 dark:text-gray-400 text-sm">
-            {search || filterClass
-              ? "কোনো ফলাফল পাওয়া যায়নি"
+            {search || filterClass || filterDateStr
+              ? "এই তারিখে কোনো পাঠ পাওয়া যায়নি"
               : "এখনো কিছু যোগ করা হয়নি"}
           </p>
         </motion.div>
@@ -990,5 +1044,4 @@ const ExamManageShell = ({ config }: { config: ShellConfig }) => {
   );
 };
 
-export default ExamManageShell;
-export type { ShellConfig, ManagedRecord, EditFormValues };
+export default ManagementShell;
