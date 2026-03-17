@@ -10,12 +10,13 @@ interface NoticeFormData {
   durationDays: number;
 }
 
+// ── preview slug with new format: Royal-Notice-YYMMDD-01 ─────────────────────
 const previewSlug = () => {
   const now = new Date();
   const yy = String(now.getFullYear()).slice(-2);
   const mm = String(now.getMonth() + 1).padStart(2, "0");
   const dd = String(now.getDate()).padStart(2, "0");
-  return `RABN-${yy}${mm}${dd}-N?`;
+  return `Royal-Notice-${yy}${mm}${dd}-??`;
 };
 
 const AddNotice = () => {
@@ -49,7 +50,10 @@ const AddNotice = () => {
 
   const createMutation = useMutation({
     mutationFn: (data: NoticeFormData) =>
-      axiosPublic.post("/api/notices", data),
+      axiosPublic.post("/api/notices", {
+        notice: data.notice,
+        durationDays: data.durationDays, // ← explicitly send both fields
+      }),
     onSuccess: (res) => {
       setSuccessSlug(res.data.data.noticeSlug);
       reset();

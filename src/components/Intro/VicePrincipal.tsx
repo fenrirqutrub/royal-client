@@ -24,10 +24,10 @@ const VicePrincipal = () => {
         {/* text */}
         <div className="md:w-2/3 text-[var(--color-text)]  text-lg md:text-xl ">
           <p className="text-justify   leading-relaxed mb-4">
-            <span className="font-bold">আসসালামু আলাইকুম,</span>
-            <br /> রয়েল একাডেমির সকল শিক্ষার্থী, অভিভাবক এবং শুভানুধ্যায়ীদের
-            জানাই আন্তরিক শুভেচ্ছা ও স্বাগতম। আমাদের প্রতিষ্ঠানের লক্ষ্য হলো এমন
-            একটি শিক্ষার পরিবেশ তৈরি করা যেখানে শিক্ষার্থীরা জ্ঞান, নৈতিকতা এবং
+            <span className="font-bold">আসসালামু আলাইকুম, </span>
+            রয়েল একাডেমির সকল শিক্ষার্থী, অভিভাবক এবং শুভানুধ্যায়ীদের জানাই
+            আন্তরিক শুভেচ্ছা ও স্বাগতম। আমাদের প্রতিষ্ঠানের লক্ষ্য হলো এমন একটি
+            শিক্ষার পরিবেশ তৈরি করা যেখানে শিক্ষার্থীরা জ্ঞান, নৈতিকতা এবং
             মানবিক মূল্যবোধে সমৃদ্ধ হয়ে উঠতে পারে।
             <br />
             আমরা বিশ্বাস করি যে প্রতিটি শিক্ষার্থীর মধ্যেই অসীম সম্ভাবনা লুকিয়ে
@@ -44,9 +44,7 @@ const VicePrincipal = () => {
           </p>
 
           {/* signature */}
-          <p className="text-[var(--color-text)] font-bold ml-8">
-            ধন্যবাদান্তে ——
-          </p>
+          <p className="text-[var(--color-text)]  ml-8">ধন্যবাদান্তে ——</p>
           <p className="font-bold flex items-center gap-2 text-[var(--color-text)] text-2xl">
             <IoCaretForwardOutline className="mt-2" />
             <span>মোছাঃ ফাতেমা খাতুন </span>

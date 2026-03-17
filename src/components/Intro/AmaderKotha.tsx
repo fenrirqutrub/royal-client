@@ -2,16 +2,11 @@ const AmaderKotha = () => {
   return (
     <section className=" pt-5 md:pt-14 bg-[var(--color-bg)] text-[var(--color-text)]  bangla">
       <div className="w-full mx-auto text-left">
-        <h2 className="text-3xl md:text-4xl font-bold  mb-6">আমাদের কথাঃ</h2>
+        <h2 className="text-3xl md:text-4xl font-bold  mb-2">আমাদের কথাঃ</h2>
 
-        <p className="text-lg md:text-xl  leading-relaxed  ">
-          বেলকুচির সনামধন্য শিক্ষা প্রতিষ্ঠান{" "}
-          <span className="font-semibold ">রয়েল একাডেমি</span> এর পক্ষ থেকে
-          আপনাকে জানাই আন্তরিক আসসালামু আলাইকুম। আমাদের ওয়েবসাইটে আপনাকে
-          স্বাগতম।
-        </p>
-
-        <p className="text-lg md:text-xl text-gray-700 leading-relaxed text-justify ">
+        <p className="text-lg md:text-xl  leading-relaxed text-justify ">
+          <span className="font-bold">আসসালামু আলাইকুম,</span> বেলকুচির সনামধন্য
+          শিক্ষা প্রতিষ্ঠান রয়েল একাডেমি এর পক্ষ থেকে আপনাকে জানাই স্বাগতম।
           শিক্ষা হলো মানুষের জীবনের সবচেয়ে মূল্যবান সম্পদ। এই বিশ্বাসকে সামনে
           রেখে রয়ের একাডেমি প্রতিষ্ঠালগ্ন থেকেই শিক্ষার্থীদের মানসম্মত শিক্ষা
           প্রদান এবং তাদেরকে নৈতিক ও মানবিক মূল্যবোধে গড়ে তোলার জন্য নিরলসভাবে

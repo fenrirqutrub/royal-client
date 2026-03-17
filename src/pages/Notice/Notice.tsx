@@ -2,9 +2,7 @@
 import Marquee from "react-fast-marquee";
 import { useQuery } from "@tanstack/react-query";
 import axiosPublic from "../../hooks/axiosPublic";
-// import { Link } from "react-router";
 
-// ── Default notice shown when no active DB notice exists ──────────────────────
 const DEFAULT_NOTICE =
   "রয়্যাল একাডেমিতে আপনাকে স্বাগতম। আমাদের সকল কার্যক্রম যথাসময়ে পরিচালিত হচ্ছে। যেকোনো তথ্যের জন্য অফিসে যোগাযোগ করুন।";
 
@@ -12,6 +10,7 @@ interface NoticeItem {
   _id: string;
   noticeSlug: string;
   notice: string;
+  durationDays: number;
   expiresAt: string;
 }
 
@@ -22,15 +21,20 @@ const Notice = () => {
       const res = await axiosPublic.get("/api/notices/active");
       return res.data.data as NoticeItem | null;
     },
-    refetchInterval: 5 * 60 * 1000,
+    // Refetch every 60 seconds so the marquee switches to default promptly
+    // after a notice expires — no need to wait 5 minutes
+    refetchInterval: 60 * 1000,
   });
 
-  const isActive = !isLoading && !!data;
+  // Double-check expiry on the client side too.
+  // The backend already filters, but this covers the gap between refetches.
+  const isActive =
+    !isLoading && !!data && new Date(data.expiresAt) > new Date();
 
   const displayText = isLoading
     ? "..."
     : isActive
-      ? `এতদ্বারা সকলের অবগতির জন্য জানানো যাইতেছে যে, ${data!.notice}`
+      ? `এতদ্বারা সকলের অবগতির জন্য জানানো যাইতেছে যে, ${data!.notice}  ঘোষনা করা হইলো।;`
       : DEFAULT_NOTICE;
 
   return (
@@ -56,25 +60,12 @@ const Notice = () => {
       {/* Marquee */}
       <Marquee direction="left" speed={50} gradient={false} pauseOnHover={true}>
         <span
-          className="text-xl md:text-2xl font-medium "
+          className="text-xl md:text-2xl font-medium"
           style={{ color: "var(--color-text)" }}
         >
           {displayText}
         </span>
       </Marquee>
-
-      {/* Label — right */}
-      {/* <Link to="/notice">
-        <div
-          className="shrink-0 px-4 py-2 font-bold text-xl md:text-2xl tracking-wide z-10 transition-opacity duration-150 hover:opacity-80"
-          style={{
-            backgroundColor: "var(--color-text)",
-            color: "var(--color-bg)",
-          }}
-        >
-          বিস্তারিত
-        </div>
-      </Link> */}
     </div>
   );
 };

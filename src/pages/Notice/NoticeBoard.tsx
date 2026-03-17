@@ -21,6 +21,9 @@ const fmt = (iso: string) =>
     year: "numeric",
   });
 
+// Returns true if notice has NOT yet expired
+const isStillActive = (expiresAt: string) => new Date(expiresAt) > new Date();
+
 // ── Notice Row ────────────────────────────────────────────────────────────────
 const NoticeRow = ({
   item,
@@ -32,6 +35,7 @@ const NoticeRow = ({
   onClick: () => void;
 }) => {
   const [hovered, setHovered] = useState(false);
+  const active = isStillActive(item.expiresAt);
 
   return (
     <motion.div
@@ -91,15 +95,34 @@ const NoticeRow = ({
             {item.notice}
           </motion.p>
 
-          {/* Date */}
-          <motion.span
-            animate={{ opacity: hovered ? 1 : 0.45 }}
+          {/* Active badge + expiry date */}
+          <motion.div
+            animate={{ opacity: hovered ? 1 : 0.55 }}
             transition={{ duration: 0.2 }}
-            className="shrink-0 hidden sm:block text-xs font-mono tabular-nums"
-            style={{ color: "var(--color-gray)" }}
+            className="shrink-0 hidden sm:flex items-center gap-2"
           >
-            {fmt(item.expiresAt)}
-          </motion.span>
+            {/* Active / Expired pill */}
+            <span
+              className="text-xs font-semibold px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: active
+                  ? "rgba(16,185,129,0.12)"
+                  : "rgba(239,68,68,0.10)",
+                color: active ? "#10b981" : "#f87171",
+                border: `1px solid ${active ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.25)"}`,
+              }}
+            >
+              {active ? "সক্রিয়" : "মেয়াদ শেষ"}
+            </span>
+
+            {/* Expiry date */}
+            <span
+              className="text-xs font-mono tabular-nums"
+              style={{ color: "var(--color-gray)" }}
+            >
+              {fmt(item.expiresAt)}
+            </span>
+          </motion.div>
 
           {/* Arrow */}
           <motion.span
@@ -172,7 +195,7 @@ const NoticeBoard = () => {
 
   return (
     <div
-      className=" pt-3"
+      className="pt-3"
       style={{ backgroundColor: "var(--color-bg)", color: "var(--color-text)" }}
     >
       <div
@@ -280,7 +303,7 @@ const NoticeBoard = () => {
                 className="hidden sm:block shrink-0 tracking-widest"
                 style={{ color: "var(--color-gray)", opacity: 0.5 }}
               >
-                মেয়াদ
+                অবস্থা / মেয়াদ
               </span>
               <span className="w-5 shrink-0" />
             </motion.div>
@@ -309,7 +332,7 @@ const NoticeBoard = () => {
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => navigate("/notice")}
-                  className="px-6 py-2.5 rounded-xl text-sm font-semibold bangla transition-all bg-[var(--color-active-bg)] text-[var(--color-text)] border border-[1px solid var(--color-active-border)] "
+                  className="px-6 py-2.5 rounded-xl text-sm font-semibold bangla transition-all bg-[var(--color-active-bg)] text-[var(--color-text)] border border-[var(--color-active-border)]"
                 >
                   আরও দেখুন →
                 </motion.button>
