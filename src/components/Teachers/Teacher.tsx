@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import Marquee from "react-fast-marquee";
 import axiosPublic from "../../hooks/axiosPublic";
 import TeacherCard, { type TeacherData } from "./TeacherCard";
-import Card from "./Card";
 
 // ── Skeleton Card ─────────────────────────────────────────────────────────────
 const SkeletonCard = () => (
@@ -88,9 +87,11 @@ const Teacher = () => {
               ? skeletons.map((_, i) => <SkeletonCard key={i} />)
               : teachers.map((t) => <TeacherCard key={t._id} teacher={t} />)}
           </Marquee>
-          <div>
-            <Card />
-          </div>
+          <Marquee pauseOnHover speed={40} gradient={false} direction="right">
+            {isLoading
+              ? skeletons.map((_, i) => <SkeletonCard key={i} />)
+              : teachers.map((t) => <TeacherCard key={t._id} teacher={t} />)}
+          </Marquee>
         </motion.div>
       )}
     </section>

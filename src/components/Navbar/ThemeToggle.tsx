@@ -36,7 +36,7 @@ const ThemeToggle = memo<ThemeToggleProps>(
       <motion.button
         onClick={handleClick}
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        className="relative flex items-center justify-center outline-none border-none rounded-full cursor-pointer p-2"
+        className="relative flex items-center justify-center outline-none border-none rounded-full cursor-pointer p-2 w-full"
         style={{ width: size, height: size, ...btnBaseStyle }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}

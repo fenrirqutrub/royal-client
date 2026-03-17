@@ -120,7 +120,11 @@ const Router = () => {
         />
         <Route
           path="management/manage-daily-lesson"
-          element={<ManageDailyLesson />}
+          element={
+            <PrivateRoute>
+              <ManageDailyLesson />
+            </PrivateRoute>
+          }
         />
 
         <Route path="*" element={<NotFound />} />
