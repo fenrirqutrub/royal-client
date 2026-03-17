@@ -124,7 +124,7 @@ const TeacherCard = ({ teacher }: { teacher: TeacherData }) => {
 
           {/* Post body — qualification as tweet text */}
           <p className="mt-1 text-sm leading-relaxed text-[var(--color-gray)]">
-            Qualification: {teacher.qualification?.trim() || "Honours Studying"}
+            {teacher.qualification?.trim() || "Honours Studying"}
           </p>
         </div>
       </div>
