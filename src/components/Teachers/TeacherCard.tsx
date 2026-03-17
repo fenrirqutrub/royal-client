@@ -1,7 +1,18 @@
 // src/components/Teachers/TeacherCard.tsx
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Crown, GraduationCap, ShieldCheck, User } from "lucide-react";
+import {
+  Crown,
+  GraduationCap,
+  ShieldCheck,
+  User,
+  Heart,
+  MessageCircle,
+  Repeat2,
+  Bookmark,
+  MoreHorizontal,
+  BadgeCheck,
+} from "lucide-react";
 
 export interface TeacherData {
   _id: string;
@@ -17,128 +28,235 @@ export interface TeacherData {
 
 const ROLE_CONFIG: Record<
   string,
-  { label: string; color: string; Icon: React.ElementType; desc: string }
+  {
+    label: string;
+    color: string;
+    handle: string;
+    Icon: React.ElementType;
+    desc: string;
+  }
 > = {
   principal: {
     label: "অধ্যক্ষ",
     color: "#8b5cf6",
+    handle: "principal",
     Icon: Crown,
     desc: "প্রধান শিক্ষক",
   },
   admin: {
     label: "প্রশাসক",
     color: "#ef4444",
+    handle: "admin",
     Icon: ShieldCheck,
     desc: "প্রশাসনিক কর্মকর্তা",
   },
   teacher: {
     label: "শিক্ষক",
-    color: "#3b82f6",
+    color: "#1d9bf0",
+    handle: "teacher",
     Icon: GraduationCap,
     desc: "শিক্ষক",
   },
 };
 
 const TeacherCard = ({ teacher }: { teacher: TeacherData }) => {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isHovered, setIsHovered] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [likeCount, setLikeCount] = useState(
+    Math.floor(Math.random() * 120) + 12,
+  );
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!cardRef.current) return;
-    const { clientX, clientY } = e;
-    const { left, top, width, height } =
-      cardRef.current.getBoundingClientRect();
-    const x = (clientX - (left + width / 2)) / (width / 2);
-    const y = (clientY - (top + height / 2)) / (height / 2);
-    setPosition({ x: x * 16, y: y * 16 });
+  const { color, Icon, desc, handle } =
+    ROLE_CONFIG[teacher.role] ?? ROLE_CONFIG.teacher;
+
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLiked((p) => !p);
+    setLikeCount((c) => (liked ? c - 1 : c + 1));
   };
 
-  const { color, Icon, desc } =
-    ROLE_CONFIG[teacher.role] ?? ROLE_CONFIG.teacher;
+  const handleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setBookmarked((p) => !p);
+  };
 
   return (
     <motion.div
-      ref={cardRef}
-      className="relative mx-3 cursor-pointer select-none overflow-hidden rounded-2xl flex flex-row gap-4 px-4 py-2"
+      className="relative cursor-pointer"
       style={{
-        width: "clamp(260px, 28vw, 340px)",
-        minWidth: "260px",
-        backgroundColor: "var(--color-active-bg)",
-        border: "1px solid var(--color-active-border)",
-        boxShadow: isHovered
-          ? `0 12px 40px ${color}22, 0 2px 8px rgba(0,0,0,0.08)`
-          : "0 2px 8px rgba(0,0,0,0.04)",
-        transition: "box-shadow 0.3s ease",
+        width: "clamp(300px, 32vw, 600px)",
+        minWidth: "300px",
+        backgroundColor: "#000000",
+        border: "1px solid #2f3336",
+        borderRadius: "0px",
+        fontFamily:
+          "'TwitterChirp', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
-      animate={{
-        x: position.x,
-        y: position.y,
-        rotateX: position.y * 0.7,
-        rotateY: position.x * -0.7,
-        scale: isHovered ? 1.04 : 1,
-      }}
-      transition={{ type: "spring", stiffness: 260, damping: 22, mass: 1 }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        setPosition({ x: 0, y: 0 });
-      }}
-      onMouseEnter={() => setIsHovered(true)}
+      whileHover={{ backgroundColor: "#080808" }}
+      transition={{ duration: 0.15 }}
     >
-      {/* Left accent bar */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
-        style={{ background: `linear-gradient(180deg, ${color}, ${color}66)` }}
-      />
-
-      {/* Avatar */}
-      <div
-        className="shrink-0 rounded-full overflow-hidden flex items-center justify-center h-20 w-20"
-        style={{
-          background: `linear-gradient(135deg, ${color}22, ${color}44)`,
-          border: `1.5px solid ${color}44`,
-        }}
-      >
-        {teacher.avatar?.url ? (
-          <img
-            src={teacher.avatar.url}
-            alt={teacher.name}
-            className="w-full h-full object-cover"
+      {/* Main content row */}
+      <div className="flex gap-3 px-4 pt-3 pb-1">
+        {/* Left: Avatar column */}
+        <div className="flex flex-col items-center shrink-0">
+          <div
+            className="rounded-full overflow-hidden flex items-center justify-center"
+            style={{
+              width: 40,
+              height: 40,
+              background: `linear-gradient(135deg, ${color}33, ${color}66)`,
+              border: `1.5px solid ${color}55`,
+            }}
+          >
+            {teacher.avatar?.url ? (
+              <img
+                src={teacher.avatar.url}
+                alt={teacher.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="w-5 h-5" style={{ color }} />
+            )}
+          </div>
+          {/* Thread line (decorative) */}
+          <div
+            className="w-0.5 flex-1 mt-1 mb-1 opacity-20"
+            style={{ background: "#536471", minHeight: 20 }}
           />
-        ) : (
-          <User className="w-8 h-8" style={{ color }} />
-        )}
+        </div>
+
+        {/* Right: Content */}
+        <div className="flex-1 min-w-0">
+          {/* Header row */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-1 flex-wrap min-w-0">
+              <span
+                className="font-bold text-[15px] leading-tight truncate max-w-[140px]"
+                style={{ color: "#e7e9ea" }}
+                title={teacher.name}
+              >
+                {teacher.name}
+              </span>
+              {/* Verified badge tinted by role color */}
+              <BadgeCheck
+                className="w-[18px] h-[18px] shrink-0"
+                style={{ color }}
+              />
+              <span
+                className="text-[15px] leading-tight truncate"
+                style={{ color: "#536471" }}
+              >
+                @{teacher.slug || handle}
+              </span>
+              <span style={{ color: "#536471", fontSize: 13 }}>·</span>
+              <span style={{ color: "#536471", fontSize: 13 }}>শিক্ষক</span>
+            </div>
+            <button
+              className="rounded-full p-1.5 flex items-center justify-center shrink-0"
+              style={{ color: "#536471" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="w-[18px] h-[18px]" />
+            </button>
+          </div>
+
+          {/* Post body — qualification as "post text" */}
+          <div className="mt-1">
+            <p
+              className="text-[15px] leading-relaxed bangla"
+              style={{ color: "#e7e9ea" }}
+            >
+              {teacher.qualification?.trim() || "Honours Studying"}
+            </p>
+          </div>
+
+          {/* Role badge pill */}
+          <div className="mt-2 mb-2 flex items-center gap-1.5">
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[12px] font-semibold bangla"
+              style={{
+                background: `${color}18`,
+                color,
+                border: `1px solid ${color}33`,
+              }}
+            >
+              <Icon className="w-3 h-3" />
+              {desc}
+            </span>
+          </div>
+
+          {/* Action bar */}
+          <div
+            className="flex items-center justify-between mt-1 mb-2"
+            style={{ maxWidth: 320, color: "#536471" }}
+          >
+            {/* Reply */}
+            <button
+              className="group flex items-center gap-1.5 text-[13px] rounded-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="group-hover:bg-[#1d9bf022] rounded-full p-1.5 transition-colors">
+                <MessageCircle className="w-[18px] h-[18px]" />
+              </span>
+              <span className="group-hover:text-[#1d9bf0] transition-colors">
+                {Math.floor(Math.random() * 40) + 2}
+              </span>
+            </button>
+
+            {/* Repost */}
+            <button
+              className="group flex items-center gap-1.5 text-[13px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="group-hover:bg-[#00ba7c22] rounded-full p-1.5 transition-colors">
+                <Repeat2 className="w-[18px] h-[18px]" />
+              </span>
+              <span className="group-hover:text-[#00ba7c] transition-colors">
+                {Math.floor(Math.random() * 30) + 1}
+              </span>
+            </button>
+
+            {/* Like */}
+            <motion.button
+              className="group flex items-center gap-1.5 text-[13px]"
+              onClick={handleLike}
+              whileTap={{ scale: 1.3 }}
+            >
+              <span className="group-hover:bg-[#f9197322] rounded-full p-1.5 transition-colors">
+                <Heart
+                  className="w-[18px] h-[18px] transition-colors"
+                  style={{ color: liked ? "#f91880" : undefined }}
+                  fill={liked ? "#f91880" : "none"}
+                />
+              </span>
+              <span
+                className="transition-colors"
+                style={{ color: liked ? "#f91880" : undefined }}
+              >
+                {likeCount}
+              </span>
+            </motion.button>
+
+            {/* Bookmark */}
+            <motion.button
+              className="group flex items-center gap-1.5"
+              onClick={handleBookmark}
+              whileTap={{ scale: 1.25 }}
+            >
+              <span className="group-hover:bg-[#1d9bf022] rounded-full p-1.5 transition-colors">
+                <Bookmark
+                  className="w-[18px] h-[18px] transition-colors"
+                  style={{ color: bookmarked ? "#1d9bf0" : undefined }}
+                  fill={bookmarked ? "#1d9bf0" : "none"}
+                />
+              </span>
+            </motion.button>
+          </div>
+        </div>
       </div>
 
-      {/* Info */}
-      <div className="flex flex-col justify-center gap-1 min-w-0 flex-1">
-        <h3
-          className="font-bold text-base leading-tight truncate bangla"
-          style={{ color: "var(--color-text)" }}
-          title={teacher.name}
-        >
-          {teacher.name}
-        </h3>
-
-        <p className="text-sm truncate bangla text-[var(--color-gray)] flex items-center gap-x-1 ">
-          <Icon className="h-4 w-4" />
-          {desc}
-        </p>
-        <p className="text-xs truncate bangla text-[var(--color-gray)]">
-          {teacher.qualification?.trim() || "Honours Studying"}
-        </p>
-      </div>
-
-      {/* Slug — top right */}
-      {teacher.slug && (
-        <span
-          className="absolute top-3 right-3 text-[9px] font-mono tracking-widest opacity-20"
-          style={{ color: "var(--color-text)" }}
-        >
-          {teacher.slug}
-        </span>
-      )}
+      {/* Bottom divider */}
+      <div style={{ borderTop: "1px solid #2f3336" }} />
     </motion.div>
   );
 };
