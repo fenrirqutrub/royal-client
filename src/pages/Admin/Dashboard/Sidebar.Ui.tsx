@@ -369,7 +369,7 @@ export const SidebarContent = ({
       >
         {/* Avatar row */}
         <motion.div
-          className="flex items-center gap-2.5 px-1 py-1.5 rounded-xl bg-[var(--color-active-bg)]"
+          className="flex items-center gap-2.5 px-1 py-1.5 rounded-xl bg-[var(--color-bg)]"
           whileHover={{ scale: 1.015 }}
           transition={SPRING_SM}
         >
