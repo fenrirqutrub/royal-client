@@ -25,7 +25,6 @@ import {
   Building2,
   Hash,
   School,
-  ChevronDown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import axiosPublic from "../../../hooks/axiosPublic";
@@ -440,7 +439,7 @@ const Profile = () => {
       className="min-h-screen transition-colors"
       style={{ backgroundColor: "var(--color-bg)" }}
     >
-      <main className="w-full px-4 py-8 lg:py-10">
+      <main className="w-full  py-8 lg:py-10">
         {/* ── Page header ── */}
         <motion.div
           initial={{ opacity: 0, y: -12 }}
