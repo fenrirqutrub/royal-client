@@ -3,7 +3,7 @@ import AdminSidebar from "../pages/Admin/Dashboard/AdminSidebar";
 
 const AdminLayout = () => {
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-800">
+    <div className="flex min-h-screen bg-[var(--color-bg)]">
       {/* Sidebar */}
       <AdminSidebar />
 

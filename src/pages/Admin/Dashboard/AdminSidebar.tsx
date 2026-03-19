@@ -215,7 +215,7 @@ const AdminSidebar = () => {
           <>
             <motion.div
               key="backdrop"
-              className="lg:hidden fixed inset-0 z-40 bg-slate-900/20"
+              className="lg:hidden fixed inset-0 z-40 bg-[var(--color-bg)]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

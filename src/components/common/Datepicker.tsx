@@ -82,17 +82,49 @@ const DatePicker = ({
   const [direction, setDirection] = useState<1 | -1>(1);
 
   const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const yearListRef = useRef<HTMLDivElement>(null);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
 
-  // close on outside click
+  // close on outside click + reposition on scroll/resize
   useEffect(() => {
-    const fn = (e: MouseEvent) => {
+    const close = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node))
         setOpen(false);
     };
-    document.addEventListener("mousedown", fn);
-    return () => document.removeEventListener("mousedown", fn);
-  }, []);
+    const reposition = () => {
+      if (!open || !triggerRef.current) return;
+      const r = triggerRef.current.getBoundingClientRect();
+      const calW = Math.max(r.width, 288);
+      // Use a smaller estimate — actual cal can be shorter
+      const calH = 320;
+      const spaceBelow = window.innerHeight - r.bottom - 8;
+      const spaceAbove = r.top - 8;
+      let top: number;
+      if (spaceBelow >= calH) {
+        // Preferred: open below trigger
+        top = r.bottom + 6;
+      } else if (spaceAbove >= calH) {
+        // Fallback: open above trigger
+        top = r.top - calH - 6;
+      } else {
+        // Neither fits — center vertically on screen
+        top = Math.max(8, (window.innerHeight - calH) / 2);
+      }
+      const rawLeft = r.left;
+      const maxLeft = window.innerWidth - calW - 8;
+      const left = Math.max(8, Math.min(rawLeft, maxLeft));
+      setDropPos({ top, left, width: r.width });
+    };
+    document.addEventListener("mousedown", close);
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+    };
+  }, [open]);
 
   // scroll year into view when year picker opens
   useEffect(() => {
@@ -212,7 +244,31 @@ const DatePicker = ({
       <button
         type="button"
         disabled={disabled}
+        ref={triggerRef}
         onClick={() => {
+          if (!open && triggerRef.current) {
+            const r = triggerRef.current.getBoundingClientRect();
+            const calW = Math.max(r.width, 288);
+            // Use a smaller estimate — actual cal can be shorter
+            const calH = 320;
+            const spaceBelow = window.innerHeight - r.bottom - 8;
+            const spaceAbove = r.top - 8;
+            let top: number;
+            if (spaceBelow >= calH) {
+              // Preferred: open below trigger
+              top = r.bottom + 6;
+            } else if (spaceAbove >= calH) {
+              // Fallback: open above trigger
+              top = r.top - calH - 6;
+            } else {
+              // Neither fits — center vertically on screen
+              top = Math.max(8, (window.innerHeight - calH) / 2);
+            }
+            const rawLeft = r.left;
+            const maxLeft = window.innerWidth - calW - 8;
+            const left = Math.max(8, Math.min(rawLeft, maxLeft));
+            setDropPos({ top, left, width: r.width });
+          }
           setOpen((v) => !v);
           setMode("day");
         }}
@@ -255,8 +311,13 @@ const DatePicker = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.16, ease: "easeOut" }}
-            className="absolute left-0 z-50 mt-2 w-72 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden"
-            style={{ boxShadow: "0 20px 60px -10px rgba(0,0,0,0.22)" }}
+            className="fixed z-[9999] bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden"
+            style={{
+              boxShadow: "0 20px 60px -10px rgba(0,0,0,0.28)",
+              top: dropPos.top,
+              left: dropPos.left,
+              width: Math.max(dropPos.width, 288),
+            }}
           >
             {/* ── Header bar ── */}
             <div className="flex items-center justify-between px-3 pt-3 pb-2 gap-1">

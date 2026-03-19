@@ -1,5 +1,15 @@
 // src/pages/Admin/Auth/Signup.tsx
 import { useState, useMemo, useCallback } from "react";
+
+// ─── Timezone-safe ISO date ───────────────────────────────────────────────────
+// date.toISOString() is UTC — in UTC+6 (Bangladesh), local midnight becomes
+// the previous day in UTC, shifting the stored date by -1. Use local parts.
+const toLocalIso = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 import { useForm } from "react-hook-form";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -13,7 +23,6 @@ import {
   ChevronLeft,
   CheckCircle2,
   GraduationCap,
-  Building2,
   Loader2,
   Mail,
   BookOpen,
@@ -26,9 +35,7 @@ import toast from "react-hot-toast";
 import axiosPublic from "../../../hooks/axiosPublic";
 import { useAuth } from "../../../context/AuthContext";
 import type { AuthUser } from "../../../context/AuthContext";
-
 import { getDivisions, getDistricts, getThanas } from "../../../data/bd-geo";
-
 import {
   type Gender,
   type Religion,
@@ -148,7 +155,7 @@ const StaffPhoneCheck = ({
   );
 };
 
-// ─── Geo address block (present / permanent) ──────────────────────────────────
+// ─── Geo address block ────────────────────────────────────────────────────────
 const GeoAddressFields = ({
   prefix = "",
   register,
@@ -194,7 +201,6 @@ const GeoAddressFields = ({
 
   return (
     <div className="space-y-3">
-      {/* Village + Para */}
       <div className="grid grid-cols-2 gap-2.5">
         <ValidatedInput
           state={fs(villageKey)}
@@ -216,7 +222,6 @@ const GeoAddressFields = ({
         />
       </div>
 
-      {/* Division → District → Thana (cascading SelectInputs) */}
       <SelectInput
         label="বিভাগ *"
         value={division}
@@ -227,7 +232,6 @@ const GeoAddressFields = ({
         }}
         placeholder="বিভাগ নির্বাচন করুন"
         options={divisionOptions}
-        error={!division ? undefined : undefined}
       />
 
       <div className="grid grid-cols-2 gap-2.5">
@@ -252,7 +256,6 @@ const GeoAddressFields = ({
         />
       </div>
 
-      {/* Optional fields */}
       {showLandmark && (
         <>
           {setPermanentSame && (
@@ -287,8 +290,8 @@ const Signup = () => {
 
   const [gender, setGender] = useState<Gender>(null);
   const [religion, setReligion] = useState<Religion>(null);
-  const [dobDisplay, setDobDisplay] = useState(""); // Bengali display
-  const [dobIso, setDobIso] = useState(""); // YYYY-MM-DD for server
+  const [dobDisplay, setDobDisplay] = useState("");
+  const [dobIso, setDobIso] = useState("");
   const [permanentSame, setPermanentSame] = useState<boolean | null>(null);
   const [educationComplete, setEducationComplete] = useState<boolean | null>(
     null,
@@ -296,12 +299,10 @@ const Signup = () => {
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
 
-  // Present address geo
   const [division, setDivision] = useState("");
   const [district, setDistrict] = useState("");
   const [thana, setThana] = useState("");
 
-  // Permanent address geo
   const [pDivision, setPDivision] = useState("");
   const [pDistrict, setPDistrict] = useState("");
   const [pThana, setPThana] = useState("");
@@ -373,6 +374,12 @@ const Signup = () => {
   }, []);
 
   const onSubmit = async (data: SignupForm) => {
+    // Guard: dobIso must be set
+    if (!dobIso) {
+      toast.error("জন্ম তারিখ দিন");
+      return;
+    }
+
     try {
       const fd = new FormData();
 
@@ -382,16 +389,17 @@ const Signup = () => {
         fd.append("phone", data.phone);
         fd.append("studentClass", selectedClass);
         if (needsSubject) fd.append("studentSubject", selectedSubject);
-        fd.append("roll", data.roll ?? "");
-        fd.append("schoolName", data.schoolName ?? "");
+        if (data.roll) fd.append("roll", data.roll);
+        if (data.schoolName) fd.append("schoolName", data.schoolName);
       } else {
         fd.append("role", staffInfo!.role);
         fd.append("phone", staffPhone!);
         fd.append("educationComplete", String(educationComplete));
-        fd.append("qualification", data.qualification ?? "");
-        if (educationComplete === true) fd.append("degree", data.degree ?? "");
-        if (educationComplete === false)
-          fd.append("currentYear", data.currentYear ?? "");
+        if (data.qualification) fd.append("qualification", data.qualification);
+        if (educationComplete === true && data.degree)
+          fd.append("degree", data.degree);
+        if (educationComplete === false && data.currentYear)
+          fd.append("currentYear", data.currentYear);
         if (data.email) fd.append("email", data.email);
       }
 
@@ -401,20 +409,20 @@ const Signup = () => {
       fd.append("dateOfBirth", dobIso);
       fd.append("religion", religion ?? "");
       fd.append("password", data.password);
-      fd.append("emergencyContact", data.emergencyContact ?? "");
+      if (data.emergencyContact)
+        fd.append("emergencyContact", data.emergencyContact);
 
-      // Present address — gramNam+para from RHF, geo from state
       fd.append("gramNam", data.gramNam);
-      fd.append("para", data.para ?? "");
+      if (data.para) fd.append("para", data.para);
       fd.append("division", division);
       fd.append("district", district);
       fd.append("thana", thana);
-      fd.append("landmark", data.landmark ?? "");
+      if (data.landmark) fd.append("landmark", data.landmark);
       fd.append("permanentSameAsPresent", String(permanentSame ?? true));
 
       if (permanentSame === false) {
         fd.append("permanentGramNam", data.permanentGramNam ?? "");
-        fd.append("permanentPara", data.permanentPara ?? "");
+        if (data.permanentPara) fd.append("permanentPara", data.permanentPara);
         fd.append("permanentDivision", pDivision);
         fd.append("permanentDistrict", pDistrict);
         fd.append("permanentThana", pThana);
@@ -551,8 +559,7 @@ const Signup = () => {
             <NavRow
               onBack={goBack}
               onNext={async () => {
-                const ok = await trigger(["fatherName", "motherName"]);
-                if (ok) goNext();
+                if (await trigger(["fatherName", "motherName"])) goNext();
               }}
             />
           </StepShell>
@@ -572,7 +579,6 @@ const Signup = () => {
         return (
           <StepShell title="জন্ম তারিখ ও লিঙ্গ" subtitle="সঠিক তথ্য দিন">
             <div className="space-y-5">
-              {/* ── Improved DatePicker with year/month navigation ── */}
               <div>
                 <p className="text-xs font-semibold mb-1.5 bangla text-[var(--color-gray)]">
                   জন্ম তারিখ *
@@ -581,9 +587,7 @@ const Signup = () => {
                   value={dobDisplay}
                   onChange={setDobDisplay}
                   onDateChange={(date) => {
-                    if (!isNaN(date.getTime())) {
-                      setDobIso(date.toISOString().split("T")[0]);
-                    }
+                    if (!isNaN(date.getTime())) setDobIso(toLocalIso(date));
                   }}
                   placeholder="জন্ম তারিখ বেছে নিন"
                   maxDate={new Date()}
@@ -594,8 +598,6 @@ const Signup = () => {
                   </p>
                 )}
               </div>
-
-              {/* Gender */}
               <div>
                 <p className="text-xs font-semibold mb-2 bangla text-[var(--color-gray)]">
                   {isStudent ? "ছেলে নাকি মেয়ে? *" : "লিঙ্গ *"}

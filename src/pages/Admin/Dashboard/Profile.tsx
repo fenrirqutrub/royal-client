@@ -313,7 +313,7 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0d1117] transition-colors duration-300">
-      <main className="max-w-2xl mx-auto px-4 py-10">
+      <main className="w-full mx-auto px-4 py-10">
         {/* ── Page header ── */}
         <motion.div
           initial={{ opacity: 0, y: -16 }}
