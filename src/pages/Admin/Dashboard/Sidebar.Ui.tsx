@@ -1,9 +1,5 @@
 /**
  * Sidebar.Ui.tsx
- * ─────────────────────────────────────────────
- * All visual design, animation variants, and
- * sub-components for the admin sidebar.
- * ✅ No shadcn/ui — pure Tailwind + Framer Motion
  */
 
 import { useState } from "react";
@@ -20,7 +16,6 @@ import { LogOut, ChevronDown, HomeIcon, type LucideIcon } from "lucide-react";
 import ThemeToggle from "../../../components/Navbar/ThemeToggle";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
 export interface SubNavItem {
   name: string;
   path: string;
@@ -31,7 +26,6 @@ export interface NavItem {
   icon: LucideIcon;
   subItems: SubNavItem[];
 }
-
 export interface SidebarContentProps {
   user: { name?: string; role?: string; slug?: string } | null;
   navGroups: NavItem[];
@@ -39,10 +33,10 @@ export interface SidebarContentProps {
   roleConfig: { label: string; color: string };
   onLogout: () => void;
   onThemeToggle: () => void;
+  onNavClick?: () => void; // ← close callback
 }
 
 // ── Motion constants ──────────────────────────────────────────────────────────
-
 export const SPRING: Transition = {
   type: "spring",
   stiffness: 320,
@@ -54,8 +48,6 @@ export const SPRING_SM: Transition = {
   damping: 32,
 };
 
-// ── Variants ──────────────────────────────────────────────────────────────────
-
 export const sidebarV: Variants = {
   hidden: { x: -40, opacity: 0 },
   visible: {
@@ -64,7 +56,6 @@ export const sidebarV: Variants = {
     transition: { ...SPRING, staggerChildren: 0.06 } as Transition,
   },
 };
-
 export const cardV: Variants = {
   hidden: { y: -16, opacity: 0, scale: 0.96 },
   visible: {
@@ -74,7 +65,6 @@ export const cardV: Variants = {
     transition: { ...SPRING, delay: 0.05 } as Transition,
   },
 };
-
 export const labelV: Variants = {
   hidden: { x: -12, opacity: 0 },
   visible: (i: number) => ({
@@ -83,7 +73,6 @@ export const labelV: Variants = {
     transition: { delay: 0.15 + i * 0.07, ...SPRING } as Transition,
   }),
 };
-
 export const groupV: Variants = {
   hidden: { x: -14, opacity: 0 },
   visible: (i: number) => ({
@@ -92,7 +81,6 @@ export const groupV: Variants = {
     transition: { delay: 0.2 + i * 0.08, ...SPRING } as Transition,
   }),
 };
-
 export const subItemV: Variants = {
   hidden: { x: -10, opacity: 0 },
   visible: (i: number) => ({
@@ -108,7 +96,6 @@ export const subItemV: Variants = {
 };
 
 // ── MagneticWrap ──────────────────────────────────────────────────────────────
-
 export const MagneticWrap = ({
   children,
   className,
@@ -120,7 +107,6 @@ export const MagneticWrap = ({
   const y = useMotionValue(0);
   const sx = useMotionSpring(x, { stiffness: 420, damping: 32 });
   const sy = useMotionSpring(y, { stiffness: 420, damping: 32 });
-
   return (
     <motion.div
       className={className}
@@ -142,7 +128,6 @@ export const MagneticWrap = ({
 };
 
 // ── PulsingAvatar ─────────────────────────────────────────────────────────────
-
 export const PulsingAvatar = ({
   color,
   initial,
@@ -155,14 +140,12 @@ export const PulsingAvatar = ({
     whileHover={{ scale: 1.08 }}
     transition={SPRING_SM}
   >
-    {/* Pulse ring */}
     <motion.span
       className="absolute inset-0 rounded-full pointer-events-none"
       style={{ backgroundColor: color + "30" }}
       animate={{ scale: [1, 1.55, 1], opacity: [0.6, 0, 0.6] }}
       transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
     />
-    {/* Avatar circle */}
     <div
       className="h-9 w-9 rounded-full flex items-center justify-center text-white text-xs font-bold"
       style={{
@@ -175,8 +158,7 @@ export const PulsingAvatar = ({
   </motion.div>
 );
 
-// ── Tooltip (plain) ───────────────────────────────────────────────────────────
-
+// ── Tooltip ───────────────────────────────────────────────────────────────────
 const PlainTooltip = ({
   label,
   children,
@@ -188,8 +170,8 @@ const PlainTooltip = ({
     {children}
     <div
       className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50
-        hidden group-hover:block px-2 py-1 rounded bg-[var(--color-text)] text-[var(--color-bg)]
-        text-xs whitespace-nowrap shadow-lg"
+      hidden group-hover:block px-2 py-1 rounded bg-[var(--color-text)] text-[var(--color-bg)]
+      text-xs whitespace-nowrap shadow-lg"
     >
       {label}
     </div>
@@ -197,15 +179,16 @@ const PlainTooltip = ({
 );
 
 // ── NavGroup ──────────────────────────────────────────────────────────────────
-
 export const NavGroup = ({
   item,
   open,
   onToggle,
+  onNavClick,
 }: {
   item: NavItem;
   open: boolean;
   onToggle: () => void;
+  onNavClick?: () => void;
 }) => {
   const { pathname } = useLocation();
   const isActive = (p: string) => pathname === p;
@@ -214,22 +197,19 @@ export const NavGroup = ({
 
   return (
     <div className="mt-1">
-      {/* Trigger */}
       <motion.button
         type="button"
         onClick={onToggle}
         whileHover={{ x: 2 }}
         whileTap={{ scale: 0.98 }}
         transition={SPRING_SM}
-        className={`
-          w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium
+        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium
           cursor-pointer transition-colors
           ${
             groupActive
               ? "bg-[var(--color-active-bg)] text-[var(--color-active-text)] font-semibold"
               : "text-[var(--color-gray)] hover:text-[var(--color-text)] bg-[var(--color-bg)]"
-          }
-        `}
+          }`}
       >
         <span className="flex items-center gap-3">
           <motion.span
@@ -257,7 +237,6 @@ export const NavGroup = ({
         </motion.span>
       </motion.button>
 
-      {/* Sub-items */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -296,14 +275,13 @@ export const NavGroup = ({
                     >
                       <Link
                         to={sub.path}
-                        className={`
-                          flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors
+                        onClick={onNavClick} // ← close sidebar on click
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors
                           ${
                             active
                               ? "bg-[var(--color-active-bg)] text-[var(--color-active-text)] font-medium"
                               : "text-[var(--color-gray)] hover:text-[var(--color-text)] hover:bg-[var(--color-active-bg)]"
-                          }
-                        `}
+                          }`}
                       >
                         <motion.span
                           whileHover={{ rotate: 12, scale: 1.2 }}
@@ -333,7 +311,6 @@ export const NavGroup = ({
 };
 
 // ── SidebarContent ────────────────────────────────────────────────────────────
-
 export const SidebarContent = ({
   user,
   navGroups,
@@ -341,6 +318,7 @@ export const SidebarContent = ({
   roleConfig: cfg,
   onLogout,
   onThemeToggle,
+  onNavClick,
 }: SidebarContentProps) => {
   const [openGroup, setOpenGroup] = useState<number | null>(null);
 
@@ -351,12 +329,11 @@ export const SidebarContent = ({
       initial="hidden"
       animate="visible"
     >
-      {/* ── User card ─────────────────────────────────────────────────── */}
+      {/* User card */}
       <motion.div
         variants={cardV}
         className="px-3 pt-4 pb-3 border-b border-[var(--color-active-border)] space-y-2.5"
       >
-        {/* Avatar row */}
         <motion.div
           className="flex items-center gap-2.5 px-1 py-1.5 rounded-xl bg-[var(--color-bg)]"
           whileHover={{ scale: 1.015 }}
@@ -366,7 +343,11 @@ export const SidebarContent = ({
             color={cfg.color}
             initial={(user?.name ?? "U")[0].toUpperCase()}
           />
-          <Link to="/dashboard/profile" className="flex-1 min-w-0">
+          <Link
+            to="/dashboard/profile"
+            onClick={onNavClick}
+            className="flex-1 min-w-0"
+          >
             <motion.p
               className="text-sm font-semibold text-[var(--color-text)] truncate"
               initial={{ opacity: 0, x: 8 }}
@@ -381,7 +362,6 @@ export const SidebarContent = ({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.26 }}
             >
-              {/* Role badge — plain span instead of shadcn Badge */}
               <span
                 className="text-[9px] px-1.5 py-0 font-bold uppercase tracking-wide rounded-full border h-4 inline-flex items-center"
                 style={{
@@ -404,6 +384,7 @@ export const SidebarContent = ({
           <MagneticWrap className="flex-1">
             <Link
               to="/"
+              onClick={onNavClick}
               className="flex items-center justify-center gap-1.5 w-full px-3 py-1.5 rounded-lg
                 text-xs font-semibold border transition-colors
                 text-emerald-700 dark:text-emerald-400
@@ -424,7 +405,10 @@ export const SidebarContent = ({
           <MagneticWrap className="flex-1">
             <motion.button
               type="button"
-              onClick={onLogout}
+              onClick={() => {
+                onLogout();
+                onNavClick?.();
+              }}
               whileTap={{ x: [0, -4, 4, 0] } as never}
               className="flex items-center justify-center gap-1.5 w-full px-3 py-1.5 rounded-lg
                 text-xs font-semibold border transition-colors cursor-pointer
@@ -441,7 +425,6 @@ export const SidebarContent = ({
           </MagneticWrap>
         </div>
 
-        {/* Theme toggle — div wrapper to avoid nested <button> inside ThemeToggle */}
         <motion.div
           onClick={onThemeToggle}
           whileHover={{
@@ -458,8 +441,7 @@ export const SidebarContent = ({
         </motion.div>
       </motion.div>
 
-      {/* ── Navigation ────────────────────────────────────────────────── */}
-      {/* plain overflow-y-auto instead of shadcn ScrollArea */}
+      {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-3 py-3">
         <nav className="space-y-0.5">
           {navGroups.map((group, idx) => (
@@ -472,7 +454,6 @@ export const SidebarContent = ({
                   className="my-2 border-[var(--color-active-border)]"
                 />
               )}
-
               <motion.p
                 custom={idx}
                 variants={labelV}
@@ -483,7 +464,6 @@ export const SidebarContent = ({
               >
                 {sectionLabels[idx]}
               </motion.p>
-
               <motion.div
                 custom={idx}
                 variants={groupV}
@@ -494,6 +474,7 @@ export const SidebarContent = ({
                   item={group}
                   open={openGroup === idx}
                   onToggle={() => setOpenGroup((p) => (p === idx ? null : idx))}
+                  onNavClick={onNavClick} // ← pass down
                 />
               </motion.div>
             </div>

@@ -1,8 +1,5 @@
 /**
  * AdminSidebar.tsx
- * ✅ Single sidebar — role দেখে conditionally items show করে
- * Student → শুধু Profile
- * Staff/Admin → full nav
  */
 
 import { useState, useEffect } from "react";
@@ -23,7 +20,6 @@ import { useAuth } from "../../../context/AuthContext";
 import { useTheme } from "../../../context/ThemeProvider";
 import { SidebarContent, SPRING_SM, type NavItem } from "./Sidebar.Ui";
 
-// ── Role config ───────────────────────────────────────────────────────────────
 const ROLES: Record<string, { label: string; color: string }> = {
   owner: { label: "Owner", color: "#f59e0b" },
   admin: { label: "Admin", color: "#ef4444" },
@@ -31,8 +27,6 @@ const ROLES: Record<string, { label: string; color: string }> = {
   teacher: { label: "Teacher", color: "#3b82f6" },
   student: { label: "Student", color: "#22c55e" },
 };
-
-// ── Nav builders ──────────────────────────────────────────────────────────────
 
 const dashboardNav = (): NavItem[] => [
   {
@@ -45,7 +39,6 @@ const dashboardNav = (): NavItem[] => [
   },
 ];
 
-// Student এর জন্য শুধু Profile
 const studentNav = (): NavItem[] => [
   {
     name: "আমার অ্যাকাউন্ট",
@@ -136,9 +129,7 @@ const managementNav = (isPrivileged: boolean): NavItem[] => [
 ];
 
 const buildNav = (role: string): NavItem[] => {
-  // Student → শুধু profile, বাকি সব hidden
   if (role === "student") return studentNav();
-
   const isPrivileged = ["admin", "principal", "owner"].includes(role);
   return [
     ...dashboardNav(),
@@ -149,10 +140,9 @@ const buildNav = (role: string): NavItem[] => {
 
 const SECTION_LABELS: Record<string, string[]> = {
   student: ["অ্যাকাউন্ট"],
-  default: ["সেটিংস", "এখানে লেখুন", "ব্যস্খাপনা্"],
+  default: ["সেটিংস", "এখানে লেখুন", "ব্যবস্থাপনা"],
 };
 
-// ── AdminSidebar ──────────────────────────────────────────────────────────────
 const AdminSidebar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopOpen, setDesktopOpen] = useState(true);
@@ -165,6 +155,9 @@ const AdminSidebar = () => {
   const sectionLabels =
     role === "student" ? SECTION_LABELS.student : SECTION_LABELS.default;
 
+  // Close mobile sidebar when a nav item is clicked
+  const handleNavClick = () => setMobileOpen(false);
+
   const contentProps = {
     user,
     navGroups,
@@ -172,6 +165,7 @@ const AdminSidebar = () => {
     roleConfig,
     onLogout: logout,
     onThemeToggle: toggleTheme,
+    onNavClick: handleNavClick,
   };
 
   useEffect(() => {
@@ -187,18 +181,16 @@ const AdminSidebar = () => {
 
   return (
     <>
-      {/* ── Mobile hamburger trigger ───────────────────────────────────── */}
+      {/* Mobile hamburger */}
       <button
         type="button"
         aria-label="Open navigation"
         aria-expanded={mobileOpen}
         aria-controls="mobile-sidebar"
         onClick={() => setMobileOpen(true)}
-        className={`
-          lg:hidden fixed top-4 left-4 z-50 inline-flex h-9 w-9 items-center justify-center
+        className="lg:hidden fixed top-4 left-4 z-50 inline-flex h-9 w-9 items-center justify-center
           rounded-md border border-[var(--color-active-border)] bg-[var(--color-bg)]
-          shadow text-[var(--color-text)] cursor-pointer
-        `}
+          shadow text-[var(--color-text)] cursor-pointer"
       >
         <motion.span
           whileHover={{ rotate: 90 }}
@@ -209,20 +201,19 @@ const AdminSidebar = () => {
         </motion.span>
       </button>
 
-      {/* ── Mobile: fixed aside + backdrop ───────────────────────────────── */}
+      {/* Mobile sidebar + backdrop */}
       <AnimatePresence>
         {mobileOpen && (
           <>
             <motion.div
               key="backdrop"
-              className="lg:hidden fixed inset-0 z-40 bg-[var(--color-bg)]"
+              className="lg:hidden fixed inset-0 z-40 bg-black/40"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={() => setMobileOpen(false)}
             />
-
             <motion.aside
               key="mobile-sidebar"
               id="mobile-sidebar"
@@ -240,7 +231,7 @@ const AdminSidebar = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Desktop: sticky aside ─────────────────────────────────────── */}
+      {/* Desktop sticky sidebar */}
       <motion.aside
         animate={{ width: desktopOpen ? 272 : 0, opacity: desktopOpen ? 1 : 0 }}
         transition={{
