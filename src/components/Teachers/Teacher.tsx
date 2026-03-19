@@ -40,14 +40,14 @@ const Teacher = () => {
     queryKey: ["teachers"],
     queryFn: async () => {
       const res = await axiosPublic.get("/api/users");
-      // handle both { data: [...] } and direct array
+
       const result: TeacherData[] = res.data?.data ?? res.data ?? [];
       return result;
     },
   });
 
   const teachers = (data ?? []).filter(
-    (t) => t.role !== "super-admin" && t.role !== "owner",
+    (t) => t.role === "teacher" || t.role === "admin" || t.role === "principal",
   );
 
   return (

@@ -32,6 +32,7 @@ import { useAuth } from "../../../context/AuthContext";
 import DatePicker from "../../../components/common/Datepicker";
 import SelectInput from "../../../components/common/SelectInput";
 import { getDivisions, getDistricts, getThanas } from "../../../data/bd-geo";
+import { FaUser } from "react-icons/fa";
 
 /* ─── Constants ──────────────────────────────────────────────────────────── */
 const ROLE_COLOR: Record<string, string> = {
@@ -100,8 +101,8 @@ const SectionHeader = ({
     className="flex items-center gap-2.5 px-5 pt-5 pb-3"
     style={{ borderBottom: "1px solid var(--color-active-border)" }}
   >
-    <span className="text-[var(--color-gray)]">{icon}</span>
-    <p className="text-xs font-black uppercase tracking-widest bangla text-[var(--color-gray)]">
+    <span className="text-[var(--color-gray)] ">{icon}</span>
+    <p className="text-xl font-bold uppercase tracking-widest bangla text-[var(--color-gray)]">
       {title}
     </p>
   </div>
@@ -154,7 +155,7 @@ const FieldDisplay = ({
         <span className="text-[var(--color-gray)]">{icon}</span>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5 bangla text-[var(--color-gray)]">
+        <p className="text-md font-bold uppercase tracking-widest mb-0.5 bangla text-[var(--color-gray)]">
           {label}
           {optional && (
             <span className="ml-1 normal-case tracking-normal opacity-40">
@@ -163,7 +164,7 @@ const FieldDisplay = ({
           )}
         </p>
         <p
-          className={`text-sm font-medium bangla truncate flex items-center gap-1.5 ${missing ? "italic" : ""}`}
+          className={`text-xl font-medium bangla truncate flex items-center gap-1.5 ${missing ? "italic" : ""}`}
           style={{ color: missing ? "#f59e0b" : "var(--color-text)" }}
         >
           {missing && <AlertCircle className="w-3 h-3 flex-shrink-0" />}
@@ -446,10 +447,10 @@ const Profile = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-5 mt-10 lg:mt-0"
         >
-          <h1 className="text-xl font-black tracking-tight bangla text-[var(--color-text)]">
+          <h1 className="text-xl md:text-4xl font-black tracking-tight bangla text-[var(--color-text)]">
             আমার প্রোফাইল
           </h1>
-          <p className="text-xs mt-0.5 bangla text-[var(--color-gray)]">
+          <p className="text-lg md:text-xl mt-0.5 bangla text-[var(--color-gray)]">
             ব্যক্তিগত তথ্য পরিচালনা করুন
           </p>
         </motion.div>
@@ -461,7 +462,7 @@ const Profile = () => {
               {/* Avatar */}
               <div className="relative flex-shrink-0">
                 <div
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-black overflow-hidden"
+                  className="w-16 h-16 md:w-32 md:h-32 rounded-full flex items-center justify-center text-white text-2xl font-black overflow-hidden"
                   style={{
                     background: `linear-gradient(135deg, ${roleColor}88, ${roleColor})`,
                   }}
@@ -473,7 +474,9 @@ const Profile = () => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    (profile?.name ?? user?.name ?? "U").charAt(0).toUpperCase()
+                    <div>
+                      <FaUser className="text-2xl md:text-7xl text-[var(--color-gray)]" />
+                    </div>
                   )}
                 </div>
                 <button
@@ -505,12 +508,12 @@ const Profile = () => {
 
               {/* Name + badges */}
               <div className="flex-1 min-w-0">
-                <h2 className="text-base sm:text-lg font-black truncate bangla text-[var(--color-text)]">
+                <h2 className="text-xl md:text-2xl font-bold truncate bangla text-[var(--color-text)]">
                   {profile?.name ?? user?.name ?? "—"}
                 </h2>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   <span
-                    className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest bangla"
+                    className="text-sm font-black px-2 py-0.5 rounded-full uppercase tracking-widest bangla"
                     style={{
                       backgroundColor: roleColor + "20",
                       color: roleColor,
@@ -520,14 +523,14 @@ const Profile = () => {
                   </span>
                   {slug && (
                     <span
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full font-mono tracking-widest"
+                      className="text-sm font-bold px-2 py-0.5 rounded-full font-mono tracking-widest"
                       style={{
                         backgroundColor: roleColor + "10",
                         color: roleColor + "bb",
                         border: `1px solid ${roleColor}30`,
                       }}
                     >
-                      {slug}
+                      STUDENT ID: {slug}
                     </span>
                   )}
                   {(user?.role === "admin" || user?.role === "owner") && (
@@ -624,7 +627,9 @@ const Profile = () => {
             {/* Personal */}
             <Card delay={0.08}>
               <SectionHeader
-                icon={<User className="w-3.5 h-3.5" />}
+                icon={
+                  <User className="w-5 h-5 border boder-[var(--color-gray)] rounded-full bg-gray-200" />
+                }
                 title="ব্যক্তিগত তথ্য"
               />
               <div className="px-5 pb-2">

@@ -21,7 +21,10 @@ const AUTH_MENU: MenuItem[] = [
 ];
 
 // শুধু principal / admin / owner দেখতে পাবে
-const PRIVILEGED_MENU: MenuItem[] = [{ name: "Students", path: "/students" }];
+const PRIVILEGED_MENU: MenuItem[] = [
+  { name: "শিক্ষকমন্ডলী", path: "/teachers" },
+  { name: "ছাত্রছাত্রী", path: "/students" },
+];
 
 const PRIVILEGED_ROLES = ["principal", "admin", "owner"];
 

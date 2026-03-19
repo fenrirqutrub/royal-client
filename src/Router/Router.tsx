@@ -26,6 +26,7 @@ import ManageDailyLesson from "../pages/Admin/Management/ManageDailyLesson";
 import Signup from "../pages/Admin/Auth/SignUp";
 import StudentsFiles from "../pages/StudentsFiles/StudentsFiles";
 import AuthPage from "../pages/Admin/Auth/AuthPage";
+import TeacherFiles from "../components/Teachers/TeacherFiles";
 
 // ── Role groups ───────────────────────────────────────────────────────────────
 const STAFF = ["teacher", "admin", "principal", "owner"] as const;
@@ -39,7 +40,6 @@ const Router = () => {
         <Route index element={<Home />} />
         <Route path="notice" element={<NoticeBoard />} />
         <Route path="photography" element={<Photography />} />
-
         {/* dailylesson — student + staff */}
         <Route
           path="dailylesson"
@@ -57,7 +57,6 @@ const Router = () => {
             </PrivateRoute>
           }
         />
-
         {/* weekly-exam — student + staff */}
         <Route
           path="weekly-exam"
@@ -75,7 +74,6 @@ const Router = () => {
             </PrivateRoute>
           }
         />
-
         {/* students — শুধু privileged */}
         <Route
           path="students"
@@ -84,8 +82,15 @@ const Router = () => {
               <StudentsFiles />
             </PrivateRoute>
           }
+        />{" "}
+        <Route
+          path="teachers"
+          element={
+            <PrivateRoute allowedRoles={[...PRIVILEGED]}>
+              <TeacherFiles />
+            </PrivateRoute>
+          }
         />
-
         <Route path="*" element={<NotFound />} />
       </Route>
 

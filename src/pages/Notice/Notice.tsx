@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import axiosPublic from "../../hooks/axiosPublic";
 
 const DEFAULT_NOTICE =
-  "রয়্যাল একাডেমিতে আপনাকে স্বাগতম। আমাদের সকল কার্যক্রম যথাসময়ে পরিচালিত হচ্ছে। যেকোনো তথ্যের জন্য অফিসে যোগাযোগ করুন।";
+  "    রয়েল একাডেমি, বেলকুচি শাখার অফিসিয়াল ওয়েবসাইটে আপনাকে স্বাগতম। আমাদের সকল কার্যক্রম যথাসময়ে পরিচালিত হচ্ছে। যেকোনো তথ্যের জন্য অফিসে যোগাযোগ করুন। —    ";
 
 interface NoticeItem {
   _id: string;
@@ -21,20 +21,17 @@ const Notice = () => {
       const res = await axiosPublic.get("/api/notices/active");
       return res.data.data as NoticeItem | null;
     },
-    // Refetch every 60 seconds so the marquee switches to default promptly
-    // after a notice expires — no need to wait 5 minutes
+
     refetchInterval: 60 * 1000,
   });
 
-  // Double-check expiry on the client side too.
-  // The backend already filters, but this covers the gap between refetches.
   const isActive =
     !isLoading && !!data && new Date(data.expiresAt) > new Date();
 
   const displayText = isLoading
     ? "..."
     : isActive
-      ? `এতদ্বারা সকলের অবগতির জন্য জানানো যাইতেছে যে, ${data!.notice}  ঘোষনা করা হইলো।;`
+      ? `এতদ্বারা সকলের অবগতির জন্য জানানো যাইতেছে যে, ${data!.notice}  ঘোষনা করা হইলো। `
       : DEFAULT_NOTICE;
 
   return (
@@ -48,19 +45,19 @@ const Notice = () => {
     >
       {/* Label — left */}
       <div
-        className="shrink-0 px-4 py-2 font-bold text-xl md:text-2xl tracking-wide z-10 select-none"
+        className="shrink-0 px-4 py-2 font-bold text-lg md:text-xl tracking-wide z-10 select-none"
         style={{
           backgroundColor: "var(--color-text)",
           color: "var(--color-bg)",
         }}
       >
-        নোটিসঃ
+        জরুরি বিজ্ঞপ্তি
       </div>
 
       {/* Marquee */}
       <Marquee direction="left" speed={50} gradient={false} pauseOnHover={true}>
         <span
-          className="text-xl md:text-2xl font-medium"
+          className="text-lg md:text-xl font-medium"
           style={{ color: "var(--color-text)" }}
         >
           {displayText}
