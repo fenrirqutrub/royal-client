@@ -34,7 +34,7 @@ const StudentsFiles = () => {
       s.name?.toLowerCase().includes(q) ||
       s.phone?.includes(q) ||
       s.studentClass?.toLowerCase().includes(q) ||
-      s.jela?.toLowerCase().includes(q)
+      s.district?.toLowerCase().includes(q)
     );
   });
 
