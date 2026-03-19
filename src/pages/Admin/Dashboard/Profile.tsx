@@ -335,7 +335,7 @@ const Profile = () => {
               {/* Avatar */}
               <div className="relative flex-shrink-0">
                 <div
-                  className="w-18 h-18 w-[72px] h-[72px] rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-md overflow-hidden"
+                  className="w-18 h-18 rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-md overflow-hidden"
                   style={{
                     background: `linear-gradient(135deg, ${roleColor}99, ${roleColor})`,
                   }}
