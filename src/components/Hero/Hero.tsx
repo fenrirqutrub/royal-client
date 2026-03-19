@@ -6,9 +6,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router";
 import { useHeroes } from "../../hooks/useHeroes";
 import "swiper/css";
-import Loader from "../ui/Loader";
-import ErrorState from "../ui/Errorstate";
+
 import { EmptyState } from "../common/Emptystate";
+import Loader from "../common/Loader";
+import ErrorState from "../common/ErrorState";
 
 interface HeroItem {
   _id: string;

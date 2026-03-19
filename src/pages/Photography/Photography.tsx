@@ -4,7 +4,7 @@ import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { IoEyeOutline, IoCloseOutline } from "react-icons/io5";
 import { axiosPublic } from "../../hooks/axiosPublic";
-import Loader from "../../components/ui/Loader";
+import Loader from "../../components/common/Loader";
 
 interface Photo {
   _id: string;
@@ -147,7 +147,7 @@ export default function PhotoGallery() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-12"
           >
-            <h1 className="text-5xl md:text-6xl font-bold mb-4 ">
+            <h1 className="text-5xl md:text-6xl font-bold mb-4 rubik ">
               Photo Gallery
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-lg">

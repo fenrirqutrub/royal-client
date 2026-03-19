@@ -1,9 +1,9 @@
 /**
- * sidebar.ui.tsx
+ * Sidebar.Ui.tsx
  * ─────────────────────────────────────────────
  * All visual design, animation variants, and
  * sub-components for the admin sidebar.
- * Import into AdminSidebar.tsx to use.
+ * ✅ No shadcn/ui — pure Tailwind + Framer Motion
  */
 
 import { useState } from "react";
@@ -17,21 +17,6 @@ import {
   type Transition,
 } from "framer-motion";
 import { LogOut, ChevronDown, HomeIcon, type LucideIcon } from "lucide-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "../../../components/ui/collapsible";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../../../components/ui/tooltip";
-import { Badge } from "../../../components/ui/badge";
-import { ScrollArea } from "../../../components/ui/scroll-area";
-import { Separator } from "../../../components/ui/separator";
-import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
 import ThemeToggle from "../../../components/Navbar/ThemeToggle";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -69,7 +54,7 @@ export const SPRING_SM: Transition = {
   damping: 32,
 };
 
-// ── Variants (fully typed) ────────────────────────────────────────────────────
+// ── Variants ──────────────────────────────────────────────────────────────────
 
 export const sidebarV: Variants = {
   hidden: { x: -40, opacity: 0 },
@@ -122,15 +107,6 @@ export const subItemV: Variants = {
   },
 };
 
-export const separatorV: Variants = {
-  hidden: { scaleX: 0, opacity: 0 },
-  visible: {
-    scaleX: 1,
-    opacity: 1,
-    transition: { duration: 0.4, ease: "easeOut" as const } as Transition,
-  },
-};
-
 // ── MagneticWrap ──────────────────────────────────────────────────────────────
 
 export const MagneticWrap = ({
@@ -179,24 +155,45 @@ export const PulsingAvatar = ({
     whileHover={{ scale: 1.08 }}
     transition={SPRING_SM}
   >
+    {/* Pulse ring */}
     <motion.span
       className="absolute inset-0 rounded-full pointer-events-none"
       style={{ backgroundColor: color + "30" }}
       animate={{ scale: [1, 1.55, 1], opacity: [0.6, 0, 0.6] }}
       transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
     />
-    <Avatar
-      className="h-9 w-9 ring-2"
-      style={{ ["--tw-ring-color" as string]: color + "55" }}
+    {/* Avatar circle */}
+    <div
+      className="h-9 w-9 rounded-full flex items-center justify-center text-white text-xs font-bold"
+      style={{
+        background: `linear-gradient(135deg, ${color}88, ${color})`,
+        boxShadow: `0 0 0 2px ${color}55`,
+      }}
     >
-      <AvatarFallback
-        className="text-white text-xs font-bold"
-        style={{ background: `linear-gradient(135deg, ${color}88, ${color})` }}
-      >
-        {initial}
-      </AvatarFallback>
-    </Avatar>
+      {initial}
+    </div>
   </motion.div>
+);
+
+// ── Tooltip (plain) ───────────────────────────────────────────────────────────
+
+const PlainTooltip = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <div className="relative group w-full">
+    {children}
+    <div
+      className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50
+        hidden group-hover:block px-2 py-1 rounded bg-[var(--color-text)] text-[var(--color-bg)]
+        text-xs whitespace-nowrap shadow-lg"
+    >
+      {label}
+    </div>
+  </div>
 );
 
 // ── NavGroup ──────────────────────────────────────────────────────────────────
@@ -216,14 +213,15 @@ export const NavGroup = ({
   const Icon = item.icon;
 
   return (
-    <Collapsible open={open} onOpenChange={onToggle} className="mt-1">
-      <motion.div
+    <div className="mt-1">
+      {/* Trigger */}
+      <motion.button
+        type="button"
+        onClick={onToggle}
         whileHover={{ x: 2 }}
         whileTap={{ scale: 0.98 }}
         transition={SPRING_SM}
-      >
-        <CollapsibleTrigger
-          className={`
+        className={`
           w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium
           cursor-pointer transition-colors
           ${
@@ -232,118 +230,109 @@ export const NavGroup = ({
               : "text-[var(--color-gray)] hover:text-[var(--color-text)] bg-[var(--color-bg)]"
           }
         `}
-        >
-          <span className="flex items-center gap-3">
-            <motion.span
-              animate={
-                open
-                  ? { rotate: [0, -15, 15, 0], scale: [1, 1.25, 1] }
-                  : { rotate: 0, scale: 1 }
-              }
-              transition={{ duration: 0.4 }}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-            </motion.span>
-            {item.name}
-          </span>
+      >
+        <span className="flex items-center gap-3">
           <motion.span
-            animate={{ rotate: open ? 180 : 0 }}
-            transition={{
-              type: "spring",
-              stiffness: 420,
-              damping: 32,
-              duration: 0.25,
-            }}
+            animate={
+              open
+                ? { rotate: [0, -15, 15, 0], scale: [1, 1.25, 1] }
+                : { rotate: 0, scale: 1 }
+            }
+            transition={{ duration: 0.4 }}
           >
-            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            <Icon className="w-4 h-4 shrink-0" />
           </motion.span>
-        </CollapsibleTrigger>
-      </motion.div>
+          {item.name}
+        </span>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{
+            type: "spring",
+            stiffness: 420,
+            damping: 32,
+            duration: 0.25,
+          }}
+        >
+          <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+        </motion.span>
+      </motion.button>
 
-      <CollapsibleContent>
-        <AnimatePresence initial={false}>
-          {open && (
-            <motion.div
-              key="sub"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{
-                height: "auto",
-                opacity: 1,
-                transition: { ...SPRING } as Transition,
-              }}
-              exit={{
-                height: 0,
-                opacity: 0,
-                transition: {
-                  duration: 0.18,
-                  ease: "easeIn" as const,
-                } as Transition,
-              }}
-              className="overflow-hidden"
-            >
-              <div className="pl-3 mt-0.5 space-y-0.5 border-l border-[var(--color-active-bg)] ml-[22px]">
-                {item.subItems.map((sub, i) => {
-                  const SubIcon = sub.icon;
-                  const active = isActive(sub.path);
-                  return (
-                    <TooltipProvider key={sub.path}>
-                      <Tooltip>
-                        <TooltipTrigger className="w-full text-left">
-                          <motion.div
-                            custom={i}
-                            variants={subItemV}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                            whileHover={{ x: 4 }}
-                            whileTap={{ scale: 0.97 }}
-                            transition={SPRING_SM}
-                          >
-                            <Link
-                              to={sub.path}
-                              className={`
-                                flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors
-                                ${
-                                  active
-                                    ? "bg-[var(--color-active-bg)] text-[var(--color-active-text)] font-medium"
-                                    : "text-[var(--color-gray)] hover:text-[var(--color-text)] hover:bg-[var(--color-active-bg)]"
-                                }
-                              `}
-                            >
-                              <motion.span
-                                whileHover={{ rotate: 12, scale: 1.2 }}
-                                transition={SPRING_SM}
-                              >
-                                <SubIcon className="w-3.5 h-3.5 shrink-0" />
-                              </motion.span>
-                              <span className="truncate">{sub.name}</span>
-                              {active && (
-                                <motion.span
-                                  layoutId="activeIndicator"
-                                  className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--color-active-text)]"
-                                  transition={SPRING}
-                                />
-                              )}
-                            </Link>
-                          </motion.div>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="text-xs">
-                          {sub.name}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </CollapsibleContent>
-    </Collapsible>
+      {/* Sub-items */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="sub"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{
+              height: "auto",
+              opacity: 1,
+              transition: { ...SPRING } as Transition,
+            }}
+            exit={{
+              height: 0,
+              opacity: 0,
+              transition: {
+                duration: 0.18,
+                ease: "easeIn" as const,
+              } as Transition,
+            }}
+            className="overflow-hidden"
+          >
+            <div className="pl-3 mt-0.5 space-y-0.5 border-l border-[var(--color-active-bg)] ml-[22px]">
+              {item.subItems.map((sub, i) => {
+                const SubIcon = sub.icon;
+                const active = isActive(sub.path);
+                return (
+                  <PlainTooltip key={sub.path} label={sub.name}>
+                    <motion.div
+                      custom={i}
+                      variants={subItemV}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      whileHover={{ x: 4 }}
+                      whileTap={{ scale: 0.97 }}
+                      transition={SPRING_SM}
+                    >
+                      <Link
+                        to={sub.path}
+                        className={`
+                          flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors
+                          ${
+                            active
+                              ? "bg-[var(--color-active-bg)] text-[var(--color-active-text)] font-medium"
+                              : "text-[var(--color-gray)] hover:text-[var(--color-text)] hover:bg-[var(--color-active-bg)]"
+                          }
+                        `}
+                      >
+                        <motion.span
+                          whileHover={{ rotate: 12, scale: 1.2 }}
+                          transition={SPRING_SM}
+                        >
+                          <SubIcon className="w-3.5 h-3.5 shrink-0" />
+                        </motion.span>
+                        <span className="truncate">{sub.name}</span>
+                        {active && (
+                          <motion.span
+                            layoutId="activeIndicator"
+                            className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--color-active-text)]"
+                            transition={SPRING}
+                          />
+                        )}
+                      </Link>
+                    </motion.div>
+                  </PlainTooltip>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 
-// ── SidebarContent (the full rendered sidebar) ────────────────────────────────
+// ── SidebarContent ────────────────────────────────────────────────────────────
 
 export const SidebarContent = ({
   user,
@@ -362,10 +351,10 @@ export const SidebarContent = ({
       initial="hidden"
       animate="visible"
     >
-      {/* ── User card ────────────────────────────────────────────────── */}
+      {/* ── User card ─────────────────────────────────────────────────── */}
       <motion.div
         variants={cardV}
-        className="px-3 pt-4 pb-3 border-b border-[var(--color-bg)] space-y-2.5"
+        className="px-3 pt-4 pb-3 border-b border-[var(--color-active-border)] space-y-2.5"
       >
         {/* Avatar row */}
         <motion.div
@@ -392,9 +381,9 @@ export const SidebarContent = ({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.26 }}
             >
-              <Badge
-                variant="outline"
-                className="text-[9px] px-1.5 py-0 font-bold uppercase tracking-wide h-4"
+              {/* Role badge — plain span instead of shadcn Badge */}
+              <span
+                className="text-[9px] px-1.5 py-0 font-bold uppercase tracking-wide rounded-full border h-4 inline-flex items-center"
                 style={{
                   backgroundColor: cfg.color + "18",
                   color: cfg.color,
@@ -402,7 +391,7 @@ export const SidebarContent = ({
                 }}
               >
                 {cfg.label}
-              </Badge>
+              </span>
               <span className="text-[10px] text-[var(--color-gray)] opacity-50 font-mono">
                 #{user?.slug ?? "—"}
               </span>
@@ -436,9 +425,7 @@ export const SidebarContent = ({
             <motion.button
               type="button"
               onClick={onLogout}
-              whileTap={
-                { x: [0, -4, 4, 0], transition: { duration: 0.3 } } as never
-              }
+              whileTap={{ x: [0, -4, 4, 0] } as never}
               className="flex items-center justify-center gap-1.5 w-full px-3 py-1.5 rounded-lg
                 text-xs font-semibold border transition-colors cursor-pointer
                 text-red-600 dark:text-red-400
@@ -454,9 +441,8 @@ export const SidebarContent = ({
           </MagneticWrap>
         </div>
 
-        {/* Theme toggle */}
-        <motion.button
-          type="button"
+        {/* Theme toggle — div wrapper to avoid nested <button> inside ThemeToggle */}
+        <motion.div
           onClick={onThemeToggle}
           whileHover={{
             scale: 1.02,
@@ -469,22 +455,22 @@ export const SidebarContent = ({
             hover:bg-[var(--color-active-bg)] transition-colors cursor-pointer"
         >
           <ThemeToggle size={26} animationSpeed={0.5} />
-        </motion.button>
+        </motion.div>
       </motion.div>
 
-      {/* ── Navigation ───────────────────────────────────────────────── */}
-      <ScrollArea className="flex-1 px-3 py-3">
+      {/* ── Navigation ────────────────────────────────────────────────── */}
+      {/* plain overflow-y-auto instead of shadcn ScrollArea */}
+      <div className="flex-1 overflow-y-auto px-3 py-3">
         <nav className="space-y-0.5">
           {navGroups.map((group, idx) => (
             <div key={group.name}>
               {idx > 0 && (
-                <motion.div
-                  variants={separatorV}
-                  initial="hidden"
-                  animate="visible"
-                >
-                  <Separator className="my-2 bg-[var(--color-active-border)]" />
-                </motion.div>
+                <motion.hr
+                  initial={{ scaleX: 0, opacity: 0 }}
+                  animate={{ scaleX: 1, opacity: 1 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="my-2 border-[var(--color-active-border)]"
+                />
               )}
 
               <motion.p
@@ -513,7 +499,7 @@ export const SidebarContent = ({
             </div>
           ))}
         </nav>
-      </ScrollArea>
+      </div>
     </motion.div>
   );
 };

@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import Hero from "../Hero/Hero";
-import UpDown from "../ui/UpDown";
 import Notice from "../../pages/Notice/Notice";
 import Principal from "../Intro/Principal";
 import NoticeBoard from "../../pages/Notice/NoticeBoard";
@@ -22,10 +21,6 @@ const Home = () => {
       <Principal />
       <VicePrincipal />
       <Teacher />
-
-      <div className="fixed bottom-5 right-5 z-50">
-        <UpDown />
-      </div>
     </div>
   );
 };

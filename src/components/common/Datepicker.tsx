@@ -8,8 +8,8 @@ import {
 } from "react-icons/io5";
 import { RxCross2 } from "react-icons/rx";
 
-// ─── Bengali locale helpers ───────────────────────────────
-const BN_DAYS = ["রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র", "শনি"];
+// ─── Bengali helpers ──────────────────────────────────────────────────────────
+const BN_DAYS_SHORT = ["রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র", "শনি"];
 const BN_MONTHS = [
   "জানুয়ারি",
   "ফেব্রুয়ারি",
@@ -24,7 +24,7 @@ const BN_MONTHS = [
   "নভেম্বর",
   "ডিসেম্বর",
 ];
-const BN_WEEK_DAYS_FULL = [
+const BN_DAYS_FULL = [
   "রবিবার",
   "সোমবার",
   "মঙ্গলবার",
@@ -34,17 +34,19 @@ const BN_WEEK_DAYS_FULL = [
   "শনিবার",
 ];
 
-const toBengaliDigit = (n: number) =>
+const toBn = (n: number | string) =>
   String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[+d]);
 
 const formatDisplay = (date: Date) =>
-  `${BN_WEEK_DAYS_FULL[date.getDay()]}, ${toBengaliDigit(date.getDate())} ${BN_MONTHS[date.getMonth()]}`;
+  `${BN_DAYS_FULL[date.getDay()]}, ${toBn(date.getDate())} ${BN_MONTHS[date.getMonth()]} ${toBn(date.getFullYear())}`;
 
-// ─── Types ────────────────────────────────────────────────
+const MIN_YEAR = 1950;
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 interface DatePickerProps {
-  value?: string; // stored value — Bengali formatted string
-  onChange: (value: string) => void;
-  onDateChange?: (date: Date) => void; // ← add this
+  value?: string;
+  onChange: (display: string) => void;
+  onDateChange?: (date: Date) => void;
   label?: string;
   required?: boolean;
   placeholder?: string;
@@ -54,11 +56,13 @@ interface DatePickerProps {
   maxDate?: Date;
 }
 
-// ─── Component ────────────────────────────────────────────
+type Mode = "day" | "month" | "year";
+
+// ─── Component ────────────────────────────────────────────────────────────────
 const DatePicker = ({
   value,
   onChange,
-  onDateChange, // ← add this
+  onDateChange,
   label,
   required,
   placeholder = "তারিখ বেছে নিন",
@@ -68,261 +72,365 @@ const DatePicker = ({
   maxDate,
 }: DatePickerProps) => {
   const today = new Date();
-  const [open, setOpen] = useState(false);
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [selected, setSelected] = useState<Date | null>(null);
-  const [direction, setDirection] = useState<1 | -1>(1); // nav animation dir
-  const ref = useRef<HTMLDivElement>(null);
+  const MAX_YEAR = today.getFullYear();
 
-  // Close on outside click
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<Mode>("day");
+  const [viewYear, setViewYear] = useState(MAX_YEAR - 20);
+  const [viewMonth, setViewMonth] = useState(0);
+  const [selected, setSelected] = useState<Date | null>(null);
+  const [direction, setDirection] = useState<1 | -1>(1);
+
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const yearListRef = useRef<HTMLDivElement>(null);
+
+  // close on outside click
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
+    const fn = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node))
         setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
   }, []);
 
-  // Sync external value back to local state (if value is pre-set)
+  // scroll year into view when year picker opens
   useEffect(() => {
-    if (!value) {
-      setSelected(null);
-      return;
+    if (mode === "year" && yearListRef.current) {
+      const el = yearListRef.current.querySelector(
+        `[data-yr="${viewYear}"]`,
+      ) as HTMLElement | null;
+      el?.scrollIntoView({ block: "center", behavior: "instant" });
     }
-  }, [value]);
+  }, [mode, viewYear]);
 
-  // ── Navigation ──────────────────────────────────────────
+  // ── Month navigation ──────────────────────────────────────────────────────
   const prevMonth = () => {
     setDirection(-1);
     if (viewMonth === 0) {
       setViewMonth(11);
-      setViewYear((y) => y - 1);
+      setViewYear((y) => Math.max(MIN_YEAR, y - 1));
     } else setViewMonth((m) => m - 1);
   };
   const nextMonth = () => {
     setDirection(1);
     if (viewMonth === 11) {
       setViewMonth(0);
-      setViewYear((y) => y + 1);
+      setViewYear((y) => Math.min(MAX_YEAR, y + 1));
     } else setViewMonth((m) => m + 1);
   };
 
-  // ── Grid generation ─────────────────────────────────────
+  const canPrev = !(viewYear === MIN_YEAR && viewMonth === 0);
+  const canNext = !(viewYear === MAX_YEAR && viewMonth >= today.getMonth());
+
+  // ── Day grid ──────────────────────────────────────────────────────────────
   const firstDay = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const cells: (number | null)[] = [
     ...Array(firstDay).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
-
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const isDisabled = (day: number) => {
-    const d = new Date(viewYear, viewMonth, day);
-    if (minDate && d < new Date(minDate.setHours(0, 0, 0, 0))) return true;
-    if (maxDate && d > new Date(maxDate.setHours(23, 59, 59, 999))) return true;
-    return false;
-  };
-  const isToday = (day: number) => {
-    return (
-      today.getDate() === day &&
-      today.getMonth() === viewMonth &&
-      today.getFullYear() === viewYear
-    );
-  };
-  const isSelected = (day: number) =>
+  const isFriSat = (day: number) =>
+    new Date(viewYear, viewMonth, day).getDay() >= 5;
+  const isToday_ = (day: number) =>
+    today.getDate() === day &&
+    today.getMonth() === viewMonth &&
+    today.getFullYear() === viewYear;
+  const isSel = (day: number) =>
     selected?.getDate() === day &&
     selected?.getMonth() === viewMonth &&
     selected?.getFullYear() === viewYear;
+  const isDis = (day: number) => {
+    const d = new Date(viewYear, viewMonth, day);
+    if (minDate) {
+      const mn = new Date(minDate);
+      mn.setHours(0, 0, 0, 0);
+      if (d < mn) return true;
+    }
+    if (maxDate) {
+      const mx = new Date(maxDate);
+      mx.setHours(23, 59, 59, 999);
+      if (d > mx) return true;
+    }
+    return false;
+  };
 
-  const handleSelect = (day: number) => {
-    if (isDisabled(day)) return;
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const pickDay = (day: number) => {
+    if (isDis(day)) return;
     const date = new Date(viewYear, viewMonth, day);
     setSelected(date);
-    onChange(formatDisplay(date));
+    const display = formatDisplay(date);
+    onChange(display);
     onDateChange?.(date);
     setOpen(false);
   };
 
-  const handleClear = (e: React.MouseEvent) => {
+  const pickMonth = (m: number) => {
+    setViewMonth(m);
+    setMode("day");
+  };
+
+  const pickYear = (y: number) => {
+    setViewYear(y);
+    setMode("month");
+  };
+
+  const pickToday = () => {
+    setViewYear(today.getFullYear());
+    setViewMonth(today.getMonth());
+    pickDay(today.getDate());
+  };
+
+  const clear = (e: React.MouseEvent) => {
     e.stopPropagation();
     setSelected(null);
     onChange("");
   };
 
+  const allYears = Array.from(
+    { length: MAX_YEAR - MIN_YEAR + 1 },
+    (_, i) => MAX_YEAR - i,
+  );
   const monthKey = `${viewYear}-${viewMonth}`;
 
   return (
-    <div className="w-full" ref={ref}>
+    <div ref={wrapRef} className="w-full relative">
       {/* Label */}
       {label && (
-        <label className="block text-xs font-semibold tracking-wide uppercase text-gray-500 dark:text-gray-400 mb-1.5">
-          {label}{" "}
+        <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5 bangla">
+          {label}
           {required && (
-            <span className="text-rose-500 normal-case tracking-normal">*</span>
+            <span className="text-rose-500 ml-1 normal-case">*</span>
           )}
         </label>
       )}
 
-      {/* Trigger button */}
+      {/* Trigger */}
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => !v);
+          setMode("day");
+        }}
         className={`w-full px-4 py-3 rounded-xl border text-sm text-left flex items-center justify-between gap-2
-          bg-white dark:bg-gray-800 transition-all duration-200
-          focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed
+          bg-white dark:bg-gray-800 transition-all duration-200 focus:outline-none focus:ring-2
+          disabled:opacity-50 disabled:cursor-not-allowed bangla
           ${
             error
-              ? "border-rose-400 focus:ring-rose-400"
+              ? "border-rose-400 focus:ring-rose-400/30"
               : open
-                ? "border-violet-500 ring-2 ring-violet-500"
-                : "border-gray-200 dark:border-gray-700 focus:ring-violet-500"
+                ? "border-violet-500 ring-2 ring-violet-500/30"
+                : "border-gray-200 dark:border-gray-700 hover:border-gray-300 focus:ring-violet-500/30"
           }`}
       >
         <span
-          className={`flex items-center gap-2 ${value ? "text-gray-900 dark:text-gray-100" : "text-gray-400"}`}
+          className={`flex items-center gap-2 min-w-0 ${value ? "text-gray-900 dark:text-gray-100" : "text-gray-400"}`}
         >
           <IoCalendarOutline className="text-base shrink-0 text-gray-400" />
-          {value || placeholder}
+          <span className="truncate">{value || placeholder}</span>
         </span>
-
         {value ? (
           <RxCross2
-            onClick={handleClear}
+            onClick={clear}
             className="shrink-0 text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
           />
         ) : (
           <IoChevronBack
-            className={`shrink-0 text-gray-400 transition-transform duration-300 ${open ? "-rotate-90" : "rotate-180"}`}
-            style={{ transform: open ? "rotate(-90deg)" : "rotate(0deg)" }}
+            className={`shrink-0 text-gray-400 transition-transform duration-200 ${open ? "-rotate-90" : "rotate-180"}`}
           />
         )}
       </button>
 
-      {error && <p className="text-rose-500 text-xs mt-1">{error}</p>}
+      {error && <p className="text-rose-500 text-xs mt-1 bangla">{error}</p>}
 
-      {/* Calendar dropdown */}
+      {/* Dropdown */}
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.97 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="absolute z-50 mt-2 w-72 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden"
-            style={{ boxShadow: "0 20px 60px -10px rgba(0,0,0,0.18)" }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.16, ease: "easeOut" }}
+            className="absolute left-0 z-50 mt-2 w-72 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden"
+            style={{ boxShadow: "0 20px 60px -10px rgba(0,0,0,0.22)" }}
           >
-            {/* ── Month/Year header ── */}
-            <div className="flex items-center justify-between px-4 pt-4 pb-3">
+            {/* ── Header bar ── */}
+            <div className="flex items-center justify-between px-3 pt-3 pb-2 gap-1">
               <button
                 type="button"
                 onClick={prevMonth}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
+                disabled={!canPrev || mode !== "day"}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
+                  transition-colors text-gray-500 disabled:opacity-20 disabled:cursor-default shrink-0"
               >
                 <IoChevronBack className="text-sm" />
               </button>
 
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.span
-                  key={monthKey}
-                  initial={{ opacity: 0, x: direction * 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: direction * -20 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-sm font-bold text-gray-800 dark:text-gray-100 select-none"
+              <div className="flex items-center gap-1 flex-1 justify-center">
+                {/* Month button */}
+                <button
+                  type="button"
+                  onClick={() => setMode(mode === "month" ? "day" : "month")}
+                  className={`px-2.5 py-1.5 rounded-lg text-sm font-bold bangla transition-all
+                    ${
+                      mode === "month"
+                        ? "bg-violet-600 text-white"
+                        : "text-gray-800 dark:text-gray-100 hover:bg-violet-50 dark:hover:bg-violet-900/30"
+                    }`}
                 >
-                  {BN_MONTHS[viewMonth]} {toBengaliDigit(viewYear)}
-                </motion.span>
-              </AnimatePresence>
+                  {BN_MONTHS[viewMonth]}
+                </button>
+
+                {/* Year button */}
+                <button
+                  type="button"
+                  onClick={() => setMode(mode === "year" ? "day" : "year")}
+                  className={`px-2.5 py-1.5 rounded-lg text-sm font-bold bangla transition-all
+                    ${
+                      mode === "year"
+                        ? "bg-violet-600 text-white"
+                        : "text-gray-800 dark:text-gray-100 hover:bg-violet-50 dark:hover:bg-violet-900/30"
+                    }`}
+                >
+                  {toBn(viewYear)}
+                </button>
+              </div>
 
               <button
                 type="button"
                 onClick={nextMonth}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
+                disabled={!canNext || mode !== "day"}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700
+                  transition-colors text-gray-500 disabled:opacity-20 disabled:cursor-default shrink-0"
               >
                 <IoChevronForward className="text-sm" />
               </button>
             </div>
 
-            {/* ── Day headers ── */}
-            <div className="grid grid-cols-7 px-3 pb-1">
-              {BN_DAYS.map((d) => (
-                <div
-                  key={d}
-                  className={`text-center text-[10px] font-semibold py-1 select-none
-                    ${d === "শুক্র" || d === "শনি" ? "text-rose-400" : "text-gray-400 dark:text-gray-500"}`}
-                >
-                  {d}
-                </div>
-              ))}
-            </div>
-
-            {/* ── Date grid ── */}
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={monthKey}
-                initial={{ opacity: 0, x: direction * 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: direction * -30 }}
-                transition={{ duration: 0.2 }}
-                className="grid grid-cols-7 gap-y-0.5 px-3 pb-4"
+            {/* ── YEAR GRID ── */}
+            {mode === "year" && (
+              <div
+                ref={yearListRef}
+                className="h-52 overflow-y-auto px-3 pb-3 grid grid-cols-4 gap-1"
+                style={{ scrollbarWidth: "thin" }}
               >
-                {cells.map((day, i) => {
-                  if (!day) return <div key={`empty-${i}`} />;
-                  const disabled_ = isDisabled(day);
-                  const today_ = isToday(day);
-                  const selected_ = isSelected(day);
-                  const isFriSat =
-                    new Date(viewYear, viewMonth, day).getDay() >= 5;
+                {allYears.map((y) => (
+                  <button
+                    key={y}
+                    type="button"
+                    data-yr={y}
+                    onClick={() => pickYear(y)}
+                    className={`py-1.5 rounded-lg text-xs font-semibold bangla transition-all
+                      ${
+                        viewYear === y
+                          ? "bg-violet-600 text-white shadow"
+                          : "hover:bg-violet-50 dark:hover:bg-violet-900/30 text-gray-700 dark:text-gray-300"
+                      }`}
+                  >
+                    {toBn(y)}
+                  </button>
+                ))}
+              </div>
+            )}
 
-                  return (
-                    <button
-                      key={day}
-                      type="button"
-                      disabled={disabled_}
-                      onClick={() => handleSelect(day)}
-                      className={`
-                        relative h-8 w-full flex items-center justify-center rounded-lg text-xs font-medium
-                        transition-all duration-150 select-none
-                        ${disabled_ ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}
-                        ${
-                          selected_
-                            ? "bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-md shadow-violet-200 dark:shadow-violet-900/40"
-                            : today_ && !selected_
-                              ? "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 font-bold ring-1 ring-violet-300 dark:ring-violet-700"
-                              : isFriSat
-                                ? "text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20"
-                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        }
-                      `}
+            {/* ── MONTH GRID ── */}
+            {mode === "month" && (
+              <div className="grid grid-cols-3 gap-1.5 px-3 pb-4">
+                {BN_MONTHS.map((m, i) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => pickMonth(i)}
+                    className={`py-2 rounded-lg text-xs font-semibold bangla transition-all
+                      ${
+                        viewMonth === i
+                          ? "bg-violet-600 text-white shadow"
+                          : "hover:bg-violet-50 dark:hover:bg-violet-900/30 text-gray-700 dark:text-gray-300"
+                      }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── DAY GRID ── */}
+            {mode === "day" && (
+              <>
+                {/* Week headers */}
+                <div className="grid grid-cols-7 px-3 pb-1">
+                  {BN_DAYS_SHORT.map((d) => (
+                    <div
+                      key={d}
+                      className={`text-center text-[10px] font-semibold py-1 select-none bangla
+                        ${d === "শুক্র" || d === "শনি" ? "text-rose-400" : "text-gray-400 dark:text-gray-500"}`}
                     >
-                      {toBengaliDigit(day)}
-                      {today_ && !selected_ && (
-                        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-500" />
-                      )}
-                    </button>
-                  );
-                })}
-              </motion.div>
-            </AnimatePresence>
+                      {d}
+                    </div>
+                  ))}
+                </div>
 
-            {/* ── Today shortcut ── */}
-            <div className="px-4 pb-3 border-t border-gray-100 dark:border-gray-700 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMonth(today.getMonth());
-                  setViewYear(today.getFullYear());
-                  handleSelect(today.getDate());
-                }}
-                className="w-full text-xs text-center text-violet-600 dark:text-violet-400 font-semibold hover:underline"
-              >
-                আজকের তারিখ
-              </button>
-            </div>
+                {/* Day cells */}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={monthKey}
+                    initial={{ opacity: 0, x: direction * 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: direction * -20 }}
+                    transition={{ duration: 0.16 }}
+                    className="grid grid-cols-7 gap-y-0.5 px-3 pb-3"
+                  >
+                    {cells.map((day, i) => {
+                      if (!day) return <div key={`e-${i}`} />;
+                      const dis = isDis(day);
+                      const sel = isSel(day);
+                      const tod = isToday_(day);
+                      const fri = isFriSat(day);
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          disabled={dis}
+                          onClick={() => pickDay(day)}
+                          className={`relative h-8 w-full flex items-center justify-center rounded-lg
+                            text-xs font-medium select-none transition-all duration-150 bangla
+                            ${dis ? "opacity-25 cursor-not-allowed" : "cursor-pointer"}
+                            ${
+                              sel
+                                ? "bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-md shadow-violet-200 dark:shadow-violet-900/40"
+                                : tod
+                                  ? "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 font-bold ring-1 ring-violet-300 dark:ring-violet-700"
+                                  : fri
+                                    ? "text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            }`}
+                        >
+                          {toBn(day)}
+                          {tod && !sel && (
+                            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-500" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Today shortcut */}
+                <div className="px-4 pb-3 border-t border-gray-100 dark:border-gray-700 pt-2">
+                  <button
+                    type="button"
+                    onClick={pickToday}
+                    className="w-full text-xs text-center text-violet-600 dark:text-violet-400 font-semibold hover:underline bangla"
+                  >
+                    আজকের তারিখ নির্বাচন করুন
+                  </button>
+                </div>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

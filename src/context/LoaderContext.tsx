@@ -1,6 +1,6 @@
 // context/LoaderContext.tsx
 import { createContext, useContext, useState } from "react";
-import Loader from "../components/ui/Loader";
+import Loader from "../components/common/Loader";
 
 const LoaderContext = createContext<{
   showLoader: () => void;

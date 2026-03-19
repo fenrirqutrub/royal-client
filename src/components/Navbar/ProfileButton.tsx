@@ -1,13 +1,15 @@
+// src/components/Shared/ProfileButton.tsx
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router";
 import {
-  LogIn,
   LogOut,
   BookOpen,
   ClipboardList,
   ChevronDown,
   LayoutDashboard,
+  UserCircle,
+  Key,
 } from "lucide-react";
 import { FaUserAlt } from "react-icons/fa";
 import ThemeToggle from "./ThemeToggle";
@@ -31,39 +33,112 @@ const POPUP_TRANSITION = {
   mass: 0.6,
 } as const;
 
-const MENU_ITEMS = [
+// ── Role badge config ────────────────────────────────────────────────────────
+const ROLE_BADGE: Record<string, { label: string; color: string; bg: string }> =
   {
-    key: "dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    path: "/dashboard",
-  },
-  {
-    key: "add-exam",
-    label: "Add Weekly Exam",
-    icon: ClipboardList,
-    path: "/admin/add-exam",
-  },
-  {
-    key: "add-lesson",
-    label: "Add Daily Lesson",
-    icon: BookOpen,
-    path: "/admin/add-lesson",
-  },
-] as const;
+    student: { label: "Student", color: "#22c55e", bg: "rgba(34,197,94,0.12)" },
+    teacher: {
+      label: "Teacher",
+      color: "#3b82f6",
+      bg: "rgba(59,130,246,0.12)",
+    },
+    principal: {
+      label: "Principal",
+      color: "#a855f7",
+      bg: "rgba(168,85,247,0.12)",
+    },
+    admin: { label: "Admin", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+    owner: { label: "Owner", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
+  };
 
-const HARDCODED_ADMINS = ["hello@world.com", "mib@gmail.com"];
+// ── Menu items per role ──────────────────────────────────────────────────────
+type MenuItemDef = {
+  key: string;
+  label: string;
+  icon: React.ElementType;
+  path: string;
+};
 
-function getDisplayName(
-  user: { email?: string; name?: string } | null,
-): string {
-  if (!user) return "Teacher";
-  if (user.name) return user.name;
-  if (user.email && HARDCODED_ADMINS.includes(user.email)) return "Super Admin";
-  return "Teacher";
-}
+const MENU_BY_ROLE: Record<string, MenuItemDef[]> = {
+  student: [
+    {
+      key: "profile",
+      label: "Profile",
+      icon: UserCircle,
+      path: "/dashboard/profile",
+    },
+  ],
+  teacher: [
+    {
+      key: "profile",
+      label: "Profile",
+      icon: UserCircle,
+      path: "/dashboard/profile",
+    },
+    {
+      key: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      path: "/dashboard",
+    },
+    {
+      key: "add-exam",
+      label: "Add Weekly Exam",
+      icon: ClipboardList,
+      path: "/admin/add-exam",
+    },
+    {
+      key: "add-lesson",
+      label: "Add Daily Lesson",
+      icon: BookOpen,
+      path: "/admin/add-lesson",
+    },
+  ],
+  principal: [
+    {
+      key: "profile",
+      label: "Profile",
+      icon: UserCircle,
+      path: "/dashboard/profile",
+    },
+    {
+      key: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      path: "/dashboard",
+    },
+  ],
+  admin: [
+    {
+      key: "profile",
+      label: "Profile",
+      icon: UserCircle,
+      path: "/dashboard/profile",
+    },
+    {
+      key: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      path: "/dashboard",
+    },
+  ],
+  owner: [
+    {
+      key: "profile",
+      label: "Profile",
+      icon: UserCircle,
+      path: "/dashboard/profile",
+    },
+    {
+      key: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      path: "/dashboard",
+    },
+  ],
+};
 
-/* ─── Avatar component — image OR fallback icon ─────────────────────────── */
+/* ─── Avatar ─────────────────────────────────────────────────────────────── */
 interface AvatarProps {
   avatarUrl?: string | null;
   size: number;
@@ -73,7 +148,6 @@ interface AvatarProps {
 const Avatar = memo<AvatarProps>(({ avatarUrl, size, className = "" }) => {
   const [imgError, setImgError] = useState(false);
   const showImage = avatarUrl && !imgError;
-
   return (
     <span
       className={`rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${className}`}
@@ -114,9 +188,14 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, loading } = useAuth();
 
-  const displayName = getDisplayName(user);
+  const role = user?.role ?? "student";
+  const badge = ROLE_BADGE[role] ?? ROLE_BADGE.student;
+  const menuItems = MENU_BY_ROLE[role] ?? [];
   const avatarUrl = user?.avatar?.url ?? null;
-  /* ── Close on outside click ── */
+  const displayPhone = user?.phone ?? "";
+  const displayName = user?.name ?? "User";
+
+  // close on outside click
   useEffect(() => {
     if (!popupOpen) return;
     const handler = (e: MouseEvent) => {
@@ -127,11 +206,12 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
     return () => document.removeEventListener("mousedown", handler);
   }, [popupOpen]);
 
-  const handleLoginClick = useCallback(
-    () => navigate("/admin-login"),
-    [navigate],
-  );
-  const handleProfileClick = useCallback(() => setPopupOpen((p) => !p), []);
+  const handleLogout = useCallback(() => {
+    setPopupOpen(false);
+    logout();
+    onLogout?.();
+  }, [logout, onLogout]);
+
   const handleMenuNav = useCallback(
     (path: string) => {
       setPopupOpen(false);
@@ -139,13 +219,8 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
     },
     [navigate],
   );
-  const handleLogout = useCallback(() => {
-    setPopupOpen(false);
-    logout();
-    onLogout?.();
-  }, [logout, onLogout]);
 
-  /* ── Loading skeleton ── */
+  // ── Loading skeleton ──
   if (loading) {
     return (
       <div
@@ -159,35 +234,29 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
     );
   }
 
-  /* ── Not logged in ── */
+  // ── Not logged in ──
   if (!isAuthenticated) {
     return (
-      <motion.button
-        onClick={handleLoginClick}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm outline-none cursor-pointer"
-        style={{
-          backgroundColor: "var(--color-active-bg)",
-          color: "var(--color-active-text)",
-          border: "1px solid var(--color-active-border)",
-          minHeight: 40,
-          minWidth: 40,
-        }}
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ scale: 0.96 }}
-        aria-label="Teacher login"
-      >
-        <LogIn className="w-4 h-4 flex-shrink-0" />
-        <span>Login</span>
-      </motion.button>
+      <div className="flex items-center gap-2">
+        <motion.button
+          onClick={() => navigate("/auth")}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm outline-none cursor-pointer bg-[var(--color-text)] text-[var(--color-bg)] border border-[var(--color-active-border)] h-10 "
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+        >
+          <Key className="w-4 h-4 flex-shrink-0" />
+          <span>লগইন</span>
+        </motion.button>
+      </div>
     );
   }
 
-  /* ── Logged in ── */
+  // ── Logged in ──
   return (
     <div ref={containerRef} className="relative">
-      {/* Avatar trigger button */}
+      {/* Trigger */}
       <motion.button
-        onClick={handleProfileClick}
+        onClick={() => setPopupOpen((p) => !p)}
         className="flex items-center gap-1.5 rounded-xl outline-none cursor-pointer px-1.5 py-1"
         style={{
           backgroundColor: popupOpen ? "var(--color-active-bg)" : "transparent",
@@ -202,9 +271,7 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
         aria-label="Profile menu"
         aria-expanded={popupOpen}
       >
-        {/* ✅ Avatar: image if exists, FaUserAlt icon if not */}
         <Avatar avatarUrl={avatarUrl} size={size} />
-
         <motion.span
           animate={{ rotate: popupOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -214,11 +281,11 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
         </motion.span>
       </motion.button>
 
-      {/* Dropdown popup */}
+      {/* Dropdown */}
       <AnimatePresence>
         {popupOpen && (
           <motion.div
-            className="absolute right-0 mt-2 w-60 rounded-2xl overflow-hidden shadow-2xl z-[100]"
+            className="absolute right-0 mt-2 w-64 rounded-2xl overflow-hidden shadow-2xl z-[100]"
             variants={POPUP_VARIANTS}
             initial="hidden"
             animate="visible"
@@ -230,14 +297,12 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
               top: "calc(100% + 4px)",
             }}
           >
-            {/* Profile header */}
+            {/* ── Profile header ── */}
             <div
-              className="px-4 py-3 flex items-center gap-3"
+              className="px-4 py-3.5 flex items-center gap-3"
               style={{ borderBottom: "1px solid var(--color-active-border)" }}
             >
-              {/* ✅ Same Avatar component — larger size in popup header */}
-              <Avatar avatarUrl={avatarUrl} size={40} />
-
+              <Avatar avatarUrl={avatarUrl} size={42} />
               <div className="min-w-0 flex-1">
                 <p
                   className="text-sm font-semibold leading-tight truncate"
@@ -249,12 +314,19 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
                   className="text-xs leading-tight truncate mt-0.5"
                   style={{ color: "var(--color-gray)" }}
                 >
-                  {user?.email ?? "Royal Academy"}
+                  {displayPhone || "No phone"}
                 </p>
+                {/* Role badge */}
+                <span
+                  className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
+                  style={{ color: badge.color, backgroundColor: badge.bg }}
+                >
+                  {badge.label}
+                </span>
               </div>
             </div>
 
-            {/* Theme toggle */}
+            {/* ── Theme toggle ── */}
             <div
               className="px-4 py-2.5 flex items-center justify-between"
               style={{ borderBottom: "1px solid var(--color-active-border)" }}
@@ -268,39 +340,41 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
               <ThemeToggle size={32} animationSpeed={0.5} />
             </div>
 
-            {/* Menu items */}
-            <ul className="py-1.5">
-              {MENU_ITEMS.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.key}>
-                    <button
-                      onClick={() => handleMenuNav(item.path)}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium outline-none cursor-pointer transition-colors"
-                      style={{ color: "var(--color-text)" }}
-                      onMouseEnter={(e) => {
-                        (
-                          e.currentTarget as HTMLButtonElement
-                        ).style.backgroundColor = "var(--color-active-bg)";
-                      }}
-                      onMouseLeave={(e) => {
-                        (
-                          e.currentTarget as HTMLButtonElement
-                        ).style.backgroundColor = "transparent";
-                      }}
-                    >
-                      <Icon
-                        className="w-4 h-4 flex-shrink-0"
-                        style={{ color: "var(--color-active-text)" }}
-                      />
-                      {item.label}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            {/* ── Menu items ── */}
+            {menuItems.length > 0 && (
+              <ul className="py-1.5">
+                {menuItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.key}>
+                      <button
+                        onClick={() => handleMenuNav(item.path)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium outline-none cursor-pointer transition-colors"
+                        style={{ color: "var(--color-text)" }}
+                        onMouseEnter={(e) => {
+                          (
+                            e.currentTarget as HTMLButtonElement
+                          ).style.backgroundColor = "var(--color-active-bg)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (
+                            e.currentTarget as HTMLButtonElement
+                          ).style.backgroundColor = "transparent";
+                        }}
+                      >
+                        <Icon
+                          className="w-4 h-4 flex-shrink-0"
+                          style={{ color: "var(--color-active-text)" }}
+                        />
+                        {item.label}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
 
-            {/* Logout */}
+            {/* ── Logout ── */}
             <div
               className="py-1.5"
               style={{ borderTop: "1px solid var(--color-active-border)" }}

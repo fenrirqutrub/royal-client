@@ -6,10 +6,11 @@ import { useNavigate, useLocation } from "react-router";
 import axiosPublic from "../../hooks/axiosPublic";
 import NoticeModal, { type NoticeItem } from "./NoticeModal";
 import { EmptyState } from "../../components/common/Emptystate";
-import ErrorState from "../../components/ui/Errorstate";
-import Loader from "../../components/ui/Loader";
+
 import { Pagination } from "../../components/common/Pagination";
 import { toBn } from "../../utility/shared";
+import ErrorState from "../../components/common/ErrorState";
+import Loader from "../../components/common/Loader";
 
 const HOME_LIMIT = 5;
 const PAGE_LIMIT = 10;
@@ -261,14 +262,9 @@ const NoticeBoard = () => {
 
         {/* ── Content ── */}
         {isLoading ? (
-          <Loader fullScreen={false} />
+          <Loader />
         ) : isError ? (
-          <ErrorState
-            title="Failed to load"
-            message="Could not fetch notices. Please try again later."
-            showBackButton={false}
-            fullScreen={false}
-          />
+          <ErrorState message="Could not fetch notices. Please try again later." />
         ) : !notices?.length ? (
           <EmptyState
             title="No notices yet"

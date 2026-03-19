@@ -11,10 +11,13 @@ import {
   ArrowUpRight,
   Layers,
   PieChart as PieIcon,
+  UserCircle,
+  ChevronRight,
 } from "lucide-react";
+import { Link } from "react-router";
 import axiosPublic from "../../../hooks/axiosPublic";
-import Loader from "../../../components/ui/Loader";
 import { useAuth } from "../../../context/AuthContext";
+import Loader from "../../../components/common/Loader";
 
 /* ─── helpers ─────────────────────────────────────────────────────────── */
 const safe = (d: unknown) => (Array.isArray(d) ? d : []);
@@ -36,6 +39,8 @@ const ROLE_KEYS: Record<string, string[]> = {
   teacher: ["exams"],
   principal: ["exams", "teachers", "heroes", "quotes", "photos"],
   admin: ["exams", "photos", "quotes", "heroes", "teachers"],
+  owner: ["exams", "photos", "quotes", "heroes", "teachers"],
+  student: [], // student এর কোনো stat card নেই
 };
 
 /* ─── role config ─────────────────────────────────────────────────────── */
@@ -55,6 +60,16 @@ const ROLE_CONFIG: Record<string, { title: string; from: string; to: string }> =
       title: "Admin Panel",
       from: "from-emerald-600",
       to: "to-teal-700",
+    },
+    owner: {
+      title: "Owner Panel",
+      from: "from-amber-500",
+      to: "to-orange-600",
+    },
+    student: {
+      title: "Student Portal",
+      from: "from-green-500",
+      to: "to-emerald-600",
     },
   };
 
@@ -196,16 +211,103 @@ const DashPieChart = ({
   );
 };
 
+/* ─── Student Dashboard ───────────────────────────────────────────────── */
+const StudentDashboard = ({ name }: { name: string }) => {
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? "শুভ সকাল" : hour < 17 ? "শুভ বিকাল" : "শুভ সন্ধ্যা";
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0d1117] transition-colors duration-300">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-10 mt-10 lg:mt-0"
+        >
+          <p className="text-sm font-medium tracking-widest uppercase text-gray-400 dark:text-gray-500 mb-1 bangla">
+            {greeting}
+          </p>
+          <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight bangla">
+            {name}
+          </h1>
+          <p className="mt-1 text-gray-500 dark:text-gray-400 text-sm bangla">
+            Student Portal — স্বাগতম!
+          </p>
+        </motion.div>
+
+        {/* Welcome banner */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 p-6 mb-6 shadow-xl"
+        >
+          <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5" />
+          <div className="absolute -bottom-10 -left-6 w-52 h-52 rounded-full bg-white/5" />
+          <div className="relative">
+            <p className="text-white/70 text-sm uppercase tracking-widest mb-1 bangla">
+              আপনার অ্যাকাউন্ট
+            </p>
+            <p className="text-2xl font-black text-white bangla">
+              প্রোফাইল দেখুন ও সম্পাদনা করুন
+            </p>
+            <p className="text-white/60 text-sm mt-1 bangla">
+              আপনার তথ্য আপডেট রাখুন
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Profile card CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+        >
+          <Link
+            to="/dashboard/profile"
+            className="flex items-center justify-between bg-white dark:bg-[#161b22]
+              border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-md
+              hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30">
+                <UserCircle className="w-6 h-6 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-base font-bold text-gray-900 dark:text-white bangla">
+                  আমার প্রোফাইল
+                </p>
+                <p className="text-sm text-gray-400 bangla">
+                  তথ্য দেখুন ও পরিবর্তন করুন
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-emerald-500 transition-colors" />
+          </Link>
+        </motion.div>
+      </main>
+    </div>
+  );
+};
+
 /* ════════════════════════════════════════════════════════════════════════
-   DASHBOARD
+   MAIN DASHBOARD
    ════════════════════════════════════════════════════════════════════════ */
 const Dashboard = () => {
   const { user } = useAuth();
   const role: string = user?.role ?? "teacher";
-  const allowedKeys = ROLE_KEYS[role] ?? ROLE_KEYS.teacher;
+  const allowedKeys = ROLE_KEYS[role] ?? [];
   const roleConf = ROLE_CONFIG[role] ?? ROLE_CONFIG.teacher;
 
-  /* ── parallel queries — only fetch what the role needs ── */
+  // Student হলে আলাদা সহজ dashboard দেখাও
+  if (role === "student") {
+    return <StudentDashboard name={user?.name ?? "Student"} />;
+  }
+
+  /* ── parallel queries ── */
   const results = useQueries({
     queries: [
       {
@@ -233,11 +335,13 @@ const Dashboard = () => {
         enabled: allowedKeys.includes("heroes"),
       },
       {
-        // admin sees all; teacher & principal see only their own exams via teacherSlug
-        queryKey: ["dash-exams", role === "admin" ? "all" : user?.slug],
+        queryKey: [
+          "dash-exams",
+          role === "admin" || role === "owner" ? "all" : user?.slug,
+        ],
         queryFn: async () => {
           const url =
-            role === "admin"
+            role === "admin" || role === "owner"
               ? "/api/weekly-exams"
               : `/api/weekly-exams?teacherSlug=${user?.slug ?? ""}`;
           const { data } = await axiosPublic.get(url);
@@ -269,7 +373,6 @@ const Dashboard = () => {
   const [photoCount, quoteCount, heroCount, examCount, teacherCount] =
     results.map(getCount);
 
-  /* ── all card definitions ── */
   const ALL_CARDS: Card[] = [
     {
       key: "exams",
@@ -323,13 +426,11 @@ const Dashboard = () => {
     },
   ];
 
-  /* ── filter by role ── */
   const cards = ALL_CARDS.filter((c) => allowedKeys.includes(c.key));
   const total = cards.reduce((s, c) => s + c.value, 0);
   const maxVal = Math.max(...cards.map((c) => c.value), 1);
   const isSingleCard = cards.length === 1;
 
-  /* greeting */
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -337,7 +438,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0d1117] transition-colors duration-300">
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* ── Header ── */}
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -359,7 +460,7 @@ const Dashboard = () => {
           <Loader />
         ) : (
           <>
-            {/* ── Total banner — role-colored ── */}
+            {/* Total banner */}
             <motion.div
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -387,7 +488,7 @@ const Dashboard = () => {
               </div>
             </motion.div>
 
-            {/* ── Stat cards ── */}
+            {/* Stat cards */}
             <div
               className={`grid gap-4 mb-8 ${
                 isSingleCard
@@ -446,10 +547,9 @@ const Dashboard = () => {
               })}
             </div>
 
-            {/* ── Charts — hidden for single-card roles (teacher) ── */}
+            {/* Charts — hidden for single-card roles */}
             {!isSingleCard && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Bar chart */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -505,7 +605,6 @@ const Dashboard = () => {
                   </div>
                 </motion.div>
 
-                {/* Pie chart */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}

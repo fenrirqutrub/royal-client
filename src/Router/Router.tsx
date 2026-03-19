@@ -23,24 +23,78 @@ import NoticeBoard from "../pages/Notice/NoticeBoard";
 import AddNotice from "../pages/Admin/AddNewItem/AddNotice";
 import ManageNotice from "../pages/Admin/Management/ManageNotice";
 import ManageDailyLesson from "../pages/Admin/Management/ManageDailyLesson";
+import Signup from "../pages/Admin/Auth/SignUp";
+import StudentsFiles from "../pages/StudentsFiles/StudentsFiles";
+import AuthPage from "../pages/Admin/Auth/AuthPage";
+
+// ── Role groups ───────────────────────────────────────────────────────────────
+const STAFF = ["teacher", "admin", "principal", "owner"] as const;
+const PRIVILEGED = ["admin", "principal", "owner"] as const;
 
 const Router = () => {
   return (
     <Routes>
-      {/* ══════════════════ PUBLIC ROUTES ══════════════════ */}
+      {/* ══════════════════ PUBLIC — সবাই দেখতে পাবে ══════════════════ */}
       <Route path="/" element={<Root />}>
         <Route index element={<Home />} />
-        <Route path="dailylesson" element={<DailyLesson />} />
-        <Route path="weekly-exam" element={<WeeklyExam />} />
         <Route path="notice" element={<NoticeBoard />} />
         <Route path="photography" element={<Photography />} />
+
+        {/* dailylesson — student + staff */}
+        <Route
+          path="dailylesson"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "student",
+                "teacher",
+                "admin",
+                "principal",
+                "owner",
+              ]}
+            >
+              <DailyLesson />
+            </PrivateRoute>
+          }
+        />
+
+        {/* weekly-exam — student + staff */}
+        <Route
+          path="weekly-exam"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "student",
+                "teacher",
+                "admin",
+                "principal",
+                "owner",
+              ]}
+            >
+              <WeeklyExam />
+            </PrivateRoute>
+          }
+        />
+
+        {/* students — শুধু privileged */}
+        <Route
+          path="students"
+          element={
+            <PrivateRoute allowedRoles={[...PRIVILEGED]}>
+              <StudentsFiles />
+            </PrivateRoute>
+          }
+        />
+
         <Route path="*" element={<NotFound />} />
       </Route>
 
       {/* ══════════════════ AUTH ══════════════════ */}
-      <Route path="/admin-login" element={<Login />} />
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
-      {/* ══════════════════ PRIVATE — any authenticated user ══════════════════ */}
+      {/* ══════════════════ DASHBOARD — authenticated ══════════════════ */}
       <Route
         path="/dashboard"
         element={
@@ -49,21 +103,49 @@ const Router = () => {
           </PrivateRoute>
         }
       >
-        {/* Dashboard — all roles */}
+        {/* ── সবাই (authenticated) ── */}
         <Route index element={<Dashboard />} />
-
-        {/* Profile — all roles */}
         <Route path="profile" element={<Profile />} />
 
-        {/* Weekly Exam — all roles */}
-        <Route path="add-weekly-exam" element={<AddWeeklyExam />} />
-        <Route path="management/weekly-exam" element={<ManageWeeklyExam />} />
+        {/* ── teacher + privileged — student বাদ ── */}
+        <Route
+          path="add-weekly-exam"
+          element={
+            <PrivateRoute allowedRoles={[...STAFF]}>
+              <AddWeeklyExam />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="management/weekly-exam"
+          element={
+            <PrivateRoute allowedRoles={[...STAFF]}>
+              <ManageWeeklyExam />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="add-daily-lesson"
+          element={
+            <PrivateRoute allowedRoles={[...STAFF]}>
+              <AddDailyLesson />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="management/manage-daily-lesson"
+          element={
+            <PrivateRoute allowedRoles={[...STAFF]}>
+              <ManageDailyLesson />
+            </PrivateRoute>
+          }
+        />
 
-        {/* ── admin + principal only ── */}
+        {/* ── শুধু admin / principal / owner ── */}
         <Route
           path="add-teacher"
           element={
-            <PrivateRoute allowedRoles={["admin", "principal"]}>
+            <PrivateRoute allowedRoles={[...PRIVILEGED]}>
               <AddTeacher />
             </PrivateRoute>
           }
@@ -71,7 +153,7 @@ const Router = () => {
         <Route
           path="add-photography"
           element={
-            <PrivateRoute allowedRoles={["admin", "principal"]}>
+            <PrivateRoute allowedRoles={[...PRIVILEGED]}>
               <AddPhotography />
             </PrivateRoute>
           }
@@ -79,7 +161,7 @@ const Router = () => {
         <Route
           path="add-hero"
           element={
-            <PrivateRoute allowedRoles={["admin", "principal"]}>
+            <PrivateRoute allowedRoles={[...PRIVILEGED]}>
               <AddHero />
             </PrivateRoute>
           }
@@ -87,16 +169,15 @@ const Router = () => {
         <Route
           path="add-notice"
           element={
-            <PrivateRoute allowedRoles={["admin", "principal"]}>
+            <PrivateRoute allowedRoles={[...PRIVILEGED]}>
               <AddNotice />
             </PrivateRoute>
           }
         />
-        <Route path="add-daily-lesson" element={<AddDailyLesson />} />
         <Route
           path="management/photos"
           element={
-            <PrivateRoute allowedRoles={["admin", "principal"]}>
+            <PrivateRoute allowedRoles={[...PRIVILEGED]}>
               <ManagePhotos />
             </PrivateRoute>
           }
@@ -104,25 +185,16 @@ const Router = () => {
         <Route
           path="management/heroes"
           element={
-            <PrivateRoute allowedRoles={["admin", "principal"]}>
+            <PrivateRoute allowedRoles={[...PRIVILEGED]}>
               <ManageHero />
             </PrivateRoute>
           }
         />
-
         <Route
           path="management/notice"
           element={
-            <PrivateRoute>
+            <PrivateRoute allowedRoles={[...PRIVILEGED]}>
               <ManageNotice />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="management/manage-daily-lesson"
-          element={
-            <PrivateRoute>
-              <ManageDailyLesson />
             </PrivateRoute>
           }
         />

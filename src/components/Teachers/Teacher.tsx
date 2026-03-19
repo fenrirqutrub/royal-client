@@ -39,7 +39,7 @@ const Teacher = () => {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["teachers"],
     queryFn: async () => {
-      const res = await axiosPublic.get("/api/teachers");
+      const res = await axiosPublic.get("/api/users");
       // handle both { data: [...] } and direct array
       const result: TeacherData[] = res.data?.data ?? res.data ?? [];
       return result;
