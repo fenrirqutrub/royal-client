@@ -336,8 +336,8 @@ const DailyLesson = () => {
           }}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 border ${
             isToday
-              ? "bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-200 dark:shadow-violet-900/30"
-              : "border-[var(--color-active-border)]/60 text-[var(--color-gray)] hover:border-violet-400 hover:text-violet-500 bg-[var(--color-bg)]"
+              ? "bg-[var(--color-text)] text-[var(--color-bg)] "
+              : "border-[var(--color-active-border)]/60 text-[var(--color-gray)] bg-[var(--color-bg)]"
           }`}
         >
           <IoCalendarOutline className="h-4 w-4" />
