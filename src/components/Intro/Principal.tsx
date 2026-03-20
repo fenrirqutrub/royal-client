@@ -1,4 +1,3 @@
-import dp from "../../assets/tom.jpg";
 import { IoCaretForwardOutline } from "react-icons/io5";
 
 const Principal = () => {
@@ -59,7 +58,7 @@ const Principal = () => {
         {/* image */}
         <figure className="md:w-1/3">
           <img
-            src={dp}
+            src="https://res.cloudinary.com/ddsfmccyi/image/upload/v1774022948/principal_uoyjbw.webp"
             alt="principal"
             className="rounded-xl shadow-lg w-full object-cover"
           />

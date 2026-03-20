@@ -1,22 +1,42 @@
 import { useMemo } from "react";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
-import type { PaginationProps } from "../../types/Article.types";
 
-// ────────────────────── REUSABLE PAGINATION COMPONENT ──────────────────────
+// ✅ Define Props properly
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
+// ────────────────────── PAGINATION COMPONENT ──────────────────────
 
 export const Pagination = ({
   currentPage,
   totalPages,
   onPageChange,
 }: PaginationProps) => {
+  // ✅ Safer page calculation
   const pageNumbers = useMemo(() => {
-    return Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-      if (totalPages <= 5) return i + 1;
-      if (currentPage <= 3) return i + 1;
-      if (currentPage >= totalPages - 2) return totalPages - 4 + i;
-      return currentPage - 2 + i;
-    });
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    if (currentPage <= 3) {
+      return [1, 2, 3, 4, 5];
+    }
+
+    if (currentPage >= totalPages - 2) {
+      return Array.from({ length: 5 }, (_, i) => totalPages - 4 + i);
+    }
+
+    return Array.from({ length: 5 }, (_, i) => currentPage - 2 + i);
   }, [currentPage, totalPages]);
+
+  // ✅ Clamp page change (VERY IMPORTANT)
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    onPageChange(page);
+  };
 
   const linkBase =
     "inline-flex h-10 items-center justify-center rounded stroke-slate-700 px-4 text-sm font-medium text-slate-700 transition duration-300 hover:bg-emerald-50 hover:stroke-emerald-500 hover:text-emerald-500 focus:bg-emerald-50 focus:stroke-emerald-600 focus:text-emerald-600 focus-visible:outline-none dark:stroke-slate-300 dark:text-slate-300 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400 dark:focus:bg-emerald-900/30 dark:focus:text-emerald-400";
@@ -34,10 +54,10 @@ export const Pagination = ({
       className="mt-8 sm:mt-12"
     >
       <ul className="flex list-none items-center justify-center text-sm text-slate-700 md:gap-1">
-        {/* Previous Button */}
+        {/* Previous */}
         <li>
           <button
-            onClick={() => onPageChange(currentPage - 1)}
+            onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
             aria-label="Go to previous page"
             className={arrowBase}
@@ -47,28 +67,28 @@ export const Pagination = ({
           </button>
         </li>
 
-        {/* Page Numbers */}
+        {/* Pages */}
         {pageNumbers.map((page) => (
           <li key={page}>
             <button
-              onClick={() => onPageChange(page)}
+              onClick={() => handlePageChange(page)}
               aria-label={
                 page === currentPage
                   ? `Current Page, Page ${page}`
                   : `Go to page ${page}`
               }
               aria-current={page === currentPage ? "page" : undefined}
-              className={`hidden md:inline-flex ${page === currentPage ? activeLink : linkBase}`}
+              className={`inline-flex ${page === currentPage ? activeLink : linkBase}`}
             >
               {page}
             </button>
           </li>
         ))}
 
-        {/* Next Button */}
+        {/* Next */}
         <li>
           <button
-            onClick={() => onPageChange(currentPage + 1)}
+            onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
             aria-label="Go to next page"
             className={arrowBase}

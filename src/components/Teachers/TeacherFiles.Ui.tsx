@@ -1,7 +1,7 @@
 // src/components/Teachers/TeacherFiles.Ui.tsx
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Phone,
   MapPin,
@@ -11,6 +11,8 @@ import {
   GraduationCap,
   ShieldCheck,
   BadgeCheck,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 
 import Avatar from "../common/Avatar";
@@ -93,6 +95,137 @@ const YEAR_LABEL: Record<string, string> = {
   mba: "এমবিএ",
   mbbs: "এমবিবিএস",
   ma: "এমএ",
+};
+
+// ══════════════════════════════════════════════════
+// DELETE CONFIRM MODAL
+// ══════════════════════════════════════════════════
+const DeleteConfirmModal = ({
+  teacher,
+  onConfirm,
+  onCancel,
+  isDeleting,
+}: {
+  teacher: Teacher;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isDeleting: boolean;
+}) => {
+  const { color } =
+    ROLE_CONFIG[teacher.role ?? "teacher"] ?? ROLE_CONFIG.teacher;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{
+        backgroundColor: "rgba(0,0,0,0.6)",
+        backdropFilter: "blur(6px)",
+      }}
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        transition={{ type: "spring", stiffness: 320, damping: 28 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full rounded-2xl overflow-hidden shadow-2xl"
+        style={{
+          maxWidth: 380,
+          backgroundColor: "var(--color-bg)",
+          border: "1px solid var(--color-active-border)",
+        }}
+      >
+        {/* Red accent strip */}
+        <div className="h-[3px] bg-rose-500" />
+
+        <div className="p-6">
+          {/* Icon */}
+          <div className="flex items-center justify-center w-12 h-12 rounded-2xl mx-auto mb-4 bg-rose-500/10 border border-rose-500/20">
+            <AlertTriangle className="w-6 h-6 text-rose-500" />
+          </div>
+
+          {/* Text */}
+          <h3
+            className="text-lg font-bold text-center bangla mb-1"
+            style={{ color: "var(--color-text)" }}
+          >
+            শিক্ষক মুছে ফেলবেন?
+          </h3>
+          <p
+            className="text-sm text-center bangla mb-1"
+            style={{ color: "var(--color-gray)" }}
+          >
+            নিচের শিক্ষককে স্থায়ীভাবে মুছে ফেলা হবে:
+          </p>
+
+          {/* Teacher preview */}
+          <div
+            className="flex items-center gap-3 rounded-xl p-3 mt-3 mb-5"
+            style={{
+              backgroundColor: "var(--color-active-bg)",
+              border: "1px solid var(--color-active-border)",
+            }}
+          >
+            <Avatar
+              name={teacher.name}
+              url={teacher.avatar?.url}
+              color={color}
+              size={40}
+              radius="rounded-xl"
+            />
+            <div className="min-w-0">
+              <p
+                className="text-sm font-semibold bangla truncate"
+                style={{ color: "var(--color-text)" }}
+              >
+                {teacher.name}
+              </p>
+              <p
+                className="text-xs font-mono"
+                style={{ color: "var(--color-gray)" }}
+              >
+                {teacher.phone ?? teacher.slug ?? "—"}
+              </p>
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bangla transition-all"
+              style={{
+                backgroundColor: "var(--color-active-bg)",
+                border: "1px solid var(--color-active-border)",
+                color: "var(--color-gray)",
+              }}
+            >
+              বাতিল
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={isDeleting}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bangla transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+              style={{
+                backgroundColor: isDeleting
+                  ? "rgb(239,68,68,0.6)"
+                  : "rgb(239,68,68)",
+                color: "#fff",
+              }}
+            >
+              {isDeleting ? (
+                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              {isDeleting ? "মুছছে..." : "হ্যাঁ, মুছুন"}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
 };
 
 // ── TeacherModal ──────────────────────────────────────────────────────────────
@@ -279,17 +412,35 @@ export const TeacherModal = ({
   );
 };
 
-// ── TeacherCard ───────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════
+// TEACHER CARD
+// ══════════════════════════════════════════════════
 export const TeacherCard = ({
   teacher,
   index,
+  onDelete,
 }: {
   teacher: Teacher;
   index: number;
+  onDelete?: (id: string) => Promise<void>;
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const { color, label, handle } =
     ROLE_CONFIG[teacher.role ?? "teacher"] ?? ROLE_CONFIG.teacher;
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    setIsDeleting(true);
+    try {
+      await onDelete(teacher._id);
+    } finally {
+      setIsDeleting(false);
+      setDeleteOpen(false);
+    }
+  };
 
   return (
     <>
@@ -422,36 +573,83 @@ export const TeacherCard = ({
             )}
           </div>
 
-          {/* view button */}
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bangla cursor-pointer transition-all"
-            style={{
-              border: "1px solid var(--color-active-border)",
-              color: "var(--color-gray)",
-              backgroundColor: "transparent",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = color + "88";
-              e.currentTarget.style.color = color;
-              e.currentTarget.style.backgroundColor = color + "0a";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-active-border)";
-              e.currentTarget.style.color = "var(--color-gray)";
-              e.currentTarget.style.backgroundColor = "transparent";
-            }}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            বিস্তারিত দেখুন
-          </button>
+          {/* Action buttons */}
+          <div className="mt-4 flex gap-2">
+            {/* View button */}
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bangla cursor-pointer transition-all"
+              style={{
+                border: "1px solid var(--color-active-border)",
+                color: "var(--color-gray)",
+                backgroundColor: "transparent",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = color + "88";
+                e.currentTarget.style.color = color;
+                e.currentTarget.style.backgroundColor = color + "0a";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor =
+                  "var(--color-active-border)";
+                e.currentTarget.style.color = "var(--color-gray)";
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              <Eye className="w-3.5 h-3.5" />
+              বিস্তারিত
+            </button>
+
+            {/* Delete button — only shown if onDelete prop passed */}
+            {onDelete && (
+              <motion.button
+                type="button"
+                onClick={() => setDeleteOpen(true)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center justify-center w-10 h-10 rounded-xl cursor-pointer transition-all shrink-0"
+                style={{
+                  border: "1px solid rgba(239,68,68,0.25)",
+                  color: "rgba(239,68,68,0.6)",
+                  backgroundColor: "rgba(239,68,68,0.05)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(239,68,68,0.6)";
+                  e.currentTarget.style.color = "rgb(239,68,68)";
+                  e.currentTarget.style.backgroundColor = "rgba(239,68,68,0.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(239,68,68,0.25)";
+                  e.currentTarget.style.color = "rgba(239,68,68,0.6)";
+                  e.currentTarget.style.backgroundColor =
+                    "rgba(239,68,68,0.05)";
+                }}
+                title="মুছুন"
+              >
+                <Trash2 className="w-4 h-4" />
+              </motion.button>
+            )}
+          </div>
         </div>
       </motion.div>
 
+      {/* Detail modal */}
       {modalOpen && (
         <TeacherModal teacher={teacher} onClose={() => setModalOpen(false)} />
       )}
+
+      {/* Delete confirm modal */}
+      <AnimatePresence>
+        {deleteOpen && (
+          <DeleteConfirmModal
+            teacher={teacher}
+            onConfirm={handleDelete}
+            onCancel={() => setDeleteOpen(false)}
+            isDeleting={isDeleting}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 };

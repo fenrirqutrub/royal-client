@@ -1,14 +1,20 @@
 // src/components/Teachers/TeacherFiles.tsx
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosPublic from "../../hooks/axiosPublic";
 import Skeleton from "../common/Skeleton";
 import { type Teacher, TeacherCard } from "./TeacherFiles.Ui";
 import SearchBar from "../common/Searchbar";
 import EmptyState from "../common/Emptystate";
+import { useAuth } from "../../context/AuthContext";
 
 const TeacherFiles = () => {
   const [search, setSearch] = useState("");
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Only owner/admin/principal can delete
+  const canDelete = ["owner", "admin", "principal"].includes(user?.role ?? "");
 
   const {
     data: teachers = [],
@@ -28,6 +34,19 @@ const TeacherFiles = () => {
       );
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await axiosPublic.delete(`/api/users/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacherFiles"] });
+    },
+  });
+
+  const handleDelete = async (id: string) => {
+    await deleteMutation.mutateAsync(id);
+  };
 
   const filtered = teachers.filter((t) => {
     const q = search.toLowerCase();
@@ -85,7 +104,12 @@ const TeacherFiles = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((t, i) => (
-            <TeacherCard key={t._id} teacher={t} index={i} />
+            <TeacherCard
+              key={t._id}
+              teacher={t}
+              index={i}
+              onDelete={canDelete ? handleDelete : undefined}
+            />
           ))}
         </div>
       )}
