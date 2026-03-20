@@ -1,7 +1,3 @@
-/**
- * AdminSidebar.tsx
- */
-
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -21,11 +17,11 @@ import { useTheme } from "../../../context/ThemeProvider";
 import { SidebarContent, SPRING_SM, type NavItem } from "./Sidebar.Ui";
 
 const ROLES: Record<string, { label: string; color: string }> = {
-  owner: { label: "Owner", color: "#f59e0b" },
-  admin: { label: "Admin", color: "#ef4444" },
-  principal: { label: "Principal", color: "#8b5cf6" },
-  teacher: { label: "Teacher", color: "#3b82f6" },
-  student: { label: "Student", color: "#22c55e" },
+  owner: { label: "মালিক", color: "#f59e0b" },
+  admin: { label: "প্রশাসক", color: "#ef4444" },
+  principal: { label: "অধ্যক্ষ", color: "#8b5cf6" },
+  teacher: { label: "শিক্ষক", color: "#3b82f6" },
+  student: { label: "ছাত্র/ছাত্রী", color: "#22c55e" },
 };
 
 const dashboardNav = (): NavItem[] => [
@@ -155,11 +151,10 @@ const AdminSidebar = () => {
   const sectionLabels =
     role === "student" ? SECTION_LABELS.student : SECTION_LABELS.default;
 
-  // Close mobile sidebar when a nav item is clicked
   const handleNavClick = () => setMobileOpen(false);
 
   const contentProps = {
-    user,
+    user, // ✅ avatar সহ পুরো user object pass হচ্ছে
     navGroups,
     sectionLabels,
     roleConfig,

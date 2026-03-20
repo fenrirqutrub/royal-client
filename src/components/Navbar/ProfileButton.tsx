@@ -4,16 +4,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router";
 import {
   LogOut,
-  BookOpen,
-  ClipboardList,
   ChevronDown,
   LayoutDashboard,
   UserCircle,
   Key,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { FaUserAlt } from "react-icons/fa";
-import ThemeToggle from "./ThemeToggle";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeProvider";
 
 interface ProfileButtonProps {
   onLogout?: () => void;
@@ -33,25 +33,22 @@ const POPUP_TRANSITION = {
   mass: 0.6,
 } as const;
 
-// ── Role badge config ────────────────────────────────────────────────────────
 const ROLE_BADGE: Record<string, { label: string; color: string; bg: string }> =
   {
-    student: { label: "Student", color: "#22c55e", bg: "rgba(34,197,94,0.12)" },
-    teacher: {
-      label: "Teacher",
-      color: "#3b82f6",
-      bg: "rgba(59,130,246,0.12)",
+    student: {
+      label: "ছাত্র/ছাত্রী",
+      color: "#22c55e",
+      bg: "rgba(34,197,94,0.12)",
     },
+    teacher: { label: "শিক্ষক", color: "#3b82f6", bg: "rgba(59,130,246,0.12)" },
     principal: {
-      label: "Principal",
+      label: "অধ্যক্ষ",
       color: "#a855f7",
       bg: "rgba(168,85,247,0.12)",
     },
-    admin: { label: "Admin", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
-    owner: { label: "Owner", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
+    admin: { label: "প্রশাসক", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+    owner: { label: "মালিক", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
   };
-
-// ── Menu items per role ──────────────────────────────────────────────────────
 type MenuItemDef = {
   key: string;
   label: string;
@@ -59,86 +56,36 @@ type MenuItemDef = {
   path: string;
 };
 
+const STAFF_MENU: MenuItemDef[] = [
+  {
+    key: "profile",
+    label: "প্রোফাইল",
+    icon: UserCircle,
+    path: "/dashboard/profile",
+  },
+  {
+    key: "dashboard",
+    label: "ড্যাশবোর্ড",
+    icon: LayoutDashboard,
+    path: "/dashboard",
+  },
+];
+
 const MENU_BY_ROLE: Record<string, MenuItemDef[]> = {
   student: [
     {
       key: "profile",
-      label: "Profile",
+      label: "প্রোফাইল",
       icon: UserCircle,
       path: "/dashboard/profile",
     },
   ],
-  teacher: [
-    {
-      key: "profile",
-      label: "Profile",
-      icon: UserCircle,
-      path: "/dashboard/profile",
-    },
-    {
-      key: "dashboard",
-      label: "Dashboard",
-      icon: LayoutDashboard,
-      path: "/dashboard",
-    },
-    {
-      key: "add-exam",
-      label: "Add Weekly Exam",
-      icon: ClipboardList,
-      path: "/admin/add-exam",
-    },
-    {
-      key: "add-lesson",
-      label: "Add Daily Lesson",
-      icon: BookOpen,
-      path: "/admin/add-lesson",
-    },
-  ],
-  principal: [
-    {
-      key: "profile",
-      label: "Profile",
-      icon: UserCircle,
-      path: "/dashboard/profile",
-    },
-    {
-      key: "dashboard",
-      label: "Dashboard",
-      icon: LayoutDashboard,
-      path: "/dashboard",
-    },
-  ],
-  admin: [
-    {
-      key: "profile",
-      label: "Profile",
-      icon: UserCircle,
-      path: "/dashboard/profile",
-    },
-    {
-      key: "dashboard",
-      label: "Dashboard",
-      icon: LayoutDashboard,
-      path: "/dashboard",
-    },
-  ],
-  owner: [
-    {
-      key: "profile",
-      label: "Profile",
-      icon: UserCircle,
-      path: "/dashboard/profile",
-    },
-    {
-      key: "dashboard",
-      label: "Dashboard",
-      icon: LayoutDashboard,
-      path: "/dashboard",
-    },
-  ],
+  teacher: STAFF_MENU,
+  principal: STAFF_MENU,
+  admin: STAFF_MENU,
+  owner: STAFF_MENU,
 };
-
-/* ─── Avatar ─────────────────────────────────────────────────────────────── */
+/* ─── Avatar ──────────────────────────────────────────────────────────────── */
 interface AvatarProps {
   avatarUrl?: string | null;
   size: number;
@@ -181,7 +128,82 @@ const Avatar = memo<AvatarProps>(({ avatarUrl, size, className = "" }) => {
 });
 Avatar.displayName = "Avatar";
 
-/* ─── ProfileButton ──────────────────────────────────────────────────────── */
+/* ─── ThemeRow ────────────────────────────────────────────────────────────── */
+const ThemeRow = memo(({ onClose }: { onClose: () => void }) => {
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
+
+  const handleClick = useCallback(() => {
+    toggleTheme();
+    onClose(); // ✅ theme change-এর পর popup বন্ধ
+  }, [toggleTheme, onClose]);
+
+  return (
+    <button
+      onClick={handleClick}
+      className="w-full flex items-center justify-between px-4 py-2.5 outline-none cursor-pointer transition-colors"
+      style={{ color: "var(--color-text)" }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+          "var(--color-active-bg)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+          "transparent";
+      }}
+    >
+      <span className="text-sm font-medium">Theme</span>
+
+      {/* Toggle pill */}
+      <div
+        className="relative flex items-center rounded-full p-0.5 transition-colors duration-300"
+        style={{
+          width: 52,
+          height: 28,
+          backgroundColor: isDark
+            ? "rgba(99,102,241,0.25)"
+            : "rgba(234,179,8,0.2)",
+          border: `1px solid ${isDark ? "rgba(99,102,241,0.4)" : "rgba(234,179,8,0.4)"}`,
+        }}
+      >
+        <motion.div
+          className="absolute rounded-full flex items-center justify-center"
+          animate={{ x: isDark ? 24 : 0 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          style={{
+            width: 22,
+            height: 22,
+            background: isDark
+              ? "linear-gradient(135deg,#6366f1,#818cf8)"
+              : "linear-gradient(135deg,#fbbf24,#f59e0b)",
+            boxShadow: isDark
+              ? "0 0 8px rgba(99,102,241,0.5)"
+              : "0 0 8px rgba(251,191,36,0.5)",
+          }}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={theme}
+              initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+              animate={{ opacity: 1, rotate: 0, scale: 1 }}
+              exit={{ opacity: 0, rotate: 90, scale: 0.5 }}
+              transition={{ duration: 0.2 }}
+            >
+              {isDark ? (
+                <Moon size={12} color="white" />
+              ) : (
+                <Sun size={12} color="white" />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
+      </div>
+    </button>
+  );
+});
+ThemeRow.displayName = "ThemeRow";
+
+/* ─── ProfileButton ───────────────────────────────────────────────────────── */
 const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
   const [popupOpen, setPopupOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -194,8 +216,9 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
   const avatarUrl = user?.avatar?.url ?? null;
   const displayPhone = user?.phone ?? "";
   const displayName = user?.name ?? "User";
+  const isStudent = role === "student";
 
-  // close on outside click
+  // outside click → close
   useEffect(() => {
     if (!popupOpen) return;
     const handler = (e: MouseEvent) => {
@@ -206,21 +229,23 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
     return () => document.removeEventListener("mousedown", handler);
   }, [popupOpen]);
 
+  const closePopup = useCallback(() => setPopupOpen(false), []);
+
   const handleLogout = useCallback(() => {
-    setPopupOpen(false);
+    closePopup();
     logout();
     onLogout?.();
-  }, [logout, onLogout]);
+  }, [closePopup, logout, onLogout]);
 
   const handleMenuNav = useCallback(
     (path: string) => {
-      setPopupOpen(false);
+      closePopup();
       navigate(path);
     },
-    [navigate],
+    [closePopup, navigate],
   );
 
-  // ── Loading skeleton ──
+  // ── Loading ──
   if (loading) {
     return (
       <div
@@ -237,17 +262,20 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
   // ── Not logged in ──
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center gap-2">
-        <motion.button
-          onClick={() => navigate("/auth")}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm outline-none cursor-pointer bg-[var(--color-text)] text-[var(--color-bg)] border border-[var(--color-active-border)] h-10 "
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
-        >
-          <Key className="w-4 h-4 flex-shrink-0" />
-          <span>লগইন</span>
-        </motion.button>
-      </div>
+      <motion.button
+        onClick={() => navigate("/auth")}
+        className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm outline-none cursor-pointer h-10"
+        style={{
+          backgroundColor: "var(--color-text)",
+          color: "var(--color-bg)",
+          border: "1px solid var(--color-active-border)",
+        }}
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.96 }}
+      >
+        <Key className="w-4 h-4 flex-shrink-0" />
+        <span>লগইন</span>
+      </motion.button>
     );
   }
 
@@ -316,7 +344,6 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
                 >
                   {displayPhone || "No phone"}
                 </p>
-                {/* Role badge */}
                 <span
                   className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
                   style={{ color: badge.color, backgroundColor: badge.bg }}
@@ -326,19 +353,14 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
               </div>
             </div>
 
-            {/* ── Theme toggle ── */}
-            <div
-              className="px-4 py-2.5 flex items-center justify-between"
-              style={{ borderBottom: "1px solid var(--color-active-border)" }}
-            >
-              <span
-                className="text-sm font-medium"
-                style={{ color: "var(--color-text)" }}
+            {/* ── Theme toggle — শুধু student ── */}
+            {isStudent && (
+              <div
+                style={{ borderBottom: "1px solid var(--color-active-border)" }}
               >
-                Theme
-              </span>
-              <ThemeToggle size={32} animationSpeed={0.5} />
-            </div>
+                <ThemeRow onClose={closePopup} />
+              </div>
+            )}
 
             {/* ── Menu items ── */}
             {menuItems.length > 0 && (
