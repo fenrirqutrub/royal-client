@@ -1,9 +1,17 @@
-// ManageNotice.tsx  →  route: /dashboard/notices/manage
+// src/pages/Admin/Management/ManageNotice.tsx
+//
+// Loading  → <Skeleton variant="notice" count={6} />
+// Error    → <ErrorState message="..." />
+// Empty    → <EmptyState ... />
+
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Trash2, BookOpen } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import axiosPublic from "../../../hooks/axiosPublic";
+import Skeleton from "../../../components/common/Skeleton";
+import ErrorState from "../../../components/common/ErrorState";
+import EmptyState from "../../../components/common/Emptystate";
 
 interface NoticeItem {
   _id: string;
@@ -31,10 +39,8 @@ const ManageNotice = () => {
     isError,
   } = useQuery<NoticeItem[]>({
     queryKey: ["notices"],
-    queryFn: async () => {
-      const res = await axiosPublic.get("/api/notices");
-      return res.data.data as NoticeItem[];
-    },
+    queryFn: async () =>
+      (await axiosPublic.get("/api/notices")).data.data as NoticeItem[],
   });
 
   const deleteMutation = useMutation({
@@ -50,12 +56,35 @@ const ManageNotice = () => {
   const activeCount = notices.filter((n) => !isExpired(n.expiresAt)).length;
   const expiredCount = notices.filter((n) => isExpired(n.expiresAt)).length;
 
+  // ── Loading ───────────────────────────────────────────────────────────────
+  if (isLoading)
+    return (
+      <div
+        className="min-h-screen bangla w-full px-4 sm:px-8 py-10"
+        style={{ backgroundColor: "var(--color-bg)" }}
+      >
+        <Skeleton variant="notice" count={6} />
+      </div>
+    );
+
+  // ── Error ─────────────────────────────────────────────────────────────────
+  if (isError)
+    return (
+      <div
+        className="min-h-screen bangla flex items-center justify-center"
+        style={{ backgroundColor: "var(--color-bg)" }}
+      >
+        <ErrorState message="ডেটা লোড করতে ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।" />
+      </div>
+    );
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
       className="min-h-screen bangla w-full px-4 sm:px-8 py-10"
       style={{ backgroundColor: "var(--color-bg)", color: "var(--color-text)" }}
     >
-      {/* ── Header ── */}
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -82,7 +111,7 @@ const ManageNotice = () => {
         </p>
       </motion.div>
 
-      {/* ── Stats Bar ── */}
+      {/* Stats */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -142,38 +171,12 @@ const ManageNotice = () => {
         ))}
       </motion.div>
 
-      {/* ── Content ── */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-24">
-          <Loader2
-            className="w-8 h-8 animate-spin"
-            style={{ color: "#f5c542" }}
-          />
-        </div>
-      ) : isError ? (
-        <div
-          className="text-center py-24 text-base"
-          style={{ color: "#f87171" }}
-        >
-          ডেটা লোড করতে ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।
-        </div>
-      ) : notices.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-24"
-        >
-          <BookOpen
-            className="w-14 h-14 mx-auto mb-4"
-            style={{ color: "var(--color-active-border)" }}
-          />
-          <p
-            className="text-base sm:text-lg"
-            style={{ color: "var(--color-gray)" }}
-          >
-            এখনো কোনো নোটিশ প্রকাশিত হয়নি।
-          </p>
-        </motion.div>
+      {/* Empty state — EmptyState দিয়ে */}
+      {notices.length === 0 ? (
+        <EmptyState
+          title="কোনো নোটিশ নেই"
+          message="এখনো কোনো নোটিশ প্রকাশিত হয়নি।"
+        />
       ) : (
         <>
           <p
@@ -201,11 +204,9 @@ const ManageNotice = () => {
                       opacity: expired ? 0.55 : 1,
                     }}
                   >
-                    {/* Left accent bar */}
                     <div className="w-1 self-stretch rounded-full shrink-0 bg-[var(--color-active-border)]" />
 
                     <div className="flex-1 min-w-0">
-                      {/* Slug + status badge */}
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <span className="text-xs sm:text-sm font-bold tracking-widest font-mono text-[var(--color-gray)]">
                           {item.noticeSlug}
@@ -235,7 +236,6 @@ const ManageNotice = () => {
                         )}
                       </div>
 
-                      {/* Notice text */}
                       <p
                         className="text-base sm:text-lg leading-relaxed whitespace-pre-wrap break-words"
                         style={{ color: "var(--color-text)" }}
@@ -243,7 +243,6 @@ const ManageNotice = () => {
                         {item.notice}
                       </p>
 
-                      {/* Dates */}
                       <div
                         className="flex items-center gap-3 mt-3 flex-wrap pt-3"
                         style={{
@@ -259,13 +258,12 @@ const ManageNotice = () => {
                         <span style={{ color: "var(--color-active-border)" }}>
                           ·
                         </span>
-                        <span className="text-xs sm:text-sm font-semibold text-[var(--color-gray)] ">
+                        <span className="text-xs sm:text-sm font-semibold text-[var(--color-gray)]">
                           মেয়াদ শেষ: {formatDate(item.expiresAt)}
                         </span>
                       </div>
                     </div>
 
-                    {/* Delete button */}
                     <motion.button
                       whileTap={{ scale: 0.9 }}
                       onClick={() => deleteMutation.mutate(item.noticeSlug)}
@@ -277,16 +275,14 @@ const ManageNotice = () => {
                         border: "1px solid rgba(239,68,68,0.2)",
                         color: "#f87171",
                       }}
-                      onMouseEnter={(e) => {
-                        (
-                          e.currentTarget as HTMLButtonElement
-                        ).style.backgroundColor = "rgba(239,68,68,0.18)";
-                      }}
-                      onMouseLeave={(e) => {
-                        (
-                          e.currentTarget as HTMLButtonElement
-                        ).style.backgroundColor = "rgba(239,68,68,0.08)";
-                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor =
+                          "rgba(239,68,68,0.18)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor =
+                          "rgba(239,68,68,0.08)")
+                      }
                     >
                       {deleteMutation.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />

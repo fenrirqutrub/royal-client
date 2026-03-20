@@ -1,4 +1,7 @@
 // src/pages/admin/Profile.tsx
+//
+// CHANGE: isLoading state — Loader2 spinner সরিয়ে Skeleton variant="profile" use করা হয়েছে
+
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +34,7 @@ import axiosPublic from "../../../hooks/axiosPublic";
 import { useAuth } from "../../../context/AuthContext";
 import DatePicker from "../../../components/common/Datepicker";
 import SelectInput from "../../../components/common/SelectInput";
+import Skeleton from "../../../components/common/Skeleton";
 import { getDivisions, getDistricts, getThanas } from "../../../data/bd-geo";
 import { FaUser } from "react-icons/fa";
 
@@ -283,14 +287,14 @@ const PasswordInput = ({
 
 /* ════════════════════════════════════════════════════════════════════════════
    PROFILE PAGE
-   ════════════════════════════════════════════════════════════════════════════ */
+════════════════════════════════════════════════════════════════════════════ */
 const Profile = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const slug = user?.slug ?? "";
   const roleColor = ROLE_COLOR[user?.role ?? "teacher"] ?? "#3b82f6";
   const isStudent = user?.role === "student";
-  const isHardcoded = user?.isHardcoded ?? false; // ✅ owner check
+  const isHardcoded = user?.isHardcoded ?? false;
 
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
@@ -311,32 +315,24 @@ const Profile = () => {
   /* ── Fetch profile ── */
   const { data: profileRes, isLoading } = useQuery({
     queryKey: ["profile", slug],
-    queryFn: async () => {
-      const { data } = await axiosPublic.get(`/api/users/${slug}/profile`);
-      return data;
-    },
+    queryFn: async () =>
+      (await axiosPublic.get(`/api/users/${slug}/profile`)).data,
     enabled: !!slug,
   });
   const profile = profileRes?.data;
 
   /* ── Update mutation ── */
   const updateMutation = useMutation({
-    mutationFn: async (payload: Record<string, string>) => {
-      const { data } = await axiosPublic.patch(
-        `/api/users/${slug}/profile`,
-        payload,
-      );
-      return data;
-    },
+    mutationFn: async (payload: Record<string, string>) =>
+      (await axiosPublic.patch(`/api/users/${slug}/profile`, payload)).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile", slug] });
       toast.success("প্রোফাইল আপডেট হয়েছে!");
       setEditing(false);
       setFormData({});
     },
-    onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message ?? "আপডেট ব্যর্থ");
-    },
+    onError: (err: { response?: { data?: { message?: string } } }) =>
+      toast.error(err?.response?.data?.message ?? "আপডেট ব্যর্থ"),
   });
 
   /* ── Avatar mutation ── */
@@ -344,8 +340,7 @@ const Profile = () => {
     mutationFn: async (file: File) => {
       const fd = new FormData();
       fd.append("image", file);
-      const { data } = await axiosPublic.post(`/api/users/${slug}/avatar`, fd);
-      return data;
+      return (await axiosPublic.post(`/api/users/${slug}/avatar`, fd)).data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile", slug] });
@@ -354,13 +349,11 @@ const Profile = () => {
     onError: () => toast.error("ছবি আপলোড ব্যর্থ"),
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
 
-  const handleSelectChange = (name: string, val: string) => {
+  const handleSelectChange = (name: string, val: string) =>
     setFormData((prev) => ({ ...prev, [name]: val }));
-  };
 
   const startEditing = () => {
     setDivision(profile?.division ?? "");
@@ -421,16 +414,18 @@ const Profile = () => {
       ? getThanas(pDivision, pDistrict).map((v) => ({ value: v, label: v }))
       : [];
 
+  // ── Loading — Skeleton দিয়ে ───────────────────────────────────────────────
   if (isLoading)
     return (
       <div
-        className="min-h-screen flex items-center justify-center"
+        className="min-h-screen transition-colors"
         style={{ backgroundColor: "var(--color-bg)" }}
       >
-        <Loader2 className="w-7 h-7 animate-spin text-[var(--color-gray)]" />
+        <Skeleton variant="profile" />
       </div>
     );
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
       className="min-h-screen transition-colors"
@@ -473,7 +468,6 @@ const Profile = () => {
                     <FaUser className="text-2xl md:text-7xl text-[var(--color-gray)]" />
                   )}
                 </div>
-                {/* Avatar change — সবার জন্য */}
                 <button
                   onClick={() => fileRef.current?.click()}
                   disabled={avatarMutation.isPending}
@@ -537,7 +531,7 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* Edit button — শুধু non-hardcoded user */}
+              {/* Edit button */}
               {!isHardcoded && (
                 <div className="flex-shrink-0">
                   <AnimatePresence mode="wait">
@@ -593,7 +587,7 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Missing fields warning — শুধু non-hardcoded */}
+            {/* Missing fields warning */}
             {!isHardcoded && missingFields > 0 && !editing && (
               <motion.div
                 initial={{ opacity: 0, y: 4 }}
@@ -623,7 +617,6 @@ const Profile = () => {
         {/* ════ DISPLAY MODE ════════════════════════════════════════════════ */}
         {!editing && (
           <>
-            {/* Personal */}
             <Card delay={0.08}>
               <SectionHeader
                 icon={<User className="w-5 h-5" />}
@@ -635,7 +628,6 @@ const Profile = () => {
                   label="পূর্ণ নাম"
                   value={profile?.name ?? user?.name}
                 />
-                {/* hardcoded owner-এর জন্য বাবা/মা/DOB/ধর্ম নেই */}
                 {!isHardcoded && (
                   <>
                     <FieldDisplay
@@ -668,7 +660,6 @@ const Profile = () => {
               </div>
             </Card>
 
-            {/* Contact */}
             <Card delay={0.12}>
               <SectionHeader
                 icon={<Phone className="w-3.5 h-3.5" />}
@@ -680,7 +671,6 @@ const Profile = () => {
                   label="ফোন নম্বর"
                   value={profile?.phone}
                 />
-                {/* email — সবার জন্য, owner-এর জন্য user.email থেকে */}
                 <FieldDisplay
                   icon={<Mail className="w-3.5 h-3.5" />}
                   label="ইমেইল"
@@ -691,7 +681,6 @@ const Profile = () => {
                   }
                   optional={!isHardcoded}
                 />
-                {/* জরুরি যোগাযোগ — শুধু non-hardcoded */}
                 {!isHardcoded && (
                   <FieldDisplay
                     icon={<PhoneCall className="w-3.5 h-3.5" />}
@@ -703,7 +692,6 @@ const Profile = () => {
               </div>
             </Card>
 
-            {/* Present address — শুধু non-hardcoded */}
             {!isHardcoded && (
               <Card delay={0.16}>
                 <SectionHeader
@@ -748,7 +736,6 @@ const Profile = () => {
               </Card>
             )}
 
-            {/* Permanent address — শুধু non-hardcoded */}
             {!isHardcoded && !profile?.permanentSameAsPresent && (
               <Card delay={0.18}>
                 <SectionHeader
@@ -787,7 +774,6 @@ const Profile = () => {
               </Card>
             )}
 
-            {/* Student info — শুধু student */}
             {isStudent && !isHardcoded && (
               <Card delay={0.2}>
                 <SectionHeader
@@ -826,7 +812,6 @@ const Profile = () => {
               </Card>
             )}
 
-            {/* Staff education — শুধু staff, non-hardcoded */}
             {!isStudent && !isHardcoded && (
               <Card delay={0.2}>
                 <SectionHeader
@@ -858,7 +843,6 @@ const Profile = () => {
               </Card>
             )}
 
-            {/* Security */}
             <Card delay={0.22}>
               <SectionHeader
                 icon={<Lock className="w-3.5 h-3.5" />}
@@ -875,7 +859,7 @@ const Profile = () => {
           </>
         )}
 
-        {/* ════ EDIT MODE — শুধু non-hardcoded ════════════════════════════ */}
+        {/* ════ EDIT MODE ════════════════════════════════════════════════════ */}
         {editing && !isHardcoded && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -914,7 +898,6 @@ const Profile = () => {
                   onChange={handleChange}
                 />
 
-                {/* DOB */}
                 <div className="space-y-1.5 mb-3">
                   <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest bangla text-[var(--color-gray)]">
                     <CalendarDays className="w-3 h-3" /> জন্ম তারিখ
@@ -935,7 +918,6 @@ const Profile = () => {
                   />
                 </div>
 
-                {/* Religion */}
                 <div className="space-y-1.5 mb-3">
                   <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest bangla text-[var(--color-gray)]">
                     <Heart className="w-3 h-3" /> ধর্ম
@@ -948,7 +930,6 @@ const Profile = () => {
                   />
                 </div>
 
-                {/* Gender — read only */}
                 <div className="space-y-1.5 mb-3">
                   <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest bangla text-[var(--color-gray)]">
                     <User className="w-3 h-3" /> লিঙ্গ{" "}

@@ -4,7 +4,7 @@ import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { IoEyeOutline, IoCloseOutline } from "react-icons/io5";
 import { axiosPublic } from "../../hooks/axiosPublic";
-import Loader from "../../components/common/Loader";
+import Skeleton from "../../components/common/Skeleton";
 
 interface Photo {
   _id: string;
@@ -117,7 +117,7 @@ export default function PhotoGallery() {
   }, []);
 
   if (isPending) {
-    return <Loader />;
+    return <Skeleton variant="picture" height="150px" count={4} />;
   }
 
   if (isError) {

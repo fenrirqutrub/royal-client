@@ -6,6 +6,7 @@ import WeeklyExamCard from "./WeeklyExamCard";
 import ExamPagination from "../../components/common/ExamPagination";
 import axiosPublic from "../../hooks/axiosPublic";
 import Marquee from "react-fast-marquee";
+import Skeleton from "../../components/common/Skeleton";
 
 interface WeeklyExamData {
   _id: string;
@@ -236,11 +237,7 @@ const WeeklyExam = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <div className="w-8 h-8 rounded-full border-4 border-violet-500 border-t-transparent animate-spin" />
-      </div>
-    );
+    return <Skeleton variant="daily-lesson" />;
   }
 
   if (isError) {

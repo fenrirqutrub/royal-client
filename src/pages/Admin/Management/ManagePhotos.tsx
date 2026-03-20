@@ -1,24 +1,31 @@
 // src/pages/Admin/Management/ManagePhotos.tsx
+//
+// Loading  → <Skeleton variant="picture" count={8} />
+// Error    → <ErrorState message="..." />
+// Empty    → <EmptyState ... />
+// Controls → <GalleryControlsBar accentColor="emerald" />
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   IoTrashOutline,
   IoEyeOutline,
-  IoGridOutline,
-  IoListOutline,
   IoCalendarOutline,
   IoCheckmarkCircle,
   IoCamera,
 } from "react-icons/io5";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import { Pagination } from "../../../components/common/Pagination";
-import { EmptyState } from "../../../components/common/Emptystate";
-import { SearchBar } from "../../../components/common/Searchbar";
 import axiosPublic from "../../../hooks/axiosPublic";
+import Skeleton from "../../../components/common/Skeleton";
+import ErrorState from "../../../components/common/ErrorState";
+import EmptyState from "../../../components/common/Emptystate";
+import GalleryControlsBar from "../../../components/common/GalleryControlsBar";
+import type { SortSelectOption } from "../../../components/common/GalleryControlsBar";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Photo {
   _id: string;
   imageUrl: string;
@@ -30,35 +37,69 @@ interface Photo {
   height?: number;
   size?: number;
 }
-
 interface ApiError {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
+  response?: { data?: { message?: string } };
 }
-
 type ViewMode = "grid" | "list";
 type SortOption = "newest" | "oldest" | "most-viewed" | "least-viewed";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 12;
 
-const fetchPhotos = async (): Promise<Photo[]> => {
-  const response = await axiosPublic.get("/api/photography?limit=1000");
-  return response.data.data;
+const SORT_OPTIONS: SortSelectOption[] = [
+  { value: "newest", label: "Newest First" },
+  { value: "oldest", label: "Oldest First" },
+  { value: "most-viewed", label: "Most Viewed" },
+  { value: "least-viewed", label: "Least Viewed" },
+];
+
+const SWAL_BASE = {
+  background: "#0C0D12",
+  color: "#fff",
+  iconColor: "#F59E0B",
+  showCancelButton: true,
+  confirmButtonColor: "#EF4444",
+  cancelButtonColor: "#52525B",
+  cancelButtonText: "Cancel",
 };
 
-const deletePhoto = async (id: string) => {
-  await axiosPublic.delete(`/api/photography/${id}`);
+// ─── API helpers ──────────────────────────────────────────────────────────────
+const fetchPhotos = async (): Promise<Photo[]> =>
+  (await axiosPublic.get("/api/photography?limit=1000")).data.data;
+
+const deletePhoto = (id: string) =>
+  axiosPublic.delete(`/api/photography/${id}`);
+
+const deleteBatchPhotos = (ids: string[]) =>
+  axiosPublic.post("/api/photography/batch/delete", { ids });
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const formatFileSize = (bytes?: number) => {
+  if (!bytes) return "N/A";
+  const mb = bytes / (1024 * 1024);
+  return mb < 1 ? `${(bytes / 1024).toFixed(0)}KB` : `${mb.toFixed(1)}MB`;
 };
 
-const deleteBatchPhotos = async (ids: string[]) => {
-  await axiosPublic.post("/api/photography/batch/delete", { ids });
+const formatDate = (date: string) => {
+  const diff = Math.ceil(
+    Math.abs(Date.now() - new Date(date).getTime()) / 86_400_000,
+  );
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 7) return `${diff} days ago`;
+  if (diff < 30) return `${Math.floor(diff / 7)} weeks ago`;
+  if (diff < 365) return `${Math.floor(diff / 30)} months ago`;
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function ManagePhotos() {
   const qc = useQueryClient();
+
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -66,6 +107,7 @@ export default function ManagePhotos() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // ── Query ──────────────────────────────────────────────────────────────────
   const {
     data: photos = [],
     isPending,
@@ -79,71 +121,68 @@ export default function ManagePhotos() {
     refetchIntervalInBackground: true,
   });
 
+  // ── Mutations ──────────────────────────────────────────────────────────────
+  const toastStyle = (border: string) => ({
+    style: {
+      background: "#0C0D12",
+      color: "#fff",
+      border: `1px solid ${border}`,
+    },
+  });
+
   const deleteMut = useMutation({
     mutationFn: deletePhoto,
     onSuccess: () => {
       toast.success("Photo deleted successfully", {
         icon: "✨",
-        style: {
-          background: "#0C0D12",
-          color: "#FFFFFF",
-          border: "1px solid #2D2E37",
-        },
+        ...toastStyle("#2D2E37"),
       });
       qc.invalidateQueries({ queryKey: ["photos-admin"] });
       qc.invalidateQueries({ queryKey: ["photos"] });
     },
-    onError: (error: ApiError) => {
-      toast.error(error?.response?.data?.message || "Failed to delete photo", {
-        style: {
-          background: "#0C0D12",
-          color: "#FFFFFF",
-          border: "1px solid #EF4444",
-        },
-      });
-    },
+    onError: (e: ApiError) =>
+      toast.error(
+        e?.response?.data?.message || "Failed to delete photo",
+        toastStyle("#EF4444"),
+      ),
   });
 
   const batchDeleteMut = useMutation({
     mutationFn: deleteBatchPhotos,
     onSuccess: () => {
-      toast.success(`${selectedPhotos.size} photos deleted successfully`, {
+      toast.success(`${selectedPhotos.size} photos deleted`, {
         icon: "🎉",
-        style: {
-          background: "#0C0D12",
-          color: "#FFFFFF",
-          border: "1px solid #2D2E37",
-        },
+        ...toastStyle("#2D2E37"),
       });
       setSelectedPhotos(new Set());
       setIsSelectionMode(false);
       qc.invalidateQueries({ queryKey: ["photos-admin"] });
       qc.invalidateQueries({ queryKey: ["photos"] });
     },
-    onError: (error: ApiError) => {
-      toast.error(error?.response?.data?.message || "Failed to delete photos", {
-        style: {
-          background: "#0C0D12",
-          color: "#FFFFFF",
-          border: "1px solid #EF4444",
-        },
-      });
-    },
+    onError: (e: ApiError) =>
+      toast.error(
+        e?.response?.data?.message || "Failed to delete photos",
+        toastStyle("#EF4444"),
+      ),
   });
 
-  // Filter and sort photos
+  // ── Reset page on filter change ────────────────────────────────────────────
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortBy]);
+
+  // ── Processed list ─────────────────────────────────────────────────────────
   const processedPhotos = useMemo(() => {
-    let filtered = [...photos];
+    const q = searchQuery.toLowerCase();
+    const filtered = q
+      ? photos.filter(
+          (p) =>
+            p.title?.toLowerCase().includes(q) ||
+            p._id.toLowerCase().includes(q),
+        )
+      : [...photos];
 
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (photo) =>
-          photo.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          photo._id.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-    }
-
-    filtered.sort((a, b) => {
+    return filtered.sort((a, b) => {
       switch (sortBy) {
         case "newest":
           return (
@@ -161,171 +200,94 @@ export default function ManagePhotos() {
           return 0;
       }
     });
-
-    return filtered;
   }, [photos, searchQuery, sortBy]);
 
-  // Pagination
   const totalPages = Math.ceil(processedPhotos.length / ITEMS_PER_PAGE);
-  const paginatedPhotos = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    const end = start + ITEMS_PER_PAGE;
-    return processedPhotos.slice(start, end);
-  }, [processedPhotos, currentPage]);
+  const paginatedPhotos = useMemo(
+    () =>
+      processedPhotos.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE,
+      ),
+    [processedPhotos, currentPage],
+  );
 
-  // Reset to page 1 when search or sort changes
-  useMemo(() => {
-    setCurrentPage(1);
-  }, []);
+  // ── Selection helpers ──────────────────────────────────────────────────────
+  const togglePhoto = (id: string) => {
+    const next = new Set(selectedPhotos);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedPhotos(next);
+  };
+  const selectAll = () =>
+    setSelectedPhotos(new Set(paginatedPhotos.map((p) => p._id)));
+  const clearSelection = () => setSelectedPhotos(new Set());
 
-  const confirmDelete = (id: string) => {
+  // ── Confirm dialogs ────────────────────────────────────────────────────────
+  const confirmDelete = (id: string) =>
     Swal.fire({
+      ...SWAL_BASE,
       title: "Delete Photo?",
       text: "This action cannot be undone",
       icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#EF4444",
-      cancelButtonColor: "#52525B",
       confirmButtonText: "Delete",
-      cancelButtonText: "Cancel",
-      background: "#0C0D12",
-      color: "#FFFFFF",
-      iconColor: "#F59E0B",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        deleteMut.mutate(id);
-      }
+    }).then((r) => {
+      if (r.isConfirmed) deleteMut.mutate(id);
     });
-  };
 
-  const confirmBatchDelete = () => {
+  const confirmBatchDelete = () =>
     Swal.fire({
+      ...SWAL_BASE,
       title: `Delete ${selectedPhotos.size} Photos?`,
       text: "This action cannot be undone",
       icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#EF4444",
-      cancelButtonColor: "#52525B",
       confirmButtonText: `Delete ${selectedPhotos.size} Photos`,
-      cancelButtonText: "Cancel",
-      background: "#0C0D12",
-      color: "#FFFFFF",
-      iconColor: "#F59E0B",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        batchDeleteMut.mutate(Array.from(selectedPhotos));
-      }
+    }).then((r) => {
+      if (r.isConfirmed) batchDeleteMut.mutate(Array.from(selectedPhotos));
     });
-  };
 
-  const togglePhotoSelection = (id: string) => {
-    const newSelection = new Set(selectedPhotos);
-    if (newSelection.has(id)) {
-      newSelection.delete(id);
-    } else {
-      newSelection.add(id);
-    }
-    setSelectedPhotos(newSelection);
-  };
-
-  const selectAll = () => {
-    setSelectedPhotos(new Set(paginatedPhotos.map((p) => p._id)));
-  };
-
-  const clearSelection = () => {
-    setSelectedPhotos(new Set());
-  };
-
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return "N/A";
-    const mb = bytes / (1024 * 1024);
-    return mb < 1 ? `${(bytes / 1024).toFixed(0)}KB` : `${mb.toFixed(1)}MB`;
-  };
-
-  const formatDate = (date: string) => {
-    const d = new Date(date);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - d.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  if (isPending) {
+  // ── Loading ───────────────────────────────────────────────────────────────
+  if (isPending)
     return (
-      <div className="min-h-screen bg-[#E9EBED] dark:bg-[#0C0D12] flex justify-center items-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center gap-6"
-        >
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-zinc-300 dark:border-zinc-800 rounded-full"></div>
-            <div className="w-20 h-20 border-4 border-[#0C0D12] dark:border-[#FFFFFF] border-t-transparent rounded-full animate-spin absolute top-0"></div>
-          </div>
-          <div className="text-center">
-            <p className="text-[#0C0D12] dark:text-[#FFFFFF] font-bold text-xl mb-1">
-              Loading Gallery
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-400 text-sm">
-              Fetching your photos...
-            </p>
-          </div>
-        </motion.div>
+      <div className="min-h-screen bg-[#E9EBED] dark:bg-[#0C0D12] px-4 sm:px-6 lg:px-8 py-10">
+        <Skeleton variant="picture" count={8} height="180px" />
       </div>
     );
-  }
 
-  if (isError) {
+  // ── Error ─────────────────────────────────────────────────────────────────
+  if (isError)
     return (
-      <div className="min-h-screen bg-[#E9EBED] dark:bg-[#0C0D12] flex justify-center items-center px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-md"
-        >
-          <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-red-500 mb-2">
-            Failed to Load Photos
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-            There was an error loading your gallery. Please try again.
-          </p>
+      <div className="min-h-screen bg-[#E9EBED] dark:bg-[#0C0D12] flex items-center justify-center">
+        <div className="text-center">
+          <ErrorState message="Photos লোড করতে ব্যর্থ হয়েছে।" />
           <button
             onClick={() => refetch()}
-            className="px-6 py-3 bg-[#0C0D12] dark:bg-[#FFFFFF] text-[#FFFFFF] dark:text-[#0C0D12] font-semibold rounded-xl hover:scale-105 transition-transform duration-200 shadow-lg"
+            className="mt-2 px-6 py-3 bg-[#0C0D12] dark:bg-white text-white dark:text-[#0C0D12] font-semibold rounded-xl hover:scale-105 transition-transform shadow-lg"
           >
             Retry
           </button>
-        </motion.div>
+        </div>
       </div>
     );
-  }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#E9EBED] dark:bg-[#0C0D12] transition-colors duration-300">
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
-        {/* Header Section */}
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          {/* Title */}
           <div className="mb-8">
             <motion.h1
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#0C0D12] dark:text-[#FFFFFF] mb-3 tracking-tight"
+              className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#0C0D12] dark:text-white mb-3 tracking-tight"
             >
               Photo Gallery
             </motion.h1>
@@ -340,121 +302,32 @@ export default function ManagePhotos() {
           </div>
 
           {/* Controls Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white dark:bg-[#1A1B23] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm"
-          >
-            <div className="flex flex-col lg:flex-row gap-4">
-              <SearchBar
-                onSearch={setSearchQuery}
-                placeholder="Search photos by title or ID..."
-                value={searchQuery}
-              />
-
-              <div className="flex flex-row justify-between items-center">
-                {/* Sort */}
-                <div className="flex items-center gap-3">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className="px-4 py-3 bg-zinc-100 dark:bg-[#0C0D12] border border-zinc-200 dark:border-zinc-800 rounded-xl text-[#0C0D12] dark:text-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 transition-all cursor-pointer font-medium"
-                  >
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                    <option value="most-viewed">Most Viewed</option>
-                    <option value="least-viewed">Least Viewed</option>
-                  </select>
-                </div>
-                {/* View Mode */}
-                <div className="flex items-center gap-2 bg-zinc-100 dark:bg-[#0C0D12] p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                  <button
-                    onClick={() => setViewMode("grid")}
-                    className={`p-2.5 rounded-lg transition-all font-medium ${
-                      viewMode === "grid"
-                        ? "bg-[#0C0D12] dark:bg-[#FFFFFF] text-[#FFFFFF] dark:text-[#0C0D12] shadow-md"
-                        : "text-zinc-500 hover:text-[#0C0D12] dark:hover:text-[#FFFFFF]"
-                    }`}
-                  >
-                    <IoGridOutline size={20} />
-                  </button>
-                  <button
-                    onClick={() => setViewMode("list")}
-                    className={`p-2.5 rounded-lg transition-all font-medium ${
-                      viewMode === "list"
-                        ? "bg-[#0C0D12] dark:bg-[#FFFFFF] text-[#FFFFFF] dark:text-[#0C0D12] shadow-md"
-                        : "text-zinc-500 hover:text-[#0C0D12] dark:hover:text-[#FFFFFF]"
-                    }`}
-                  >
-                    <IoListOutline size={20} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Selection Mode Toggle */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setIsSelectionMode(!isSelectionMode);
-                  if (isSelectionMode) clearSelection();
-                }}
-                className={`px-5 py-3 rounded-xl font-semibold transition-all whitespace-nowrap shadow-sm ${
-                  isSelectionMode
-                    ? "bg-purple-600 text-white hover:bg-purple-500"
-                    : "bg-zinc-100 dark:bg-[#0C0D12] text-[#0C0D12] dark:text-[#FFFFFF] border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-900"
-                }`}
-              >
-                {isSelectionMode ? "Exit Select" : "Select Mode"}
-              </motion.button>
-            </div>
-
-            {/* Selection Actions */}
-            <AnimatePresence>
-              {isSelectionMode && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-5 pt-5 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-3"
-                >
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={selectAll}
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm"
-                  >
-                    Select All ({paginatedPhotos.length})
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={clearSelection}
-                    disabled={selectedPhotos.size === 0}
-                    className="px-5 py-2.5 bg-zinc-600 hover:bg-zinc-500 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                  >
-                    Clear Selection
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={confirmBatchDelete}
-                    disabled={
-                      selectedPhotos.size === 0 || batchDeleteMut.isPending
-                    }
-                    className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
-                  >
-                    <IoTrashOutline size={16} />
-                    Delete Selected ({selectedPhotos.size})
-                  </motion.button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          <GalleryControlsBar
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search photos by title or ID..."
+            searchLabel="Search Photos"
+            sortValue={sortBy}
+            onSortChange={(v) => setSortBy(v as SortOption)}
+            sortOptions={SORT_OPTIONS}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            isSelectionMode={isSelectionMode}
+            onSelectionModeToggle={() => {
+              setIsSelectionMode((v) => !v);
+              if (isSelectionMode) clearSelection();
+            }}
+            selectionCount={selectedPhotos.size}
+            pageItemCount={paginatedPhotos.length}
+            onSelectAll={selectAll}
+            onClearSelection={clearSelection}
+            onBatchDelete={confirmBatchDelete}
+            isBatchDeleting={batchDeleteMut.isPending}
+            accentColor="emerald"
+          />
         </motion.div>
 
-        {/* Photos Display */}
+        {/* Empty state */}
         {processedPhotos.length === 0 ? (
           <EmptyState
             query={searchQuery}
@@ -464,12 +337,12 @@ export default function ManagePhotos() {
             title={searchQuery ? "No Photos Found" : "No Photos Yet"}
             message={
               searchQuery
-                ? `We couldn't find any photos matching "${searchQuery}"`
+                ? undefined
                 : "Start building your gallery by uploading photos"
             }
           />
-        ) : viewMode === "grid" ? (
-          // Grid View
+        ) : /* Grid view */
+        viewMode === "grid" ? (
           <>
             <motion.div
               initial={{ opacity: 0 }}
@@ -496,13 +369,12 @@ export default function ManagePhotos() {
                         : "border-zinc-200 dark:border-zinc-800 hover:border-emerald-400 dark:hover:border-emerald-600"
                     }`}
                   >
-                    {/* Selection Checkbox */}
                     {isSelectionMode && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         className="absolute top-3 left-3 z-10 cursor-pointer"
-                        onClick={() => togglePhotoSelection(photo._id)}
+                        onClick={() => togglePhoto(photo._id)}
                       >
                         <div
                           className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all backdrop-blur-sm ${
@@ -521,13 +393,10 @@ export default function ManagePhotos() {
                       </motion.div>
                     )}
 
-                    {/* Image */}
                     <div
                       className="relative aspect-square overflow-hidden cursor-pointer bg-zinc-100 dark:bg-zinc-900"
                       onClick={() => {
-                        if (isSelectionMode) {
-                          togglePhotoSelection(photo._id);
-                        }
+                        if (isSelectionMode) togglePhoto(photo._id);
                       }}
                     >
                       <motion.img
@@ -538,19 +407,15 @@ export default function ManagePhotos() {
                         whileHover={{ scale: 1.1 }}
                         transition={{ duration: 0.4 }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
 
-                    {/* Content */}
                     <div className="p-5">
-                      {/* Title */}
                       {photo.title && (
-                        <h3 className="text-[#0C0D12] dark:text-[#FFFFFF] font-bold mb-3 truncate text-base">
+                        <h3 className="text-[#0C0D12] dark:text-white font-bold mb-3 truncate text-base">
                           {photo.title}
                         </h3>
                       )}
-
-                      {/* Stats */}
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                           <IoEyeOutline size={18} />
@@ -565,8 +430,6 @@ export default function ManagePhotos() {
                           </span>
                         </div>
                       </div>
-
-                      {/* Meta Info */}
                       <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-4 pb-4 border-b border-zinc-200 dark:border-zinc-800">
                         {photo.width && photo.height && (
                           <span className="font-medium">
@@ -577,8 +440,6 @@ export default function ManagePhotos() {
                           {formatFileSize(photo.size)}
                         </span>
                       </div>
-
-                      {/* Actions */}
                       <motion.button
                         onClick={() => confirmDelete(photo._id)}
                         disabled={deleteMut.isPending}
@@ -586,16 +447,13 @@ export default function ManagePhotos() {
                         whileTap={{ scale: 0.97 }}
                         className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                       >
-                        <IoTrashOutline size={18} />
-                        <span>Delete</span>
+                        <IoTrashOutline size={18} /> Delete
                       </motion.button>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
             </motion.div>
-
-            {/* Pagination */}
             {totalPages > 1 && (
               <Pagination
                 currentPage={currentPage}
@@ -605,14 +463,14 @@ export default function ManagePhotos() {
             )}
           </>
         ) : (
-          // List View
+          /* List view */
           <>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="bg-white dark:bg-[#1A1B23] border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-md"
             >
-              {/* Desktop Table */}
+              {/* Desktop table */}
               <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-zinc-100 dark:bg-[#0C0D12] border-b border-zinc-200 dark:border-zinc-800">
@@ -632,28 +490,25 @@ export default function ManagePhotos() {
                                 clearSelection();
                               }
                             }}
-                            className="w-5 h-5 rounded-lg bg-white dark:bg-zinc-900 border-zinc-400 dark:border-zinc-600 text-emerald-600 focus:ring-emerald-500"
+                            className="w-5 h-5 rounded-lg text-emerald-600 focus:ring-emerald-500"
                           />
                         </th>
                       )}
-                      <th className="px-6 py-4 text-left text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]">
-                        Photo
-                      </th>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]">
-                        Title
-                      </th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]">
-                        Views
-                      </th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]">
-                        Size
-                      </th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]">
-                        Uploaded
-                      </th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]">
-                        Actions
-                      </th>
+                      {[
+                        "Photo",
+                        "Title",
+                        "Views",
+                        "Size",
+                        "Uploaded",
+                        "Actions",
+                      ].map((h) => (
+                        <th
+                          key={h}
+                          className="px-6 py-4 text-left text-sm font-bold text-[#0C0D12] dark:text-white"
+                        >
+                          {h}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -665,19 +520,15 @@ export default function ManagePhotos() {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20 }}
                           transition={{ delay: index * 0.02 }}
-                          className={`hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors ${
-                            selectedPhotos.has(photo._id)
-                              ? "bg-emerald-50 dark:bg-emerald-500/5"
-                              : ""
-                          }`}
+                          className={`hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors ${selectedPhotos.has(photo._id) ? "bg-emerald-50 dark:bg-emerald-500/5" : ""}`}
                         >
                           {isSelectionMode && (
                             <td className="px-6 py-4">
                               <input
                                 type="checkbox"
                                 checked={selectedPhotos.has(photo._id)}
-                                onChange={() => togglePhotoSelection(photo._id)}
-                                className="w-5 h-5 rounded-lg bg-white dark:bg-zinc-900 border-zinc-400 dark:border-zinc-600 text-emerald-600 focus:ring-emerald-500"
+                                onChange={() => togglePhoto(photo._id)}
+                                className="w-5 h-5 rounded-lg text-emerald-600 focus:ring-emerald-500"
                               />
                             </td>
                           )}
@@ -691,14 +542,12 @@ export default function ManagePhotos() {
                             />
                           </td>
                           <td className="px-6 py-4">
-                            <div className="max-w-xs">
-                              <p className="text-[#0C0D12] dark:text-[#FFFFFF] font-semibold text-sm truncate">
-                                {photo.title || "Untitled"}
-                              </p>
-                              <p className="text-zinc-500 dark:text-zinc-400 text-xs truncate mt-1">
-                                ID: {photo._id.slice(-8)}
-                              </p>
-                            </div>
+                            <p className="text-[#0C0D12] dark:text-white font-semibold text-sm truncate max-w-xs">
+                              {photo.title || "Untitled"}
+                            </p>
+                            <p className="text-zinc-500 dark:text-zinc-400 text-xs truncate mt-1">
+                              ID: {photo._id.slice(-8)}
+                            </p>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
@@ -706,20 +555,20 @@ export default function ManagePhotos() {
                                 size={18}
                                 className="text-emerald-600 dark:text-emerald-400"
                               />
-                              <span className="text-[#0C0D12] dark:text-[#FFFFFF] font-bold">
+                              <span className="text-[#0C0D12] dark:text-white font-bold">
                                 {photo.views}
                               </span>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className="text-[#0C0D12] dark:text-[#FFFFFF] text-sm font-medium">
+                            <span className="text-[#0C0D12] dark:text-white text-sm font-medium">
                               {formatFileSize(photo.size)}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <div className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">
+                            <span className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">
                               {formatDate(photo.createdAt)}
-                            </div>
+                            </span>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <motion.button
@@ -729,8 +578,7 @@ export default function ManagePhotos() {
                               whileTap={{ scale: 0.95 }}
                               className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                             >
-                              <IoTrashOutline size={16} />
-                              Delete
+                              <IoTrashOutline size={16} /> Delete
                             </motion.button>
                           </td>
                         </motion.tr>
@@ -740,7 +588,7 @@ export default function ManagePhotos() {
                 </table>
               </div>
 
-              {/* Mobile List */}
+              {/* Mobile list */}
               <div className="lg:hidden divide-y divide-zinc-200 dark:divide-zinc-800">
                 <AnimatePresence>
                   {paginatedPhotos.map((photo, index) => (
@@ -750,11 +598,7 @@ export default function ManagePhotos() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ delay: index * 0.02 }}
-                      className={`p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors ${
-                        selectedPhotos.has(photo._id)
-                          ? "bg-emerald-50 dark:bg-emerald-500/5"
-                          : ""
-                      }`}
+                      className={`p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors ${selectedPhotos.has(photo._id) ? "bg-emerald-50 dark:bg-emerald-500/5" : ""}`}
                     >
                       <div className="flex gap-4">
                         {isSelectionMode && (
@@ -762,8 +606,8 @@ export default function ManagePhotos() {
                             <input
                               type="checkbox"
                               checked={selectedPhotos.has(photo._id)}
-                              onChange={() => togglePhotoSelection(photo._id)}
-                              className="w-5 h-5 rounded-lg bg-white dark:bg-zinc-900 border-zinc-400 dark:border-zinc-600 text-emerald-600 focus:ring-emerald-500"
+                              onChange={() => togglePhoto(photo._id)}
+                              className="w-5 h-5 rounded-lg text-emerald-600 focus:ring-emerald-500"
                             />
                           </div>
                         )}
@@ -774,7 +618,7 @@ export default function ManagePhotos() {
                           loading="lazy"
                         />
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-[#0C0D12] dark:text-[#FFFFFF] font-bold text-sm mb-2 truncate">
+                          <h3 className="text-[#0C0D12] dark:text-white font-bold text-sm mb-2 truncate">
                             {photo.title || "Untitled"}
                           </h3>
                           <div className="flex items-center gap-3 text-xs text-zinc-600 dark:text-zinc-400 mb-3">
@@ -792,18 +636,15 @@ export default function ManagePhotos() {
                               {formatDate(photo.createdAt)}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <motion.button
-                              onClick={() => confirmDelete(photo._id)}
-                              disabled={deleteMut.isPending}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-50 shadow-sm"
-                            >
-                              <IoTrashOutline size={14} />
-                              Delete
-                            </motion.button>
-                          </div>
+                          <motion.button
+                            onClick={() => confirmDelete(photo._id)}
+                            disabled={deleteMut.isPending}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-50 shadow-sm"
+                          >
+                            <IoTrashOutline size={14} /> Delete
+                          </motion.button>
                         </div>
                       </div>
                     </motion.div>
@@ -811,8 +652,6 @@ export default function ManagePhotos() {
                 </AnimatePresence>
               </div>
             </motion.div>
-
-            {/* Pagination */}
             {totalPages > 1 && (
               <Pagination
                 currentPage={currentPage}

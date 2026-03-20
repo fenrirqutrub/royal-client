@@ -1,8 +1,14 @@
 // src/components/Students/StudentsFiles.Ui.tsx
+
 import { useState } from "react";
-import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { Phone, MapPin, BookOpen, User, Search, X, Eye } from "lucide-react";
+import { motion } from "framer-motion";
+import { Phone, MapPin, BookOpen, Eye } from "lucide-react";
+import PersonModal, {
+  formatDOB,
+  InfoRow,
+  Section,
+} from "../../components/common/PersonModal";
+import Avatar from "../../components/common/Avatar";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface Student {
@@ -16,21 +22,18 @@ export interface Student {
   religion?: string | null;
   dateOfBirth?: string | null;
   emergencyContact?: string | null;
-  // Present address
   gramNam?: string | null;
   para?: string | null;
   thana?: string | null;
   district?: string | null;
   division?: string | null;
   landmark?: string | null;
-  // Permanent address
   permanentSameAsPresent?: boolean;
   permanentGramNam?: string | null;
   permanentPara?: string | null;
   permanentThana?: string | null;
   permanentDistrict?: string | null;
   permanentDivision?: string | null;
-  // Student fields
   studentClass?: string | null;
   studentSubject?: string | null;
   roll?: string | null;
@@ -40,70 +43,11 @@ export interface Student {
   isHardcoded?: boolean;
 }
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-const InfoRow = ({ label, value }: { label: string; value?: string | null }) =>
-  value ? (
-    <div className="flex items-start gap-2">
-      <span className="text-[11px] font-bold uppercase tracking-wide shrink-0 bangla text-[var(--color-gray)] w-14">
-        {label}
-      </span>
-      <span className="text-xs text-[var(--color-gray)] opacity-40">:</span>
-      <span className="text-sm bangla text-[var(--color-text)]">{value}</span>
-    </div>
-  ) : null;
+// ── gender → accent color ─────────────────────────────────────────────────────
+const getAccent = (gender?: string | null) =>
+  gender === "মেয়ে" || gender === "নারী" ? "#ec4899" : "#3b82f6";
 
-const formatDOB = (dob: string) => {
-  try {
-    return new Date(dob).toLocaleDateString("bn-BD", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  } catch {
-    return dob;
-  }
-};
-
-// ── Avatar ────────────────────────────────────────────────────────────────────
-export const StudentAvatar = ({
-  student,
-  size = 64,
-  radius = "rounded-2xl",
-}: {
-  student: Student;
-  size?: number;
-  radius?: string;
-}) => {
-  const [err, setErr] = useState(false);
-  const isFemale = student.gender === "মেয়ে" || student.gender === "নারী";
-  const bg = isFemale
-    ? "linear-gradient(135deg,#f472b6,#ec4899)"
-    : "linear-gradient(135deg,#60a5fa,#3b82f6)";
-
-  return student.avatar?.url && !err ? (
-    <img
-      src={student.avatar.url}
-      alt={student.name}
-      onError={() => setErr(true)}
-      className={`${radius} object-cover shrink-0`}
-      style={{ width: size, height: size }}
-    />
-  ) : (
-    <div
-      className={`${radius} flex items-center justify-center text-white font-bold shrink-0`}
-      style={{
-        width: size,
-        height: size,
-        background: bg,
-        fontSize: size * 0.36,
-      }}
-    >
-      {student.name[0].toUpperCase()}
-    </div>
-  );
-};
-
-// ── Modal ─────────────────────────────────────────────────────────────────────
+// ── StudentModal ──────────────────────────────────────────────────────────────
 export const StudentModal = ({
   student,
   onClose,
@@ -111,241 +55,149 @@ export const StudentModal = ({
   student: Student;
   onClose: () => void;
 }) => {
-  const isFemale = student.gender === "মেয়ে" || student.gender === "নারী";
-  const accent = isFemale ? "#ec4899" : "#3b82f6";
+  const accent = getAccent(student.gender);
 
-  return createPortal(
-    <AnimatePresence>
-      <motion.div
-        key="backdrop"
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        style={{
-          backgroundColor: "rgba(0,0,0,0.55)",
-          backdropFilter: "blur(6px)",
-        }}
-      >
-        <motion.div
-          key="modal"
-          initial={{ opacity: 0, scale: 0.92, y: 24 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92, y: 24 }}
-          transition={{ type: "spring", stiffness: 300, damping: 26 }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full rounded-2xl overflow-hidden shadow-2xl"
-          style={{
-            maxWidth: 420,
-            backgroundColor: "var(--color-bg)",
-            border: "1px solid var(--color-active-border)",
-          }}
-        >
-          {/* Accent strip */}
-          <div
-            className="h-1.5"
-            style={{
-              background: `linear-gradient(90deg,${accent},${accent}44)`,
-            }}
+  const pAddr = student.permanentSameAsPresent
+    ? {
+        gram: student.gramNam,
+        para: student.para,
+        thana: student.thana,
+        district: student.district,
+        division: student.division,
+      }
+    : {
+        gram: student.permanentGramNam,
+        para: student.permanentPara,
+        thana: student.permanentThana,
+        district: student.permanentDistrict,
+        division: student.permanentDivision,
+      };
+
+  const hasPresent = student.gramNam || student.thana || student.district;
+  const hasPermanent = pAddr.gram || pAddr.thana || pAddr.district;
+
+  return (
+    <PersonModal
+      onClose={onClose}
+      accentColor={accent}
+      header={
+        <>
+          <Avatar
+            name={student.name}
+            url={student.avatar?.url}
+            color={accent}
+            size={68}
+            radius="rounded-2xl"
           />
-
-          {/* Close */}
-          <div className="flex justify-end px-4 pt-3">
-            <button
-              onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-full transition-colors cursor-pointer"
-              style={{
-                backgroundColor: "var(--color-active-bg)",
-                color: "var(--color-gray)",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor =
-                  "var(--color-active-border)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor =
-                  "var(--color-active-bg)")
-              }
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div
-            className="px-5 pb-5 overflow-y-auto"
-            style={{ maxHeight: "80vh" }}
-          >
-            {/* Avatar + name */}
-            <div className="flex items-center gap-4 mb-5">
-              <StudentAvatar student={student} size={68} radius="rounded-2xl" />
-              <div className="min-w-0">
-                <p className="text-base font-bold bangla leading-snug text-[var(--color-text)]">
-                  {student.name}
-                </p>
-                {student.fatherName && (
-                  <p className="text-sm bangla mt-0.5 text-[var(--color-gray)]">
-                    পিতা: {student.fatherName}
-                  </p>
-                )}
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  {student.slug && (
-                    <span
-                      className="text-[9px] font-mono px-1.5 py-0.5 rounded"
-                      style={{
-                        backgroundColor: "var(--color-active-bg)",
-                        color: "var(--color-gray)",
-                      }}
-                    >
-                      #{student.slug}
-                    </span>
-                  )}
-                  {student.gender && (
-                    <span
-                      className="text-[9px] px-1.5 py-0.5 rounded font-bold bangla"
-                      style={{ backgroundColor: accent + "18", color: accent }}
-                    >
-                      {student.gender}
-                    </span>
-                  )}
-                  {student.religion && (
-                    <span
-                      className="text-[9px] px-1.5 py-0.5 rounded font-bold bangla"
-                      style={{
-                        backgroundColor: "var(--color-active-bg)",
-                        color: "var(--color-gray)",
-                      }}
-                    >
-                      {student.religion}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {/* Basic info */}
-              <Section
-                title="মূল তথ্য"
-                color="var(--color-active-bg)"
-                borderColor="var(--color-active-border)"
-              >
-                <InfoRow label="ফোন" value={student.phone} />
-                <InfoRow label="শ্রেণি" value={student.studentClass} />
-                <InfoRow label="বিভাগ" value={student.studentSubject} />
-                <InfoRow label="রোল" value={student.roll} />
-                <InfoRow label="বিদ্যা." value={student.schoolName} />
-                <InfoRow
-                  label="জন্ম"
-                  value={
-                    student.dateOfBirth ? formatDOB(student.dateOfBirth) : null
-                  }
-                />
-                <InfoRow label="মা" value={student.motherName} />
-                <InfoRow label="জরুরি" value={student.emergencyContact} />
-              </Section>
-
-              {/* Present address */}
-              {(student.gramNam || student.thana || student.district) && (
-                <Section
-                  title="বর্তমান ঠিকানা"
-                  color="rgba(239,68,68,0.06)"
-                  borderColor="rgba(239,68,68,0.2)"
-                  titleColor="#ef4444"
-                  icon={<MapPin className="w-3 h-3" />}
+          <div className="min-w-0">
+            <p className="text-base font-bold bangla leading-snug text-[var(--color-text)]">
+              {student.name}
+            </p>
+            {student.fatherName && (
+              <p className="text-sm bangla mt-0.5 text-[var(--color-gray)]">
+                পিতা: {student.fatherName}
+              </p>
+            )}
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              {student.slug && (
+                <span
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                  style={{
+                    backgroundColor: "var(--color-active-bg)",
+                    color: "var(--color-gray)",
+                  }}
                 >
-                  <InfoRow label="গ্রাম" value={student.gramNam} />
-                  <InfoRow label="পাড়া" value={student.para} />
-                  <InfoRow label="থানা" value={student.thana} />
-                  <InfoRow label="জেলা" value={student.district} />
-                  <InfoRow label="বিভাগ" value={student.division} />
-                  <InfoRow label="চিহ্ন" value={student.landmark} />
-                </Section>
+                  #{student.slug}
+                </span>
               )}
-
-              {/* Permanent address — always show, fallback to present if same */}
-              {(() => {
-                const pGram = student.permanentSameAsPresent
-                  ? student.gramNam
-                  : student.permanentGramNam;
-                const pPara = student.permanentSameAsPresent
-                  ? student.para
-                  : student.permanentPara;
-                const pThana = student.permanentSameAsPresent
-                  ? student.thana
-                  : student.permanentThana;
-                const pDistrict = student.permanentSameAsPresent
-                  ? student.district
-                  : student.permanentDistrict;
-                const pDivision = student.permanentSameAsPresent
-                  ? student.division
-                  : student.permanentDivision;
-                if (!pGram && !pThana && !pDistrict) return null;
-                return (
-                  <Section
-                    title="স্থায়ী ঠিকানা"
-                    color="rgba(245,158,11,0.06)"
-                    borderColor="rgba(245,158,11,0.2)"
-                    titleColor="#f59e0b"
-                    icon={<MapPin className="w-3 h-3" />}
-                  >
-                    {student.permanentSameAsPresent && (
-                      <p
-                        className="text-[10px] bangla mb-1 px-1 py-0.5 rounded"
-                        style={{
-                          backgroundColor: "rgba(245,158,11,0.12)",
-                          color: "#f59e0b",
-                        }}
-                      >
-                        ★ বর্তমান ঠিকানার মতো
-                      </p>
-                    )}
-                    <InfoRow label="গ্রাম" value={pGram} />
-                    <InfoRow label="পাড়া" value={pPara} />
-                    <InfoRow label="থানা" value={pThana} />
-                    <InfoRow label="জেলা" value={pDistrict} />
-                    <InfoRow label="বিভাগ" value={pDivision} />
-                  </Section>
-                );
-              })()}
+              {student.gender && (
+                <span
+                  className="text-[9px] px-1.5 py-0.5 rounded font-bold bangla"
+                  style={{ backgroundColor: accent + "18", color: accent }}
+                >
+                  {student.gender}
+                </span>
+              )}
+              {student.religion && (
+                <span
+                  className="text-[9px] px-1.5 py-0.5 rounded font-bold bangla"
+                  style={{
+                    backgroundColor: "var(--color-active-bg)",
+                    color: "var(--color-gray)",
+                  }}
+                >
+                  {student.religion}
+                </span>
+              )}
             </div>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>,
-    document.body,
+        </>
+      }
+    >
+      <Section
+        title="মূল তথ্য"
+        color="var(--color-active-bg)"
+        borderColor="var(--color-active-border)"
+      >
+        <InfoRow label="ফোন" value={student.phone} />
+        <InfoRow label="শ্রেণি" value={student.studentClass} />
+        <InfoRow label="বিভাগ" value={student.studentSubject} />
+        <InfoRow label="রোল" value={student.roll} />
+        <InfoRow label="বিদ্যা." value={student.schoolName} />
+        <InfoRow
+          label="জন্ম"
+          value={student.dateOfBirth ? formatDOB(student.dateOfBirth) : null}
+        />
+        <InfoRow label="মা" value={student.motherName} />
+        <InfoRow label="জরুরি" value={student.emergencyContact} />
+      </Section>
+
+      {hasPresent && (
+        <Section
+          title="বর্তমান ঠিকানা"
+          color="rgba(239,68,68,0.06)"
+          borderColor="rgba(239,68,68,0.2)"
+          titleColor="#ef4444"
+          icon={<MapPin className="w-3 h-3" />}
+        >
+          <InfoRow label="গ্রাম" value={student.gramNam} />
+          <InfoRow label="পাড়া" value={student.para} />
+          <InfoRow label="থানা" value={student.thana} />
+          <InfoRow label="জেলা" value={student.district} />
+          <InfoRow label="বিভাগ" value={student.division} />
+          <InfoRow label="চিহ্ন" value={student.landmark} />
+        </Section>
+      )}
+
+      {hasPermanent && (
+        <Section
+          title="স্থায়ী ঠিকানা"
+          color="rgba(245,158,11,0.06)"
+          borderColor="rgba(245,158,11,0.2)"
+          titleColor="#f59e0b"
+          icon={<MapPin className="w-3 h-3" />}
+        >
+          {student.permanentSameAsPresent && (
+            <p
+              className="text-[10px] bangla mb-1 px-1 py-0.5 rounded"
+              style={{
+                backgroundColor: "rgba(245,158,11,0.12)",
+                color: "#f59e0b",
+              }}
+            >
+              ★ বর্তমান ঠিকানার মতো
+            </p>
+          )}
+          <InfoRow label="গ্রাম" value={pAddr.gram} />
+          <InfoRow label="পাড়া" value={pAddr.para} />
+          <InfoRow label="থানা" value={pAddr.thana} />
+          <InfoRow label="জেলা" value={pAddr.district} />
+          <InfoRow label="বিভাগ" value={pAddr.division} />
+        </Section>
+      )}
+    </PersonModal>
   );
 };
-
-// ── Section helper ────────────────────────────────────────────────────────────
-const Section = ({
-  title,
-  color,
-  borderColor,
-  titleColor,
-  icon,
-  children,
-}: {
-  title: string;
-  color: string;
-  borderColor: string;
-  titleColor?: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) => (
-  <div
-    className="p-3.5 rounded-xl space-y-2"
-    style={{ backgroundColor: color, border: `1px solid ${borderColor}` }}
-  >
-    <p
-      className="text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5 bangla"
-      style={{ color: titleColor ?? "var(--color-gray)" }}
-    >
-      {icon} {title}
-    </p>
-    {children}
-  </div>
-);
 
 // ── StudentCard ───────────────────────────────────────────────────────────────
 export const StudentCard = ({
@@ -356,8 +208,7 @@ export const StudentCard = ({
   index: number;
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
-  const isFemale = student.gender === "মেয়ে" || student.gender === "নারী";
-  const accent = isFemale ? "#ec4899" : "#3b82f6";
+  const accent = getAccent(student.gender);
 
   return (
     <>
@@ -376,16 +227,21 @@ export const StudentCard = ({
           border: "1px solid var(--color-active-border)",
         }}
       >
-        {/* Accent strip */}
         <div
           className="h-1.5"
           style={{ background: `linear-gradient(90deg,${accent},${accent}40)` }}
         />
 
         <div className="p-4 flex flex-col flex-1">
-          {/* Avatar + name */}
+          {/* avatar + name */}
           <div className="flex items-start gap-3 mb-4">
-            <StudentAvatar student={student} size={52} radius="rounded-xl" />
+            <Avatar
+              name={student.name}
+              url={student.avatar?.url}
+              color={accent}
+              size={52}
+              radius="rounded-xl"
+            />
             <div className="min-w-0 flex-1 pt-0.5">
               <p className="text-sm font-bold bangla leading-snug text-[var(--color-text)]">
                 {student.name}
@@ -419,17 +275,14 @@ export const StudentCard = ({
             </div>
           </div>
 
-          {/* Info rows */}
+          {/* info rows */}
           <div
             className="space-y-2.5 pt-3 flex-1"
             style={{ borderTop: "1px solid var(--color-active-border)" }}
           >
             {student.phone && (
               <div className="flex items-center gap-2.5">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: "rgba(16,185,129,0.1)" }}
-                >
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(16,185,129,0.1)]">
                   <Phone className="w-3 h-3" style={{ color: "#10b981" }} />
                 </div>
                 <span className="text-sm font-mono text-[var(--color-text)]">
@@ -439,10 +292,7 @@ export const StudentCard = ({
             )}
             {student.studentClass && (
               <div className="flex items-center gap-2.5">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: "rgba(139,92,246,0.1)" }}
-                >
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(139,92,246,0.1)]">
                   <BookOpen className="w-3 h-3" style={{ color: "#8b5cf6" }} />
                 </div>
                 <span className="text-sm bangla text-[var(--color-text)]">
@@ -452,10 +302,7 @@ export const StudentCard = ({
             )}
             {(student.thana || student.gramNam) && (
               <div className="flex items-start gap-2.5">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ backgroundColor: "rgba(239,68,68,0.08)" }}
-                >
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 bg-[rgba(239,68,68,0.08)]">
                   <MapPin className="w-3 h-3" style={{ color: "#ef4444" }} />
                 </div>
                 <div className="space-y-0.5">
@@ -474,7 +321,7 @@ export const StudentCard = ({
             )}
           </div>
 
-          {/* View button */}
+          {/* view button */}
           <button
             type="button"
             onClick={() => setModalOpen(true)}
@@ -507,158 +354,3 @@ export const StudentCard = ({
     </>
   );
 };
-
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-export const SkeletonCard = () => (
-  <div
-    className="rounded-2xl overflow-hidden"
-    style={{
-      backgroundColor: "var(--color-bg)",
-      border: "1px solid var(--color-active-border)",
-    }}
-  >
-    <div
-      className="h-1.5"
-      style={{ backgroundColor: "var(--color-active-border)" }}
-    />
-    <div className="p-4">
-      <div className="flex items-start gap-3 mb-4">
-        <div
-          className="w-13 h-13 rounded-xl animate-pulse shrink-0"
-          style={{
-            width: 52,
-            height: 52,
-            backgroundColor: "var(--color-active-bg)",
-          }}
-        />
-        <div className="flex-1 pt-1 space-y-2">
-          <div
-            className="h-3.5 rounded animate-pulse w-3/4"
-            style={{ backgroundColor: "var(--color-active-bg)" }}
-          />
-          <div
-            className="h-3 rounded animate-pulse w-1/2"
-            style={{ backgroundColor: "var(--color-active-bg)" }}
-          />
-          <div
-            className="h-3 rounded animate-pulse w-1/3"
-            style={{ backgroundColor: "var(--color-active-bg)" }}
-          />
-        </div>
-      </div>
-      <div
-        className="space-y-2.5 pt-3"
-        style={{ borderTop: "1px solid var(--color-active-border)" }}
-      >
-        <div
-          className="h-3.5 rounded animate-pulse w-2/3"
-          style={{ backgroundColor: "var(--color-active-bg)" }}
-        />
-        <div
-          className="h-3.5 rounded animate-pulse w-1/2"
-          style={{ backgroundColor: "var(--color-active-bg)" }}
-        />
-        <div
-          className="h-3.5 rounded animate-pulse w-3/4"
-          style={{ backgroundColor: "var(--color-active-bg)" }}
-        />
-      </div>
-      <div
-        className="mt-4 h-10 rounded-xl animate-pulse"
-        style={{ backgroundColor: "var(--color-active-bg)" }}
-      />
-    </div>
-  </div>
-);
-
-// ── SearchBar ─────────────────────────────────────────────────────────────────
-export const StudentSearchBar = ({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) => (
-  <div className="relative w-full sm:w-72">
-    <Search
-      className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-      style={{ color: "var(--color-gray)" }}
-    />
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="নাম, ফোন বা জেলা দিয়ে খুঁজুন..."
-      className="w-full h-11 pl-10 pr-10 text-sm rounded-xl outline-none transition-all bangla"
-      style={{
-        backgroundColor: "var(--color-active-bg)",
-        border: "1px solid var(--color-active-border)",
-        color: "var(--color-text)",
-      }}
-      onFocus={(e) => (e.currentTarget.style.borderColor = "#3b82f6")}
-      onBlur={(e) =>
-        (e.currentTarget.style.borderColor = "var(--color-active-border)")
-      }
-    />
-    {value && (
-      <button
-        onClick={() => onChange("")}
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full transition-colors"
-        style={{
-          backgroundColor: "var(--color-active-bg)",
-          color: "var(--color-gray)",
-        }}
-      >
-        <X className="w-3 h-3" />
-      </button>
-    )}
-  </div>
-);
-
-// ── EmptyState ────────────────────────────────────────────────────────────────
-export const EmptyState = () => (
-  <div className="text-center py-24">
-    <User
-      className="w-12 h-12 mx-auto mb-4"
-      style={{ color: "var(--color-active-border)" }}
-    />
-    <p className="bangla text-[var(--color-gray)]">
-      কোনো ছাত্রছাত্রী পাওয়া যায়নি
-    </p>
-  </div>
-);
-
-// ── PageShell ─────────────────────────────────────────────────────────────────
-export const StudentsPageShell = ({
-  totalCount,
-  search,
-  onSearch,
-  children,
-}: {
-  totalCount: number;
-  search: string;
-  onSearch: (v: string) => void;
-  children: React.ReactNode;
-}) => (
-  <div
-    className="min-h-screen px-4 sm:px-6 py-8"
-    style={{ backgroundColor: "var(--color-bg)" }}
-  >
-    <div className="mb-7 mt-10 lg:mt-0 flex items-end justify-between flex-wrap gap-4">
-      <div>
-        <h1 className="text-2xl font-bold bangla text-[var(--color-text)]">
-          ছাত্রছাত্রী তালিকা
-        </h1>
-        <p className="text-sm bangla mt-1 text-[var(--color-gray)]">
-          মোট{" "}
-          <span className="font-semibold" style={{ color: "#3b82f6" }}>
-            {totalCount}
-          </span>{" "}
-          জন নিবন্ধিত
-        </p>
-      </div>
-      <StudentSearchBar value={search} onChange={onSearch} />
-    </div>
-    {children}
-  </div>
-);

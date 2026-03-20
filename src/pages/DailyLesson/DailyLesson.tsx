@@ -7,6 +7,7 @@ import { IoCalendarOutline } from "react-icons/io5";
 import axiosPublic from "../../hooks/axiosPublic";
 import DailyLessonCard from "./DailyLessonCard";
 import DatePicker from "../../components/common/Datepicker";
+import Skeleton from "../../components/common/Skeleton"; // ← import
 
 // ─── Types ────────────────────────────────────────────────
 export interface DailyLessonData {
@@ -306,8 +307,12 @@ const DailyLesson = () => {
 
   const handleDateChange = (value: string) => {
     setDatePickerValue(value);
-    // DatePicker returns Bengali string; we store the Date separately
   };
+
+  // ── Loading state → full-page skeleton ──────────────────
+  if (isLoading) {
+    return <Skeleton variant="daily-lesson" />;
+  }
 
   return (
     <div>
@@ -376,11 +381,7 @@ const DailyLesson = () => {
       </div>
 
       {/* Content */}
-      {isLoading ? (
-        <div className="flex justify-center items-center py-20">
-          <div className="w-8 h-8 rounded-full border-4 border-violet-500 border-t-transparent animate-spin" />
-        </div>
-      ) : isError ? (
+      {isError ? (
         <div className="text-center py-20 text-rose-400 text-sm bangla">
           ডেটা লোড করতে সমস্যা হয়েছে। পুনরায় চেষ্টা করুন।
         </div>

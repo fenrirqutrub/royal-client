@@ -1,6 +1,7 @@
 // src/pages/Admin/Management/ManageWeeklyExam.tsx
+
 import { useAuth } from "../../../context/AuthContext";
-import ExamManageShell from "./ManagementShell";
+import ManagementShell from "./ManagementShell";
 import type { ManagedRecord, ShellConfig } from "./ManagementShell";
 
 const ManageWeeklyExam = () => {
@@ -18,6 +19,7 @@ const ManageWeeklyExam = () => {
     groupField: "ExamNumber",
     hasImages: true,
     updateMethod: "put",
+    useDateFilter: false,
 
     mapRecord: (raw): ManagedRecord => ({
       _id: raw._id as string,
@@ -47,7 +49,7 @@ const ManageWeeklyExam = () => {
     },
   };
 
-  return <ExamManageShell config={config} />;
+  return <ManagementShell config={config} />;
 };
 
 export default ManageWeeklyExam;

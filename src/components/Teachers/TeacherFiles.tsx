@@ -2,18 +2,19 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axiosPublic from "../../hooks/axiosPublic";
-import {
-  type Teacher,
-  TeacherCard,
-  SkeletonCard,
-  EmptyState,
-  TeacherFilesPageShell,
-} from "./TeacherFiles.Ui";
+import Skeleton from "../common/Skeleton";
+import { type Teacher, TeacherCard } from "./TeacherFiles.Ui";
+import SearchBar from "../common/Searchbar";
+import EmptyState from "../common/Emptystate";
 
 const TeacherFiles = () => {
   const [search, setSearch] = useState("");
 
-  const { data: teachers = [], isLoading } = useQuery<Teacher[]>({
+  const {
+    data: teachers = [],
+    isLoading,
+    isError,
+  } = useQuery<Teacher[]>({
     queryKey: ["teacherFiles"],
     queryFn: async () => {
       const { data } = await axiosPublic.get("/api/users");
@@ -42,19 +43,45 @@ const TeacherFiles = () => {
   });
 
   return (
-    <TeacherFilesPageShell
-      totalCount={teachers.length}
-      search={search}
-      onSearch={setSearch}
+    <div
+      className="min-h-screen px-4 sm:px-6 py-8"
+      style={{ backgroundColor: "var(--color-bg)" }}
     >
+      {/* header */}
+      <div className="mb-7 mt-10 lg:mt-0 flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold bangla text-[var(--color-text)]">
+            শিক্ষক তালিকা
+          </h1>
+          <p className="text-sm bangla mt-1 text-[var(--color-gray)]">
+            মোট{" "}
+            <span className="font-semibold" style={{ color: "#3b82f6" }}>
+              {teachers.length}
+            </span>{" "}
+            জন নিবন্ধিত
+          </p>
+        </div>
+        <div className="w-full sm:w-72">
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="নাম, ফোন বা জেলা দিয়ে খুঁজুন..."
+          />
+        </div>
+      </div>
+
+      {/* content */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
+        <Skeleton variant="teacher-card" count={6} />
+      ) : isError ? (
+        <div className="text-center py-20 text-rose-400 text-sm bangla">
+          ডেটা লোড করতে সমস্যা হয়েছে।
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState />
+        <EmptyState
+          query={search}
+          message={!search ? "কোনো শিক্ষক পাওয়া যায়নি" : undefined}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((t, i) => (
@@ -62,7 +89,7 @@ const TeacherFiles = () => {
           ))}
         </div>
       )}
-    </TeacherFilesPageShell>
+    </div>
   );
 };
 

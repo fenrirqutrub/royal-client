@@ -6,10 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router";
 import { useHeroes } from "../../hooks/useHeroes";
 import "swiper/css";
-
-import { EmptyState } from "../common/Emptystate";
-import Loader from "../common/Loader";
 import ErrorState from "../common/ErrorState";
+import Skeleton from "../common/Skeleton";
+import EmptyState from "../common/Emptystate";
 
 interface HeroItem {
   _id: string;
@@ -158,7 +157,7 @@ const Hero = () => {
 
   /* ── Loading ── */
   if (isLoading) {
-    return <Loader />;
+    return <Skeleton variant="hero" />;
   }
 
   /* ── Error ── */

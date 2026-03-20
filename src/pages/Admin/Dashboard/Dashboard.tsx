@@ -1,631 +1,895 @@
-import { motion } from "framer-motion";
-import { useQueries } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+// src/pages/dashboard/home/Dashboard.tsx
+import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { TypeAnimation } from "react-type-animation";
+import { useQuery } from "@tanstack/react-query";
 import {
-  Camera,
-  Quote,
-  Star,
   BookOpen,
+  ClipboardList,
+  ArrowRight,
+  CheckCircle2,
+  Sparkles,
+  CalendarDays,
   Users,
-  Activity,
-  ArrowUpRight,
-  Layers,
-  PieChart as PieIcon,
-  UserCircle,
-  ChevronRight,
+  TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router";
 import axiosPublic from "../../../hooks/axiosPublic";
 import { useAuth } from "../../../context/AuthContext";
-import Loader from "../../../components/common/Loader";
 
-/* ─── helpers ─────────────────────────────────────────────────────────── */
-const safe = (d: unknown) => (Array.isArray(d) ? d : []);
-
-/* ─── types ───────────────────────────────────────────────────────────── */
-interface Card {
-  key: string;
-  label: string;
-  value: number;
-  icon: React.ComponentType<{ className?: string }>;
-  accent: string;
-  glow: string;
-  textAccent: string;
-  trend?: string;
-}
-
-/* ─── role → allowed card keys ───────────────────────────────────────── */
-const ROLE_KEYS: Record<string, string[]> = {
-  teacher: ["exams"],
-  principal: ["exams", "teachers", "heroes", "quotes", "photos"],
-  admin: ["exams", "photos", "quotes", "heroes", "teachers"],
-  owner: ["exams", "photos", "quotes", "heroes", "teachers"],
-  student: [], // student এর কোনো stat card নেই
+/* ══════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════ */
+const getGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 6) return { text: "শুভ রাত্রি", emoji: "🌙" };
+  if (h < 12) return { text: "শুভ সকাল", emoji: "☀️" };
+  if (h < 17) return { text: "শুভ বিকাল", emoji: "🌤️" };
+  return { text: "শুভ সন্ধ্যা", emoji: "🌆" };
 };
 
-/* ─── role config ─────────────────────────────────────────────────────── */
-const ROLE_CONFIG: Record<string, { title: string; from: string; to: string }> =
-  {
-    teacher: {
-      title: "Teacher Panel",
-      from: "from-sky-600",
-      to: "to-blue-700",
-    },
-    principal: {
-      title: "Principal Panel",
-      from: "from-violet-600",
-      to: "to-purple-700",
-    },
-    admin: {
-      title: "Admin Panel",
-      from: "from-emerald-600",
-      to: "to-teal-700",
-    },
-    owner: {
-      title: "Owner Panel",
-      from: "from-amber-500",
-      to: "to-orange-600",
-    },
-    student: {
-      title: "Student Portal",
-      from: "from-green-500",
-      to: "to-emerald-600",
-    },
-  };
-
-/* ─── pie colors ──────────────────────────────────────────────────────── */
-const PIE_COLORS = ["#10b981", "#0ea5e9", "#8b5cf6", "#f59e0b", "#f43f5e"];
-
-interface PieSlice {
-  path: string;
-  percentage: number;
-  color: string;
-  labelX: number;
-  labelY: number;
-  name: string;
-}
-
-/* ─── Donut Pie Chart ─────────────────────────────────────────────────── */
-const DashPieChart = ({
-  data,
-}: {
-  data: { name: string; value: number }[];
-}) => {
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  useEffect(() => {
-    const h = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", h);
-    return () => window.removeEventListener("resize", h);
-  }, []);
-
-  const size = windowWidth < 376 ? 220 : 280;
-  const radius = size / 3;
-  const cx = size / 2,
-    cy = size / 2;
-  const total = data.reduce((s, d) => s + d.value, 0);
-
-  if (total === 0)
-    return (
-      <p className="text-center text-gray-400 text-sm py-8">No data yet</p>
-    );
-
-  let startAngle = -Math.PI / 2;
-  const slices: PieSlice[] = data.map((item, i) => {
-    const pct = (item.value / total) * 100;
-    const angle = (pct / 100) * 2 * Math.PI;
-    const endAngle = startAngle + angle;
-    const x1 = cx + radius * Math.cos(startAngle);
-    const y1 = cy + radius * Math.sin(startAngle);
-    const x2 = cx + radius * Math.cos(endAngle);
-    const y2 = cy + radius * Math.sin(endAngle);
-    const mid = startAngle + angle / 2;
-    const lr = radius * 0.68;
-    const slice: PieSlice = {
-      path: `M ${cx},${cy} L ${x1},${y1} A ${radius},${radius} 0 ${angle > Math.PI ? 1 : 0},1 ${x2},${y2} Z`,
-      percentage: pct,
-      color: PIE_COLORS[i % PIE_COLORS.length],
-      labelX: cx + lr * Math.cos(mid),
-      labelY: cy + lr * Math.sin(mid),
-      name: item.name,
-    };
-    startAngle = endAngle;
-    return slice;
+const getBanglaDate = () =>
+  new Date().toLocaleDateString("bn-BD", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
   });
 
+// Current week: Sunday → Friday
+const getCurrentWeekRange = () => {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun, 5=Fri, 6=Sat
+  // If Saturday, show next week's range
+  const diffToSun = day === 6 ? 1 : -day;
+  const sun = new Date(now);
+  sun.setDate(now.getDate() + diffToSun);
+  sun.setHours(0, 0, 0, 0);
+  const fri = new Date(sun);
+  fri.setDate(sun.getDate() + 5);
+  fri.setHours(23, 59, 59, 999);
+  return { start: sun, end: fri };
+};
+
+const isTodayInRange = (dateStr: string) => {
+  const d = new Date(dateStr);
+  const today = new Date();
   return (
-    <div className="flex flex-col items-center gap-4">
-      <svg
-        width={size}
-        height={size}
-        className="overflow-visible drop-shadow-lg"
-      >
-        {slices.map((s, i) => (
-          <path
-            key={i}
-            d={s.path}
-            fill={s.color}
-            stroke="white"
-            strokeWidth="1.5"
-            className="dark:stroke-[#161b22] transition-opacity duration-200 hover:opacity-75"
-          />
-        ))}
-        <circle
-          cx={cx}
-          cy={cy}
-          r={radius * 0.42}
-          fill="white"
-          className="dark:fill-[#161b22]"
-        />
-        <text
-          x={cx}
-          y={cy - 8}
-          textAnchor="middle"
-          fill="currentColor"
-          fontSize={10}
-          fontWeight={500}
-          opacity={0.5}
-        >
-          Total
-        </text>
-        <text
-          x={cx}
-          y={cy + 14}
-          textAnchor="middle"
-          fill="currentColor"
-          fontSize={20}
-          fontWeight={800}
-        >
-          {total}
-        </text>
-        {slices.map((s, i) =>
-          s.percentage >= 8 ? (
-            <text
-              key={`lbl-${i}`}
-              x={s.labelX}
-              y={s.labelY}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="#fff"
-              fontSize={windowWidth < 376 ? 9 : 11}
-              fontWeight={700}
-            >
-              {`${s.percentage.toFixed(1)}%`}
-            </text>
-          ) : null,
-        )}
-      </svg>
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
-        {slices.map((s, i) => (
-          <div key={`leg-${i}`} className="flex items-center gap-1.5">
-            <span
-              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-              style={{ backgroundColor: s.color }}
-            />
-            <span className="text-xs text-gray-600 dark:text-gray-400">
-              {s.name}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate()
   );
 };
 
-/* ─── Student Dashboard ───────────────────────────────────────────────── */
-const StudentDashboard = ({ name }: { name: string }) => {
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "শুভ সকাল" : hour < 17 ? "শুভ বিকাল" : "শুভ সন্ধ্যা";
+const isThisWeek = (dateStr: string) => {
+  const { start, end } = getCurrentWeekRange();
+  const d = new Date(dateStr);
+  return d >= start && d <= end;
+};
 
+/* ══════════════════════════════════════════════════
+   VARIANTS
+══════════════════════════════════════════════════ */
+const containerVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.13, delayChildren: 0.15 } },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 36, scale: 0.97 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.55, ease: "easeOut" },
+  },
+};
+
+/* ══════════════════════════════════════════════════
+   PROGRESS RING
+══════════════════════════════════════════════════ */
+const ProgressRing = ({ done }: { done: boolean }) => {
+  const r = 16;
+  const circ = 2 * Math.PI * r;
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d1117] transition-colors duration-300">
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-10 mt-10 lg:mt-0"
-        >
-          <p className="text-sm font-medium tracking-widest uppercase text-gray-400 dark:text-gray-500 mb-1 bangla">
-            {greeting}
-          </p>
-          <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight bangla">
-            {name}
-          </h1>
-          <p className="mt-1 text-gray-500 dark:text-gray-400 text-sm bangla">
-            Student Portal — স্বাগতম!
-          </p>
-        </motion.div>
+    <svg width={40} height={40} className="shrink-0">
+      <circle
+        cx={20}
+        cy={20}
+        r={r}
+        fill="none"
+        strokeWidth={2.5}
+        stroke="var(--color-active-border)"
+      />
+      <motion.circle
+        cx={20}
+        cy={20}
+        r={r}
+        fill="none"
+        strokeWidth={2.5}
+        stroke="var(--color-text)"
+        strokeLinecap="round"
+        strokeDasharray={circ}
+        initial={{ strokeDashoffset: circ }}
+        animate={{ strokeDashoffset: done ? 0 : circ * 0.72 }}
+        transition={{ duration: 1.1, delay: 0.4, ease: "easeOut" }}
+        transform="rotate(-90 20 20)"
+      />
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={12}
+        fill="var(--color-text)"
+      >
+        {done ? "✓" : "○"}
+      </text>
+    </svg>
+  );
+};
 
-        {/* Welcome banner */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 p-6 mb-6 shadow-xl"
-        >
-          <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5" />
-          <div className="absolute -bottom-10 -left-6 w-52 h-52 rounded-full bg-white/5" />
-          <div className="relative">
-            <p className="text-white/70 text-sm uppercase tracking-widest mb-1 bangla">
-              আপনার অ্যাকাউন্ট
+/* ══════════════════════════════════════════════════
+   STATUS BADGE
+══════════════════════════════════════════════════ */
+const StatusBadge = ({ done }: { done: boolean }) => (
+  <motion.span
+    initial={{ scale: 0.8, opacity: 0 }}
+    animate={{ scale: 1, opacity: 1 }}
+    transition={{ delay: 0.5, duration: 0.3 }}
+    className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bangla"
+    style={{
+      backgroundColor: "var(--color-active-bg)",
+      border: "1px solid var(--color-active-border)",
+      color: done ? "var(--color-text)" : "var(--color-gray)",
+    }}
+  >
+    <span
+      className={`w-1.5 h-1.5 rounded-full ${!done ? "animate-pulse" : ""}`}
+      style={{
+        backgroundColor: done ? "var(--color-text)" : "var(--color-gray)",
+      }}
+    />
+    {done ? "সম্পন্ন" : "বাকি আছে"}
+  </motion.span>
+);
+
+/* ══════════════════════════════════════════════════
+   ACTION CARD
+══════════════════════════════════════════════════ */
+interface ActionCardProps {
+  submitted: boolean;
+  icon: React.ComponentType<{
+    className?: string;
+    style?: React.CSSProperties;
+  }>;
+  label: string;
+  timeLabel: string;
+  question: string;
+  typeSequence: (string | number)[];
+  cta: string;
+  to: string;
+  doneText: string;
+  index: number;
+}
+
+const ActionCard = ({
+  submitted,
+  icon: Icon,
+  label,
+  timeLabel,
+  question,
+  typeSequence,
+  cta,
+  to,
+  doneText,
+  index,
+}: ActionCardProps) => (
+  <motion.div
+    variants={cardVariants}
+    whileHover={!submitted ? { y: -4, transition: { duration: 0.2 } } : {}}
+    className="relative rounded-3xl overflow-hidden flex flex-col"
+    style={{
+      border: "1px solid var(--color-active-border)",
+      backgroundColor: "var(--color-bg)",
+    }}
+  >
+    {/* Animated top line */}
+    <motion.div
+      initial={{ scaleX: 0 }}
+      animate={{ scaleX: 1 }}
+      transition={{
+        delay: 0.3 + index * 0.13,
+        duration: 0.65,
+        ease: "easeOut",
+      }}
+      className="h-[2px] w-full origin-left"
+      style={{ backgroundColor: "var(--color-text)", opacity: 0.4 }}
+    />
+
+    <div className="p-6 sm:p-8 flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ scale: 0, rotate: -20 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{
+              delay: 0.35 + index * 0.13,
+              duration: 0.45,
+              ease: "backOut",
+            }}
+            className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl shrink-0"
+            style={{
+              backgroundColor: "var(--color-active-bg)",
+              border: "1px solid var(--color-active-border)",
+            }}
+          >
+            <Icon
+              className="w-6 h-6 sm:w-7 sm:h-7"
+              style={{ color: "var(--color-text)" }}
+            />
+          </motion.div>
+          <div>
+            <p
+              className="text-xs font-semibold uppercase tracking-widest bangla"
+              style={{ color: "var(--color-gray)" }}
+            >
+              {label}
             </p>
-            <p className="text-2xl font-black text-white bangla">
-              প্রোফাইল দেখুন ও সম্পাদনা করুন
-            </p>
-            <p className="text-white/60 text-sm mt-1 bangla">
-              আপনার তথ্য আপডেট রাখুন
+            <p
+              className="text-xs mt-0.5 bangla"
+              style={{ color: "var(--color-gray)" }}
+            >
+              {timeLabel}
             </p>
           </div>
-        </motion.div>
+        </div>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <StatusBadge done={submitted} />
+          <ProgressRing done={submitted} />
+        </div>
+      </div>
 
-        {/* Profile card CTA */}
+      {/* Divider */}
+      <motion.div
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{
+          delay: 0.45 + index * 0.13,
+          duration: 0.5,
+          ease: "easeOut",
+        }}
+        className="h-px origin-left"
+        style={{ backgroundColor: "var(--color-active-border)" }}
+      />
+
+      {/* Question + Typewriter */}
+      <div className="space-y-3">
+        <p
+          className="text-xl sm:text-2xl lg:text-3xl font-bold leading-snug bangla"
+          style={{ color: "var(--color-text)" }}
+        >
+          {question}
+        </p>
+
+        {!submitted ? (
+          <div
+            className="text-base sm:text-lg font-medium bangla min-h-[1.8rem]"
+            style={{ color: "var(--color-gray)" }}
+          >
+            <TypeAnimation
+              sequence={typeSequence}
+              wrapper="span"
+              speed={60}
+              repeat={Infinity}
+              cursor
+            />
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35 }}
+            className="flex items-center gap-2 text-base bangla"
+            style={{ color: "var(--color-gray)" }}
+          >
+            <motion.div
+              initial={{ scale: 0, rotate: -45 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ delay: 0.1, duration: 0.4, ease: "backOut" }}
+            >
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
+            </motion.div>
+            <span>{doneText}</span>
+          </motion.div>
+        )}
+      </div>
+
+      {/* CTA */}
+      <AnimatePresence>
+        {!submitted && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ delay: 0.5 + index * 0.13, duration: 0.38 }}
+          >
+            <Link
+              to={to}
+              className="group relative flex items-center justify-between w-full rounded-2xl px-6 py-4 overflow-hidden"
+              style={{
+                backgroundColor: "var(--color-text)",
+                color: "var(--color-bg)",
+              }}
+            >
+              {/* shimmer sweep */}
+              <motion.div
+                initial={{ x: "-100%" }}
+                whileHover={{ x: "100%" }}
+                transition={{ duration: 0.45 }}
+                className="absolute inset-0 opacity-10"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, var(--color-bg), transparent)",
+                }}
+              />
+              <span className="text-base sm:text-lg font-bold bangla relative z-10">
+                {cta}
+              </span>
+              <motion.div
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.2 }}
+                className="relative z-10"
+              >
+                <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />
+              </motion.div>
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  </motion.div>
+);
+
+/* ══════════════════════════════════════════════════
+   STAFF SUMMARY ROW (principal/admin/owner only)
+══════════════════════════════════════════════════ */
+const StaffSummary = ({ teacherSlug }: { teacherSlug: string }) => {
+  const { data: allExams } = useQuery({
+    queryKey: ["dash-all-weekly-exams"],
+    queryFn: async () => {
+      const { data } = await axiosPublic.get("/api/weekly-exams");
+      return data as WeeklyExamDoc[];
+    },
+  });
+
+  const { data: allLessons } = useQuery({
+    queryKey: ["dash-all-daily-lessons"],
+    queryFn: async () => {
+      const { data } = await axiosPublic.get("/api/daily-lessons");
+      return (data?.data ?? data) as DailyLessonDoc[];
+    },
+  });
+
+  const { data: teachers } = useQuery({
+    queryKey: ["dash-teachers"],
+    queryFn: async () => {
+      const { data } = await axiosPublic.get("/api/users?role=teacher");
+      return data as { slug: string; name: string }[];
+    },
+  });
+
+  if (!teachers?.length) return null;
+
+  const weeklySubmittedSlugs = new Set(
+    (allExams ?? [])
+      .filter((e) => isThisWeek(e.createdAt))
+      .map((e) => e.teacherSlug)
+      .filter(Boolean),
+  );
+
+  const todayLessonSlugs = new Set(
+    (allLessons ?? [])
+      .filter((l) => isTodayInRange(l.createdAt))
+      .map((l) => l.teacherSlug)
+      .filter(Boolean),
+  );
+
+  const submitted = teachers.filter(
+    (t) => weeklySubmittedSlugs.has(t.slug) || todayLessonSlugs.has(t.slug),
+  ).length;
+  const notSubmitted = teachers.length - submitted;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.6, duration: 0.45, ease: "easeOut" }}
+      className="rounded-3xl overflow-hidden"
+      style={{
+        border: "1px solid var(--color-active-border)",
+        backgroundColor: "var(--color-bg)",
+      }}
+    >
+      <motion.div
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ delay: 0.65, duration: 0.65, ease: "easeOut" }}
+        className="h-[2px] w-full origin-left"
+        style={{ backgroundColor: "var(--color-text)", opacity: 0.4 }}
+      />
+
+      <div className="p-6 sm:p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div
+            className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0"
+            style={{
+              backgroundColor: "var(--color-active-bg)",
+              border: "1px solid var(--color-active-border)",
+            }}
+          >
+            <Users className="w-5 h-5" style={{ color: "var(--color-text)" }} />
+          </div>
+          <div>
+            <p
+              className="text-xs font-semibold uppercase tracking-widest bangla"
+              style={{ color: "var(--color-gray)" }}
+            >
+              শিক্ষক সারসংক্ষেপ
+            </p>
+            <p
+              className="text-xs bangla mt-0.5"
+              style={{ color: "var(--color-gray)" }}
+            >
+              এই সপ্তাহ ও আজকের জমা
+            </p>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          {[
+            { label: "মোট শিক্ষক", value: teachers.length },
+            { label: "জমা দিয়েছেন", value: submitted },
+            { label: "জমা দেননি", value: notSubmitted },
+          ].map((s, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                delay: 0.7 + i * 0.07,
+                duration: 0.35,
+                ease: "backOut",
+              }}
+              className="rounded-2xl p-3 sm:p-4 text-center"
+              style={{
+                backgroundColor: "var(--color-active-bg)",
+                border: "1px solid var(--color-active-border)",
+              }}
+            >
+              <p
+                className="text-2xl sm:text-3xl font-black tabular-nums"
+                style={{ color: "var(--color-text)" }}
+              >
+                {s.value}
+              </p>
+              <p
+                className="text-xs mt-1 bangla"
+                style={{ color: "var(--color-gray)" }}
+              >
+                {s.label}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Progress bar */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p
+              className="text-xs bangla"
+              style={{ color: "var(--color-gray)" }}
+            >
+              জমা দেওয়ার হার
+            </p>
+            <p
+              className="text-xs font-bold tabular-nums"
+              style={{ color: "var(--color-text)" }}
+            >
+              {teachers.length
+                ? Math.round((submitted / teachers.length) * 100)
+                : 0}
+              %
+            </p>
+          </div>
+          <div
+            className="h-2 w-full rounded-full overflow-hidden"
+            style={{ backgroundColor: "var(--color-active-bg)" }}
+          >
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{
+                width: `${teachers.length ? (submitted / teachers.length) * 100 : 0}%`,
+              }}
+              transition={{ delay: 0.9, duration: 0.8, ease: "easeOut" }}
+              className="h-full rounded-full"
+              style={{ backgroundColor: "var(--color-text)" }}
+            />
+          </div>
+        </div>
+
+        {/* Teacher list */}
+        <div className="mt-5 space-y-2">
+          {teachers.slice(0, 6).map((t, i) => {
+            const hasWeekly = weeklySubmittedSlugs.has(t.slug);
+            const hasLesson = todayLessonSlugs.has(t.slug);
+            const done = hasWeekly || hasLesson;
+            return (
+              <motion.div
+                key={t.slug}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.8 + i * 0.05, duration: 0.35 }}
+                className="flex items-center justify-between gap-3 py-2"
+                style={{ borderBottom: "1px solid var(--color-active-border)" }}
+              >
+                <p
+                  className="text-sm font-medium bangla truncate"
+                  style={{ color: "var(--color-text)" }}
+                >
+                  {t.name}
+                </p>
+                <div className="flex items-center gap-2 shrink-0">
+                  {hasLesson && (
+                    <span
+                      className="text-[10px] px-2 py-0.5 rounded-full bangla"
+                      style={{
+                        backgroundColor: "var(--color-active-bg)",
+                        border: "1px solid var(--color-active-border)",
+                        color: "var(--color-text)",
+                      }}
+                    >
+                      পড়া ✓
+                    </span>
+                  )}
+                  {hasWeekly && (
+                    <span
+                      className="text-[10px] px-2 py-0.5 rounded-full bangla"
+                      style={{
+                        backgroundColor: "var(--color-active-bg)",
+                        border: "1px solid var(--color-active-border)",
+                        color: "var(--color-text)",
+                      }}
+                    >
+                      Exam ✓
+                    </span>
+                  )}
+                  {!done && (
+                    <span
+                      className="text-[10px] px-2 py-0.5 rounded-full bangla"
+                      style={{
+                        backgroundColor: "var(--color-active-bg)",
+                        border: "1px solid var(--color-active-border)",
+                        color: "var(--color-gray)",
+                      }}
+                    >
+                      জমা নেই
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+          {teachers.length > 6 && (
+            <p
+              className="text-xs text-center pt-2 bangla"
+              style={{ color: "var(--color-gray)" }}
+            >
+              আরও {teachers.length - 6} জন শিক্ষক
+            </p>
+          )}
+        </div>
+
+        {/* Monthly report link */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.1 }}
+          className="mt-5"
         >
           <Link
-            to="/dashboard/profile"
-            className="flex items-center justify-between bg-white dark:bg-[#161b22]
-              border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-md
-              hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group"
+            to="/dashboard/monthly-report"
+            className="group flex items-center justify-between w-full rounded-2xl px-5 py-3"
+            style={{
+              backgroundColor: "var(--color-active-bg)",
+              border: "1px solid var(--color-active-border)",
+              color: "var(--color-text)",
+            }}
           >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30">
-                <UserCircle className="w-6 h-6 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-base font-bold text-gray-900 dark:text-white bangla">
-                  আমার প্রোফাইল
-                </p>
-                <p className="text-sm text-gray-400 bangla">
-                  তথ্য দেখুন ও পরিবর্তন করুন
-                </p>
-              </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp
+                className="w-4 h-4"
+                style={{ color: "var(--color-gray)" }}
+              />
+              <span className="text-sm font-semibold bangla">
+                মাসিক রিপোর্ট দেখুন
+              </span>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-emerald-500 transition-colors" />
+            <motion.div whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
+              <ArrowRight
+                className="w-4 h-4"
+                style={{ color: "var(--color-gray)" }}
+              />
+            </motion.div>
           </Link>
         </motion.div>
-      </main>
-    </div>
+      </div>
+    </motion.div>
   );
 };
 
-/* ════════════════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════
+   TYPES
+══════════════════════════════════════════════════ */
+interface WeeklyExamDoc {
+  _id: string;
+  teacherSlug: string;
+  createdAt: string;
+  ExamNumber: string;
+  class: string;
+}
+
+interface DailyLessonDoc {
+  _id: string;
+  teacherSlug: string;
+  createdAt: string;
+  class: string;
+}
+
+/* ══════════════════════════════════════════════════
    MAIN DASHBOARD
-   ════════════════════════════════════════════════════════════════════════ */
+══════════════════════════════════════════════════ */
 const Dashboard = () => {
   const { user } = useAuth();
-  const role: string = user?.role ?? "teacher";
-  const allowedKeys = ROLE_KEYS[role] ?? [];
-  const roleConf = ROLE_CONFIG[role] ?? ROLE_CONFIG.teacher;
+  const role = user?.role ?? "teacher";
+  const slug = user?.slug ?? "";
+  const isManager = ["principal", "admin", "owner"].includes(role);
 
-  // Student হলে আলাদা সহজ dashboard দেখাও
-  if (role === "student") {
-    return <StudentDashboard name={user?.name ?? "Student"} />;
-  }
+  const { text: greetingText, emoji } = getGreeting();
+  const banglaDate = getBanglaDate();
 
-  /* ── parallel queries ── */
-  const results = useQueries({
-    queries: [
-      {
-        queryKey: ["dash-photography"],
-        queryFn: async () => {
-          const { data } = await axiosPublic.get("/api/photography");
-          return data;
-        },
-        enabled: allowedKeys.includes("photos"),
-      },
-      {
-        queryKey: ["dash-quotes"],
-        queryFn: async () => {
-          const { data } = await axiosPublic.get("/api/quotes");
-          return data;
-        },
-        enabled: allowedKeys.includes("quotes"),
-      },
-      {
-        queryKey: ["dash-heroes"],
-        queryFn: async () => {
-          const { data } = await axiosPublic.get("/api/heroes");
-          return data;
-        },
-        enabled: allowedKeys.includes("heroes"),
-      },
-      {
-        queryKey: [
-          "dash-exams",
-          role === "admin" || role === "owner" ? "all" : user?.slug,
-        ],
-        queryFn: async () => {
-          const url =
-            role === "admin" || role === "owner"
-              ? "/api/weekly-exams"
-              : `/api/weekly-exams?teacherSlug=${user?.slug ?? ""}`;
-          const { data } = await axiosPublic.get(url);
-          return data;
-        },
-        enabled: allowedKeys.includes("exams"),
-      },
-      {
-        queryKey: ["dash-teachers"],
-        queryFn: async () => {
-          const { data } = await axiosPublic.get("/api/teachers");
-          return data;
-        },
-        enabled: allowedKeys.includes("teachers"),
-      },
-    ],
+  /* ── Own weekly exam this week ── */
+  const { data: myExams } = useQuery({
+    queryKey: ["dash-my-exams", slug],
+    queryFn: async () => {
+      const { data } = await axiosPublic.get(
+        `/api/weekly-exams?teacherSlug=${slug}`,
+      );
+      return data as WeeklyExamDoc[];
+    },
+    enabled: !!slug,
   });
 
-  const isLoading = results.some(
-    (r) => r.isLoading && r.fetchStatus !== "idle",
+  /* ── Own daily lessons today ── */
+  const { data: myLessons } = useQuery({
+    queryKey: ["dash-my-lessons", slug],
+    queryFn: async () => {
+      const { data } = await axiosPublic.get(
+        `/api/daily-lessons?teacherSlug=${slug}`,
+      );
+      return (data?.data ?? data) as DailyLessonDoc[];
+    },
+    enabled: !!slug,
+  });
+
+  const hasSubmittedLesson = (myLessons ?? []).some((l) =>
+    isTodayInRange(l.createdAt),
   );
+  const hasSubmittedExam = (myExams ?? []).some((e) => isThisWeek(e.createdAt));
 
-  const getCount = (res: (typeof results)[0]) => {
-    if (!res.data) return 0;
-    const payload = res.data?.data ?? res.data;
-    return safe(payload).length;
-  };
-
-  const [photoCount, quoteCount, heroCount, examCount, teacherCount] =
-    results.map(getCount);
-
-  const ALL_CARDS: Card[] = [
-    {
-      key: "exams",
-      label: "Weekly Exams",
-      value: examCount,
-      icon: BookOpen,
-      accent: "bg-emerald-500/15 border-emerald-500/30",
-      glow: "hover:shadow-emerald-500/20",
-      textAccent: "text-emerald-500 dark:text-emerald-400",
-      trend: "Exams published",
-    },
-    {
-      key: "teachers",
-      label: "Teachers",
-      value: teacherCount,
-      icon: Users,
-      accent: "bg-sky-500/15 border-sky-500/30",
-      glow: "hover:shadow-sky-500/20",
-      textAccent: "text-sky-500 dark:text-sky-400",
-      trend: "Staff profiles",
-    },
-    {
-      key: "heroes",
-      label: "Heroes",
-      value: heroCount,
-      icon: Star,
-      accent: "bg-violet-500/15 border-violet-500/30",
-      glow: "hover:shadow-violet-500/20",
-      textAccent: "text-violet-500 dark:text-violet-400",
-      trend: "Hero banners",
-    },
-    {
-      key: "quotes",
-      label: "Quotes",
-      value: quoteCount,
-      icon: Quote,
-      accent: "bg-amber-500/15 border-amber-500/30",
-      glow: "hover:shadow-amber-500/20",
-      textAccent: "text-amber-500 dark:text-amber-400",
-      trend: "Inspirational quotes",
-    },
-    {
-      key: "photos",
-      label: "Photography",
-      value: photoCount,
-      icon: Camera,
-      accent: "bg-rose-500/15 border-rose-500/30",
-      glow: "hover:shadow-rose-500/20",
-      textAccent: "text-rose-500 dark:text-rose-400",
-      trend: "Photos uploaded",
-    },
-  ];
-
-  const cards = ALL_CARDS.filter((c) => allowedKeys.includes(c.key));
-  const total = cards.reduce((s, c) => s + c.value, 0);
-  const maxVal = Math.max(...cards.map((c) => c.value), 1);
-  const isSingleCard = cards.length === 1;
-
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const totalDone = [hasSubmittedLesson, hasSubmittedExam].filter(
+    Boolean,
+  ).length;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d1117] transition-colors duration-300">
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Header */}
+    <div
+      className="min-h-screen transition-colors duration-300"
+      style={{ backgroundColor: "var(--color-bg)" }}
+    >
+      <div className="w-full px-4 sm:px-8 lg:px-12 py-10 lg:py-14">
+        {/* ════ HEADER ════ */}
         <motion.div
-          initial={{ opacity: 0, y: -16 }}
+          initial={{ opacity: 0, y: -18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="mb-10 mt-10 lg:mt-0"
+          className="mt-10 lg:mt-0 mb-10 lg:mb-14"
         >
-          <p className="text-sm font-medium tracking-widest uppercase text-gray-400 dark:text-gray-500 mb-1">
-            {greeting}
-          </p>
-          <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">
-            {user?.name ?? "Dashboard"}
-          </h1>
-          <p className="mt-1 text-gray-500 dark:text-gray-400 text-sm">
-            {roleConf.title} — here's your content snapshot.
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5 mb-6">
+            <div>
+              {/* Greeting pill */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1, duration: 0.4, ease: "backOut" }}
+                className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-4"
+                style={{
+                  backgroundColor: "var(--color-active-bg)",
+                  border: "1px solid var(--color-active-border)",
+                }}
+              >
+                <span className="text-lg">{emoji}</span>
+                <span
+                  className="text-sm font-medium bangla"
+                  style={{ color: "var(--color-gray)" }}
+                >
+                  {greetingText}
+                </span>
+                <span className="relative flex w-2 h-2">
+                  <span
+                    className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
+                    style={{ backgroundColor: "var(--color-text)" }}
+                  />
+                  <span
+                    className="relative inline-flex rounded-full w-2 h-2"
+                    style={{ backgroundColor: "var(--color-text)" }}
+                  />
+                </span>
+              </motion.div>
+
+              {/* Name */}
+              <h1
+                className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight bangla leading-tight"
+                style={{ color: "var(--color-text)" }}
+              >
+                {user?.name ?? "Dashboard"}
+              </h1>
+
+              {/* Typewriter */}
+              <div
+                className="mt-3 text-xl sm:text-2xl lg:text-3xl font-semibold bangla min-h-[2.5rem]"
+                style={{ color: "var(--color-gray)" }}
+              >
+                <TypeAnimation
+                  sequence={[
+                    "আজকের কাজ সম্পন্ন করুন 📚",
+                    2500,
+                    "নিয়মিত পড়া জমা দিন ✏️",
+                    2500,
+                    "এগিয়ে থাকুন, এগিয়ে যান 🚀",
+                    2500,
+                    "জ্ঞানই শক্তি, পড়াই পথ 💡",
+                    2500,
+                  ]}
+                  wrapper="span"
+                  speed={55}
+                  repeat={Infinity}
+                  cursor
+                />
+              </div>
+            </div>
+
+            {/* Date + progress badges */}
+            <motion.div
+              initial={{ opacity: 0, x: 14 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" }}
+              className="flex flex-row sm:flex-col items-center sm:items-end gap-3 shrink-0"
+            >
+              <div
+                className="flex items-center gap-2 rounded-xl px-3 py-2"
+                style={{
+                  backgroundColor: "var(--color-active-bg)",
+                  border: "1px solid var(--color-active-border)",
+                }}
+              >
+                <CalendarDays
+                  className="w-4 h-4 shrink-0"
+                  style={{ color: "var(--color-gray)" }}
+                />
+                <span
+                  className="text-xs sm:text-sm font-medium bangla"
+                  style={{ color: "var(--color-gray)" }}
+                >
+                  {banglaDate}
+                </span>
+              </div>
+              <div
+                className="flex items-center gap-2 rounded-xl px-3 py-2"
+                style={{
+                  backgroundColor: "var(--color-active-bg)",
+                  border: "1px solid var(--color-active-border)",
+                }}
+              >
+                <Sparkles
+                  className="w-4 h-4 shrink-0"
+                  style={{ color: "var(--color-gray)" }}
+                />
+                <span
+                  className="text-xs sm:text-sm font-bold bangla"
+                  style={{ color: "var(--color-text)" }}
+                >
+                  {totalDone}/2 সম্পন্ন
+                </span>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Overall progress bar */}
+          <div
+            className="h-1 w-full rounded-full overflow-hidden"
+            style={{ backgroundColor: "var(--color-active-bg)" }}
+          >
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${(totalDone / 2) * 100}%` }}
+              transition={{ delay: 0.55, duration: 0.8, ease: "easeOut" }}
+              className="h-full rounded-full"
+              style={{ backgroundColor: "var(--color-text)" }}
+            />
+          </div>
+          <p
+            className="mt-2 text-xs bangla"
+            style={{ color: "var(--color-gray)" }}
+          >
+            আজকের অগ্রগতি
           </p>
         </motion.div>
 
-        {isLoading ? (
-          <Loader />
-        ) : (
-          <>
-            {/* Total banner */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1, duration: 0.4 }}
-              className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${roleConf.from} ${roleConf.to} p-6 mb-8 shadow-xl`}
-            >
-              <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5" />
-              <div className="absolute -bottom-10 -left-6 w-52 h-52 rounded-full bg-white/5" />
-              <div className="relative flex items-center justify-between">
-                <div>
-                  <p className="text-white/60 text-sm font-medium uppercase tracking-widest mb-1">
-                    Total Content
-                  </p>
-                  <p className="text-6xl font-black text-white leading-none">
-                    {total}
-                  </p>
-                  <p className="text-white/60 text-sm mt-2">
-                    across {cards.length}{" "}
-                    {cards.length === 1 ? "section" : "sections"}
-                  </p>
-                </div>
-                <div className="hidden sm:flex items-center justify-center w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20">
-                  <Layers className="w-10 h-10 text-white" />
-                </div>
-              </div>
-            </motion.div>
+        {/* ════ CARDS ════ */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 mb-6"
+        >
+          <ActionCard
+            index={0}
+            submitted={hasSubmittedLesson}
+            icon={BookOpen}
+            label="Daily Lesson"
+            timeLabel="প্রতিদিন"
+            question="আজকের পড়া জমা দিয়েছেন?"
+            typeSequence={[
+              "না দিলে এখনই জমা দিন 📖",
+              2000,
+              "আজকের পড়া বাকি রয়েছে ⏳",
+              2000,
+              "দেরি না করে এখনই জমা দিন ✍️",
+              2000,
+            ]}
+            cta="Daily Lesson জমা দিন"
+            to="/dashboard/daily-lesson/add"
+            doneText="আজকের পড়া সফলভাবে জমা দেওয়া হয়েছে ✓"
+          />
 
-            {/* Stat cards */}
-            <div
-              className={`grid gap-4 mb-8 ${
-                isSingleCard
-                  ? "grid-cols-1 max-w-xs"
-                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-              }`}
-            >
-              {cards.map((card, i) => {
-                const Icon = card.icon;
-                return (
-                  <motion.div
-                    key={card.key}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 + i * 0.08, duration: 0.4 }}
-                    whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                    className={`group relative bg-white dark:bg-[#161b22] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-md hover:shadow-xl ${card.glow} transition-all duration-300 cursor-default`}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`p-2.5 rounded-xl border ${card.accent}`}>
-                        <Icon className={`w-5 h-5 ${card.textAccent}`} />
-                      </div>
-                      <ArrowUpRight
-                        className={`w-4 h-4 ${card.textAccent} opacity-0 group-hover:opacity-100 transition-opacity`}
-                      />
-                    </div>
-                    <p
-                      className={`text-4xl font-black ${card.textAccent} mb-1`}
-                    >
-                      {card.value}
-                    </p>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                      {card.label}
-                    </p>
-                    {card.trend && (
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        {card.trend}
-                      </p>
-                    )}
-                    <div className="mt-4 h-1 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{
-                          width: `${Math.round((card.value / maxVal) * 100)}%`,
-                        }}
-                        transition={{
-                          delay: 0.4 + i * 0.08,
-                          duration: 0.6,
-                          ease: "easeOut",
-                        }}
-                        className={`h-full rounded-full ${card.textAccent.replace("text-", "bg-")}`}
-                      />
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
+          <ActionCard
+            index={1}
+            submitted={hasSubmittedExam}
+            icon={ClipboardList}
+            label="Weekly Exam"
+            timeLabel="রবিবার → শুক্রবার"
+            question="এই সপ্তাহের Exam Question জমা দিয়েছেন?"
+            typeSequence={[
+              "না দিলে এখনই জমা দিন 📝",
+              2000,
+              "এই সপ্তাহের Exam বাকি আছে ⏳",
+              2000,
+              "Question এখনই সাবমিট করুন 🎯",
+              2000,
+            ]}
+            cta="Weekly Exam জমা দিন"
+            to="/dashboard/weekly-exam/add"
+            doneText="এই সপ্তাহের Exam Question সফলভাবে জমা দেওয়া হয়েছে ✓"
+          />
+        </motion.div>
 
-            {/* Charts — hidden for single-card roles */}
-            {!isSingleCard && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7, duration: 0.4 }}
-                  className="bg-white dark:bg-[#161b22] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-md"
-                >
-                  <div className="flex items-center gap-2 mb-6">
-                    <Activity className="w-5 h-5 text-emerald-500" />
-                    <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                      Content Distribution
-                    </h3>
-                  </div>
-                  <div className="space-y-4">
-                    {cards.map((card, i) => {
-                      const Icon = card.icon;
-                      const pct = Math.round((card.value / maxVal) * 100);
-                      return (
-                        <motion.div
-                          key={card.key}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.8 + i * 0.07 }}
-                          className="flex items-center gap-4"
-                        >
-                          <div className="flex items-center gap-2 w-36 shrink-0">
-                            <Icon
-                              className={`w-4 h-4 ${card.textAccent} shrink-0`}
-                            />
-                            <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                              {card.label}
-                            </span>
-                          </div>
-                          <div className="flex-1 h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${pct}%` }}
-                              transition={{
-                                delay: 0.9 + i * 0.07,
-                                duration: 0.7,
-                                ease: "easeOut",
-                              }}
-                              className={`h-full rounded-full ${card.textAccent.replace("text-", "bg-")}`}
-                            />
-                          </div>
-                          <span
-                            className={`text-sm font-bold ${card.textAccent} w-8 text-right shrink-0`}
-                          >
-                            {card.value}
-                          </span>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8, duration: 0.4 }}
-                  className="bg-white dark:bg-[#161b22] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-md"
-                >
-                  <div className="flex items-center gap-2 mb-6">
-                    <PieIcon className="w-5 h-5 text-violet-500" />
-                    <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                      Content Breakdown
-                    </h3>
-                  </div>
-                  <DashPieChart
-                    data={cards.map((c) => ({ name: c.label, value: c.value }))}
-                  />
-                </motion.div>
-              </div>
-            )}
-          </>
+        {/* ════ STAFF SUMMARY (manager only) ════ */}
+        {isManager && (
+          <div className="mt-2">
+            <StaffSummary teacherSlug={slug} />
+          </div>
         )}
-      </main>
+      </div>
     </div>
   );
 };

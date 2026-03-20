@@ -1,11 +1,14 @@
 // src/pages/Admin/Management/ManageHero.tsx
+//
+// Loading  → <Skeleton variant="picture" count={8} />
+// Error    → <ErrorState message="..." />
+// Empty    → <EmptyState ... />
+// Controls → <GalleryControlsBar accentColor="indigo" />
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   IoTrashOutline,
-  IoGridOutline,
-  IoListOutline,
   IoCalendarOutline,
   IoCheckmarkCircle,
   IoImageOutline,
@@ -14,10 +17,14 @@ import { useState, useMemo } from "react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import { Pagination } from "../../../components/common/Pagination";
-import { EmptyState } from "../../../components/common/Emptystate";
-import { SearchBar } from "../../../components/common/Searchbar";
 import axiosPublic from "../../../hooks/axiosPublic";
+import Skeleton from "../../../components/common/Skeleton";
+import ErrorState from "../../../components/common/ErrorState";
+import EmptyState from "../../../components/common/Emptystate";
+import GalleryControlsBar from "../../../components/common/GalleryControlsBar";
+import type { SortSelectOption } from "../../../components/common/GalleryControlsBar";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Hero {
   _id: string;
   title: string;
@@ -27,41 +34,66 @@ interface Hero {
   createdAt: string;
   updatedAt: string;
 }
-
 interface HeroesResponse {
   success: boolean;
   count: number;
   data: Hero[];
 }
-
 interface ApiError {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
+  response?: { data?: { message?: string } };
 }
-
 type ViewMode = "grid" | "list";
 type SortOption = "newest" | "oldest" | "title-asc" | "title-desc";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 12;
 
-const fetchHeroes = async (): Promise<Hero[]> => {
-  const response = await axiosPublic.get<HeroesResponse>("/api/heroes");
-  return response.data.data;
+const SORT_OPTIONS: SortSelectOption[] = [
+  { value: "newest", label: "Newest First" },
+  { value: "oldest", label: "Oldest First" },
+  { value: "title-asc", label: "Title (A-Z)" },
+  { value: "title-desc", label: "Title (Z-A)" },
+];
+
+const SWAL_BASE = {
+  background: "#0C0D12",
+  color: "#FFFFFF",
+  iconColor: "#F59E0B",
+  showCancelButton: true,
+  confirmButtonColor: "#EF4444",
+  cancelButtonColor: "#52525B",
+  cancelButtonText: "Cancel",
 };
 
-const deleteHero = async (id: string) => {
-  await axiosPublic.delete(`/api/heroes/${id}`);
+// ─── API helpers ──────────────────────────────────────────────────────────────
+const fetchHeroes = async (): Promise<Hero[]> =>
+  (await axiosPublic.get<HeroesResponse>("/api/heroes")).data.data;
+
+const deleteHero = async (id: string) =>
+  axiosPublic.delete(`/api/heroes/${id}`);
+const deleteBatchHeroes = async (ids: string[]) =>
+  Promise.all(ids.map((id) => axiosPublic.delete(`/api/heroes/${id}`)));
+
+const formatDate = (date: string) => {
+  const diff = Math.ceil(
+    Math.abs(Date.now() - new Date(date).getTime()) / 86_400_000,
+  );
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 7) return `${diff} days ago`;
+  if (diff < 30) return `${Math.floor(diff / 7)} weeks ago`;
+  if (diff < 365) return `${Math.floor(diff / 30)} months ago`;
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
-const deleteBatchHeroes = async (ids: string[]) => {
-  await Promise.all(ids.map((id) => axiosPublic.delete(`/api/heroes/${id}`)));
-};
-
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function ManageHero() {
   const qc = useQueryClient();
+
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -82,72 +114,61 @@ export default function ManageHero() {
     refetchIntervalInBackground: true,
   });
 
+  const toastStyle = (border: string) => ({
+    style: {
+      background: "#0C0D12",
+      color: "#FFFFFF",
+      border: `1px solid ${border}`,
+    },
+  });
+
   const deleteMut = useMutation({
     mutationFn: deleteHero,
     onSuccess: () => {
       toast.success("Hero deleted successfully", {
         icon: "✨",
-        style: {
-          background: "#0C0D12",
-          color: "#FFFFFF",
-          border: "1px solid #2D2E37",
-        },
+        ...toastStyle("#2D2E37"),
       });
       qc.invalidateQueries({ queryKey: ["heroes-admin"] });
       qc.invalidateQueries({ queryKey: ["heroes"] });
     },
-    onError: (error: ApiError) => {
-      toast.error(error?.response?.data?.message || "Failed to delete hero", {
-        style: {
-          background: "#0C0D12",
-          color: "#FFFFFF",
-          border: "1px solid #EF4444",
-        },
-      });
-    },
+    onError: (e: ApiError) =>
+      toast.error(
+        e?.response?.data?.message || "Failed to delete hero",
+        toastStyle("#EF4444"),
+      ),
   });
 
   const batchDeleteMut = useMutation({
     mutationFn: deleteBatchHeroes,
     onSuccess: () => {
-      toast.success(`${selectedHeroes.size} heroes deleted successfully`, {
+      toast.success(`${selectedHeroes.size} heroes deleted`, {
         icon: "🎉",
-        style: {
-          background: "#0C0D12",
-          color: "#FFFFFF",
-          border: "1px solid #2D2E37",
-        },
+        ...toastStyle("#2D2E37"),
       });
       setSelectedHeroes(new Set());
       setIsSelectionMode(false);
       qc.invalidateQueries({ queryKey: ["heroes-admin"] });
       qc.invalidateQueries({ queryKey: ["heroes"] });
     },
-    onError: (error: ApiError) => {
-      toast.error(error?.response?.data?.message || "Failed to delete heroes", {
-        style: {
-          background: "#0C0D12",
-          color: "#FFFFFF",
-          border: "1px solid #EF4444",
-        },
-      });
-    },
+    onError: (e: ApiError) =>
+      toast.error(
+        e?.response?.data?.message || "Failed to delete heroes",
+        toastStyle("#EF4444"),
+      ),
   });
 
-  // Filter and sort heroes
   const processedHeroes = useMemo(() => {
-    let filtered = [...heroes];
+    const filtered = searchQuery
+      ? heroes.filter(
+          (h) =>
+            h.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            h.uniqueID.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            h._id.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+      : [...heroes];
 
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (hero) =>
-          hero.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          hero.uniqueID.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          hero._id.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-    }
-
-    filtered.sort((a, b) => {
+    return filtered.sort((a, b) => {
       switch (sortBy) {
         case "newest":
           return (
@@ -165,160 +186,85 @@ export default function ManageHero() {
           return 0;
       }
     });
-
-    return filtered;
   }, [heroes, searchQuery, sortBy]);
 
-  // Pagination
   const totalPages = Math.ceil(processedHeroes.length / ITEMS_PER_PAGE);
-  const paginatedHeroes = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    const end = start + ITEMS_PER_PAGE;
-    return processedHeroes.slice(start, end);
-  }, [processedHeroes, currentPage]);
+  const paginatedHeroes = useMemo(
+    () =>
+      processedHeroes.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE,
+      ),
+    [processedHeroes, currentPage],
+  );
 
-  // Reset to page 1 when search or sort changes
-  useMemo(() => {
-    setCurrentPage(1);
-  }, []);
+  const toggleHero = (id: string) => {
+    const n = new Set(selectedHeroes);
+    if (n.has(id)) {
+      n.delete(id);
+    } else {
+      n.add(id);
+    }
+    setSelectedHeroes(n);
+  };
+  const selectAll = () =>
+    setSelectedHeroes(new Set(paginatedHeroes.map((h) => h._id)));
+  const clearSelection = () => setSelectedHeroes(new Set());
 
-  const confirmDelete = (id: string) => {
+  const confirmDelete = (id: string) =>
     Swal.fire({
+      ...SWAL_BASE,
       title: "Delete Hero?",
       text: "This action cannot be undone",
       icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#EF4444",
-      cancelButtonColor: "#52525B",
       confirmButtonText: "Delete",
-      cancelButtonText: "Cancel",
-      background: "#0C0D12",
-      color: "#FFFFFF",
-      iconColor: "#F59E0B",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        deleteMut.mutate(id);
-      }
-    });
-  };
+    }).then((r) => r.isConfirmed && deleteMut.mutate(id));
 
-  const confirmBatchDelete = () => {
+  const confirmBatchDelete = () =>
     Swal.fire({
+      ...SWAL_BASE,
       title: `Delete ${selectedHeroes.size} Heroes?`,
       text: "This action cannot be undone",
       icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#EF4444",
-      cancelButtonColor: "#52525B",
       confirmButtonText: `Delete ${selectedHeroes.size} Heroes`,
-      cancelButtonText: "Cancel",
-      background: "#0C0D12",
-      color: "#FFFFFF",
-      iconColor: "#F59E0B",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        batchDeleteMut.mutate(Array.from(selectedHeroes));
-      }
-    });
-  };
+    }).then(
+      (r) => r.isConfirmed && batchDeleteMut.mutate(Array.from(selectedHeroes)),
+    );
 
-  const toggleHeroSelection = (id: string) => {
-    const newSelection = new Set(selectedHeroes);
-    if (newSelection.has(id)) {
-      newSelection.delete(id);
-    } else {
-      newSelection.add(id);
-    }
-    setSelectedHeroes(newSelection);
-  };
-
-  const selectAll = () => {
-    setSelectedHeroes(new Set(paginatedHeroes.map((h) => h._id)));
-  };
-
-  const clearSelection = () => {
-    setSelectedHeroes(new Set());
-  };
-
-  const formatDate = (date: string) => {
-    const d = new Date(date);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - d.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  if (isPending) {
+  // ── Loading ───────────────────────────────────────────────────────────────
+  if (isPending)
     return (
-      <div className="min-h-screen bg-[#E9EBED] dark:bg-[#0C0D12] flex justify-center items-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center gap-6"
-        >
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-zinc-300 dark:border-zinc-800 rounded-full"></div>
-            <div className="w-20 h-20 border-4 border-[#0C0D12] dark:border-[#FFFFFF] border-t-transparent rounded-full animate-spin absolute top-0"></div>
-          </div>
-          <div className="text-center">
-            <p className="text-[#0C0D12] dark:text-[#FFFFFF] font-bold text-xl mb-1">
-              Loading Heroes
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-400 text-sm">
-              Fetching hero images...
-            </p>
-          </div>
-        </motion.div>
+      <div className="min-h-screen bg-[#E9EBED] dark:bg-[#0C0D12] px-4 sm:px-6 lg:px-8 py-10">
+        <Skeleton variant="picture" count={8} height="180px" />
       </div>
     );
-  }
 
-  if (isError) {
+  // ── Error ─────────────────────────────────────────────────────────────────
+  if (isError)
     return (
-      <div className="min-h-screen bg-[#E9EBED] dark:bg-[#0C0D12] flex justify-center items-center px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-md"
-        >
-          <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-red-500 mb-2">
-            Failed to Load Heroes
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-            There was an error loading hero images. Please try again.
-          </p>
+      <div className="min-h-screen bg-[#E9EBED] dark:bg-[#0C0D12] flex items-center justify-center">
+        <div className="text-center">
+          <ErrorState message="Hero images লোড করতে ব্যর্থ হয়েছে।" />
           <button
             onClick={() => refetch()}
-            className="px-6 py-3 bg-[#0C0D12] dark:bg-[#FFFFFF] text-[#FFFFFF] dark:text-[#0C0D12] font-semibold rounded-xl hover:scale-105 transition-transform duration-200 shadow-lg"
+            className="mt-2 px-6 py-3 bg-[#0C0D12] dark:bg-white text-white dark:text-[#0C0D12] font-semibold rounded-xl hover:scale-105 transition-transform shadow-lg"
           >
             Retry
           </button>
-        </motion.div>
+        </div>
       </div>
     );
-  }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#E9EBED] dark:bg-[#0C0D12] transition-colors duration-300">
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
-        {/* Header Section */}
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          {/* Title */}
           <div className="mb-8">
             <motion.h1
               initial={{ opacity: 0, x: -20 }}
@@ -338,120 +284,32 @@ export default function ManageHero() {
           </div>
 
           {/* Controls Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white dark:bg-[#1A1B23] border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm"
-          >
-            <div className="flex flex-col lg:flex-row gap-4">
-              <SearchBar
-                onSearch={setSearchQuery}
-                placeholder="Search heroes by title, ID or uniqueID..."
-                value={searchQuery}
-              />
-
-              <div className="flex flex-row justify-between items-center gap-3">
-                {/* Sort */}
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortOption)}
-                  className="px-4 py-3 bg-zinc-100 dark:bg-[#0C0D12] border border-zinc-200 dark:border-zinc-800 rounded-xl text-[#0C0D12] dark:text-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all cursor-pointer font-medium"
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="title-asc">Title (A-Z)</option>
-                  <option value="title-desc">Title (Z-A)</option>
-                </select>
-
-                {/* View Mode */}
-                <div className="flex items-center gap-2 bg-zinc-100 dark:bg-[#0C0D12] p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                  <button
-                    onClick={() => setViewMode("grid")}
-                    className={`p-2.5 rounded-lg transition-all font-medium ${
-                      viewMode === "grid"
-                        ? "bg-[#0C0D12] dark:bg-[#FFFFFF] text-[#FFFFFF] dark:text-[#0C0D12] shadow-md"
-                        : "text-zinc-500 hover:text-[#0C0D12] dark:hover:text-[#FFFFFF]"
-                    }`}
-                  >
-                    <IoGridOutline size={20} />
-                  </button>
-                  <button
-                    onClick={() => setViewMode("list")}
-                    className={`p-2.5 rounded-lg transition-all font-medium ${
-                      viewMode === "list"
-                        ? "bg-[#0C0D12] dark:bg-[#FFFFFF] text-[#FFFFFF] dark:text-[#0C0D12] shadow-md"
-                        : "text-zinc-500 hover:text-[#0C0D12] dark:hover:text-[#FFFFFF]"
-                    }`}
-                  >
-                    <IoListOutline size={20} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Selection Mode Toggle */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setIsSelectionMode(!isSelectionMode);
-                  if (isSelectionMode) clearSelection();
-                }}
-                className={`px-5 py-3 rounded-xl font-semibold transition-all whitespace-nowrap shadow-sm ${
-                  isSelectionMode
-                    ? "bg-purple-600 text-white hover:bg-purple-500"
-                    : "bg-zinc-100 dark:bg-[#0C0D12] text-[#0C0D12] dark:text-[#FFFFFF] border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-900"
-                }`}
-              >
-                {isSelectionMode ? "Exit Select" : "Select Mode"}
-              </motion.button>
-            </div>
-
-            {/* Selection Actions */}
-            <AnimatePresence>
-              {isSelectionMode && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-5 pt-5 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-3"
-                >
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={selectAll}
-                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm"
-                  >
-                    Select All ({paginatedHeroes.length})
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={clearSelection}
-                    disabled={selectedHeroes.size === 0}
-                    className="px-5 py-2.5 bg-zinc-600 hover:bg-zinc-500 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                  >
-                    Clear Selection
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={confirmBatchDelete}
-                    disabled={
-                      selectedHeroes.size === 0 || batchDeleteMut.isPending
-                    }
-                    className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
-                  >
-                    <IoTrashOutline size={16} />
-                    Delete Selected ({selectedHeroes.size})
-                  </motion.button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          <GalleryControlsBar
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search heroes by title, ID or uniqueID..."
+            searchLabel="Search Heroes"
+            sortValue={sortBy}
+            onSortChange={(v) => setSortBy(v as SortOption)}
+            sortOptions={SORT_OPTIONS}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            isSelectionMode={isSelectionMode}
+            onSelectionModeToggle={() => {
+              setIsSelectionMode((v) => !v);
+              if (isSelectionMode) clearSelection();
+            }}
+            selectionCount={selectedHeroes.size}
+            pageItemCount={paginatedHeroes.length}
+            onSelectAll={selectAll}
+            onClearSelection={clearSelection}
+            onBatchDelete={confirmBatchDelete}
+            isBatchDeleting={batchDeleteMut.isPending}
+            accentColor="indigo"
+          />
         </motion.div>
 
-        {/* Heroes Display */}
+        {/* Empty state */}
         {processedHeroes.length === 0 ? (
           <EmptyState
             query={searchQuery}
@@ -461,12 +319,12 @@ export default function ManageHero() {
             title={searchQuery ? "No Heroes Found" : "No Heroes Yet"}
             message={
               searchQuery
-                ? `We couldn't find any heroes matching "${searchQuery}"`
+                ? undefined
                 : "Start by uploading hero images for your slider"
             }
           />
-        ) : viewMode === "grid" ? (
-          // Grid View
+        ) : /* Grid view */
+        viewMode === "grid" ? (
           <>
             <motion.div
               initial={{ opacity: 0 }}
@@ -493,13 +351,12 @@ export default function ManageHero() {
                         : "border-zinc-200 dark:border-zinc-800 hover:border-indigo-400 dark:hover:border-indigo-600"
                     }`}
                   >
-                    {/* Selection Checkbox */}
                     {isSelectionMode && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         className="absolute top-3 left-3 z-10 cursor-pointer"
-                        onClick={() => toggleHeroSelection(hero._id)}
+                        onClick={() => toggleHero(hero._id)}
                       >
                         <div
                           className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all backdrop-blur-sm ${
@@ -518,19 +375,13 @@ export default function ManageHero() {
                       </motion.div>
                     )}
 
-                    {/* Badge */}
                     <div className="absolute top-3 right-3 z-10 px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg backdrop-blur-sm">
                       {hero.uniqueID}
                     </div>
 
-                    {/* Image */}
                     <div
                       className="relative aspect-video overflow-hidden cursor-pointer bg-zinc-100 dark:bg-zinc-900"
-                      onClick={() => {
-                        if (isSelectionMode) {
-                          toggleHeroSelection(hero._id);
-                        }
-                      }}
+                      onClick={() => isSelectionMode && toggleHero(hero._id)}
                     >
                       <motion.img
                         src={hero.imageUrl}
@@ -540,44 +391,33 @@ export default function ManageHero() {
                         whileHover={{ scale: 1.1 }}
                         transition={{ duration: 0.4 }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
 
-                    {/* Content */}
                     <div className="p-5">
-                      {/* Title */}
                       <h3 className="text-[#0C0D12] dark:text-[#FFFFFF] font-bold mb-3 text-base line-clamp-2">
                         {hero.title}
                       </h3>
-
-                      {/* Date */}
                       <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 mb-4">
                         <IoCalendarOutline size={16} />
                         <span className="text-xs font-medium">
                           {formatDate(hero.createdAt)}
                         </span>
                       </div>
-
-                      {/* Actions */}
-                      <div className="flex gap-2">
-                        <motion.button
-                          onClick={() => confirmDelete(hero._id)}
-                          disabled={deleteMut.isPending}
-                          whileHover={{ scale: 1.03 }}
-                          whileTap={{ scale: 0.97 }}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                        >
-                          <IoTrashOutline size={18} />
-                          <span>Delete</span>
-                        </motion.button>
-                      </div>
+                      <motion.button
+                        onClick={() => confirmDelete(hero._id)}
+                        disabled={deleteMut.isPending}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      >
+                        <IoTrashOutline size={18} /> Delete
+                      </motion.button>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
             </motion.div>
-
-            {/* Pagination */}
             {totalPages > 1 && (
               <Pagination
                 currentPage={currentPage}
@@ -587,14 +427,14 @@ export default function ManageHero() {
             )}
           </>
         ) : (
-          // List View
+          /* List view */
           <>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="bg-white dark:bg-[#1A1B23] border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-md"
             >
-              {/* Desktop Table */}
+              {/* Desktop table */}
               <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-zinc-100 dark:bg-[#0C0D12] border-b border-zinc-200 dark:border-zinc-800">
@@ -607,32 +447,27 @@ export default function ManageHero() {
                               selectedHeroes.size === paginatedHeroes.length &&
                               paginatedHeroes.length > 0
                             }
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                selectAll();
-                              } else {
-                                clearSelection();
-                              }
-                            }}
-                            className="w-5 h-5 rounded-lg bg-white dark:bg-zinc-900 border-zinc-400 dark:border-zinc-600 text-indigo-600 focus:ring-indigo-500"
+                            onChange={(e) =>
+                              e.target.checked ? selectAll() : clearSelection()
+                            }
+                            className="w-5 h-5 rounded-lg text-indigo-600 focus:ring-indigo-500"
                           />
                         </th>
                       )}
-                      <th className="px-6 py-4 text-left text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]">
-                        Image
-                      </th>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]">
-                        Title
-                      </th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]">
-                        Unique ID
-                      </th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]">
-                        Uploaded
-                      </th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]">
-                        Actions
-                      </th>
+                      {[
+                        "Image",
+                        "Title",
+                        "Unique ID",
+                        "Uploaded",
+                        "Actions",
+                      ].map((h) => (
+                        <th
+                          key={h}
+                          className="px-6 py-4 text-left text-sm font-bold text-[#0C0D12] dark:text-[#FFFFFF]"
+                        >
+                          {h}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -644,19 +479,15 @@ export default function ManageHero() {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20 }}
                           transition={{ delay: index * 0.02 }}
-                          className={`hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors ${
-                            selectedHeroes.has(hero._id)
-                              ? "bg-indigo-50 dark:bg-indigo-500/5"
-                              : ""
-                          }`}
+                          className={`hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors ${selectedHeroes.has(hero._id) ? "bg-indigo-50 dark:bg-indigo-500/5" : ""}`}
                         >
                           {isSelectionMode && (
                             <td className="px-6 py-4">
                               <input
                                 type="checkbox"
                                 checked={selectedHeroes.has(hero._id)}
-                                onChange={() => toggleHeroSelection(hero._id)}
-                                className="w-5 h-5 rounded-lg bg-white dark:bg-zinc-900 border-zinc-400 dark:border-zinc-600 text-indigo-600 focus:ring-indigo-500"
+                                onChange={() => toggleHero(hero._id)}
+                                className="w-5 h-5 rounded-lg text-indigo-600 focus:ring-indigo-500"
                               />
                             </td>
                           )}
@@ -670,11 +501,9 @@ export default function ManageHero() {
                             />
                           </td>
                           <td className="px-6 py-4">
-                            <div className="max-w-xs">
-                              <p className="text-[#0C0D12] dark:text-[#FFFFFF] font-semibold text-sm line-clamp-2">
-                                {hero.title}
-                              </p>
-                            </div>
+                            <p className="text-[#0C0D12] dark:text-[#FFFFFF] font-semibold text-sm line-clamp-2 max-w-xs">
+                              {hero.title}
+                            </p>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <span className="inline-block px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold">
@@ -682,9 +511,9 @@ export default function ManageHero() {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <div className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">
+                            <span className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">
                               {formatDate(hero.createdAt)}
-                            </div>
+                            </span>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <motion.button
@@ -694,8 +523,7 @@ export default function ManageHero() {
                               whileTap={{ scale: 0.95 }}
                               className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                             >
-                              <IoTrashOutline size={16} />
-                              Delete
+                              <IoTrashOutline size={16} /> Delete
                             </motion.button>
                           </td>
                         </motion.tr>
@@ -705,7 +533,7 @@ export default function ManageHero() {
                 </table>
               </div>
 
-              {/* Mobile List */}
+              {/* Mobile list */}
               <div className="lg:hidden divide-y divide-zinc-200 dark:divide-zinc-800">
                 <AnimatePresence>
                   {paginatedHeroes.map((hero, index) => (
@@ -715,11 +543,7 @@ export default function ManageHero() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ delay: index * 0.02 }}
-                      className={`p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors ${
-                        selectedHeroes.has(hero._id)
-                          ? "bg-indigo-50 dark:bg-indigo-500/5"
-                          : ""
-                      }`}
+                      className={`p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors ${selectedHeroes.has(hero._id) ? "bg-indigo-50 dark:bg-indigo-500/5" : ""}`}
                     >
                       <div className="flex gap-4">
                         {isSelectionMode && (
@@ -727,8 +551,8 @@ export default function ManageHero() {
                             <input
                               type="checkbox"
                               checked={selectedHeroes.has(hero._id)}
-                              onChange={() => toggleHeroSelection(hero._id)}
-                              className="w-5 h-5 rounded-lg bg-white dark:bg-zinc-900 border-zinc-400 dark:border-zinc-600 text-indigo-600 focus:ring-indigo-500"
+                              onChange={() => toggleHero(hero._id)}
+                              className="w-5 h-5 rounded-lg text-indigo-600 focus:ring-indigo-500"
                             />
                           </div>
                         )}
@@ -742,15 +566,11 @@ export default function ManageHero() {
                           <h3 className="text-[#0C0D12] dark:text-[#FFFFFF] font-bold text-sm mb-1 line-clamp-2">
                             {hero.title}
                           </h3>
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="inline-block px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-xs font-bold">
-                              {hero.uniqueID}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-zinc-600 dark:text-zinc-400 mb-3">
-                            <span className="font-medium">
-                              {formatDate(hero.createdAt)}
-                            </span>
+                          <span className="inline-block px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-xs font-bold mb-2">
+                            {hero.uniqueID}
+                          </span>
+                          <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-3 font-medium">
+                            {formatDate(hero.createdAt)}
                           </div>
                           <motion.button
                             onClick={() => confirmDelete(hero._id)}
@@ -759,8 +579,7 @@ export default function ManageHero() {
                             whileTap={{ scale: 0.98 }}
                             className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-50 shadow-sm"
                           >
-                            <IoTrashOutline size={14} />
-                            Delete
+                            <IoTrashOutline size={14} /> Delete
                           </motion.button>
                         </div>
                       </div>
@@ -769,8 +588,6 @@ export default function ManageHero() {
                 </AnimatePresence>
               </div>
             </motion.div>
-
-            {/* Pagination */}
             {totalPages > 1 && (
               <Pagination
                 currentPage={currentPage}

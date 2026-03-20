@@ -27,6 +27,7 @@ import Signup from "../pages/Admin/Auth/SignUp";
 import StudentsFiles from "../pages/StudentsFiles/StudentsFiles";
 import AuthPage from "../pages/Admin/Auth/AuthPage";
 import TeacherFiles from "../components/Teachers/TeacherFiles";
+import MonthlyReport from "../pages/Admin/Dashboard/MonthlyReport";
 
 // ── Role groups ───────────────────────────────────────────────────────────────
 const STAFF = ["teacher", "admin", "principal", "owner"] as const;
@@ -137,6 +138,9 @@ const Router = () => {
             </PrivateRoute>
           }
         />
+
+        <Route path="/dashboard/monthly-report" element={<MonthlyReport />} />
+
         <Route
           path="management/manage-daily-lesson"
           element={

@@ -1,6 +1,7 @@
 // src/pages/Admin/Management/ManageDailyLesson.tsx
+
 import { useAuth } from "../../../context/AuthContext";
-import ExamManageShell from "./ManagementShell";
+import ManagementShell from "./ManagementShell";
 import type { ManagedRecord, ShellConfig } from "./ManagementShell";
 
 const ManageDailyLesson = () => {
@@ -46,7 +47,7 @@ const ManageDailyLesson = () => {
     },
   };
 
-  return <ExamManageShell config={config} />;
+  return <ManagementShell config={config} />;
 };
 
 export default ManageDailyLesson;
