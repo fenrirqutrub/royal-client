@@ -45,13 +45,13 @@ const Notice = () => {
     >
       {/* Label — left */}
       <div
-        className="shrink-0 px-4 py-2 font-bold text-lg md:text-xl tracking-wide z-10 select-none"
+        className="shrink-0 px-4 py-2 font-bold text-md md:text-lg tracking-wide z-10 select-none"
         style={{
           backgroundColor: "var(--color-text)",
           color: "var(--color-bg)",
         }}
       >
-        জরুরি বিজ্ঞপ্তি
+        নোটিশ
       </div>
 
       {/* Marquee */}

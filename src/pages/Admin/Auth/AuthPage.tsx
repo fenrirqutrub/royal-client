@@ -64,7 +64,7 @@ const AuthPage = () => {
               <span className="text-white text-base">🎓</span>
             </div>
             <span className="font-bold text-sm tracking-wide text-[var(--color-text)]">
-              Royal Academy
+              রয়েল একাডেমি
             </span>
           </div>
 
@@ -139,7 +139,7 @@ const AuthPage = () => {
         </div>
 
         <p className="text-[11px] text-[var(--color-gray)]">
-          © ২০২৫ রয়েল একাডেমি। সর্বস্বত্ব সংরক্ষিত।
+          &copy; ২০২৫ রয়েল একাডেমি। সর্বস্বত্ব সংরক্ষিত।
         </p>
       </motion.div>
 
@@ -165,7 +165,7 @@ const AuthPage = () => {
               <span className="text-white text-sm">🎓</span>
             </div>
             <span className="font-bold text-sm text-[var(--color-text)]">
-              Royal Academy
+              রয়েল একাডেমি
             </span>
           </div>
 
@@ -204,11 +204,11 @@ const AuthPage = () => {
             <div className="h-[72px] flex items-start">
               <TypeAnimation
                 sequence={[
-                  "আপনি কি এই",
+                  "আপনি কি ",
                   300,
-                  "আপনি কি এই ওয়েবসাইটে",
+                  "আপনি কি আমাদের ওয়েবসাইটে",
                   400,
-                  "আপনি কি এই ওয়েবসাইটে প্রথমবার আসছেন?",
+                  "আপনি কি আমাদের ওয়েবসাইটে প্রথমবার আসছেন?",
                   99999,
                 ]}
                 wrapper="h1"
@@ -218,7 +218,7 @@ const AuthPage = () => {
                 className="text-[1.75rem] font-black leading-tight text-[var(--color-text)]"
               />
             </div>
-            <p className="text-sm text-[var(--color-gray)] mt-2">
+            <p className="text-sm text-[var(--color-gray)] mt-16">
               সঠিক বিকল্পটি বেছে নিন — আমরা আপনাকে সঠিক জায়গায় নিয়ে যাব।
             </p>
           </motion.div>

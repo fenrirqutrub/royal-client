@@ -1,4 +1,3 @@
-// src/pages/Admin/Auth/Login.tsx
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { AnimatePresence } from "framer-motion";
@@ -7,54 +6,14 @@ import { Link } from "react-router";
 import toast from "react-hot-toast";
 import { useTheme } from "../../../context/ThemeProvider";
 import { useAuth } from "../../../context/AuthContext";
+import { getApiMessage } from "../../../hooks/axiosPublic";
 import ForgetPassword from "./ForgetPassword";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface LoginForm {
   phone: string;
   password: string;
 }
 
-// ─── Bengali helpers ──────────────────────────────────────────────────────────
-const toBn = (n: number | string) =>
-  String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[+d]);
-
-const BN_MONTHS = [
-  "জানুয়ারি",
-  "ফেব্রুয়ারি",
-  "মার্চ",
-  "এপ্রিল",
-  "মে",
-  "জুন",
-  "জুলাই",
-  "আগস্ট",
-  "সেপ্টেম্বর",
-  "অক্টোবর",
-  "নভেম্বর",
-  "ডিসেম্বর",
-];
-const BN_DAYS = [
-  "রবিবার",
-  "সোমবার",
-  "মঙ্গলবার",
-  "বুধবার",
-  "বৃহস্পতিবার",
-  "শুক্রবার",
-  "শনিবার",
-];
-
-const formatDobBn = (date: Date) =>
-  `${BN_DAYS[date.getDay()]}, ${toBn(date.getDate())} ${BN_MONTHS[date.getMonth()]} ${toBn(date.getFullYear())}`;
-
-// ─── Animation variants ───────────────────────────────────────────────────────
-const slideVariants = {
-  enter: (d: number) => ({ x: d > 0 ? 40 : -40, opacity: 0 }),
-  center: { x: 0, opacity: 1 },
-  exit: (d: number) => ({ x: d > 0 ? -40 : 40, opacity: 0 }),
-};
-const slideTrans = { duration: 0.24, ease: [0.25, 0.46, 0.45, 0.94] as const };
-
-// ─── Login ────────────────────────────────────────────────────────────────────
 const Login = () => {
   const { theme } = useTheme();
   const { login } = useAuth();
@@ -74,8 +33,7 @@ const Login = () => {
       await login(data.phone, data.password);
       toast.success("স্বাগতম!");
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? "ফোন নম্বর বা পাসওয়ার্ড ভুল");
+      toast.error(getApiMessage(err, "ফোন নম্বর বা পাসওয়ার্ড ভুল"));
     }
   };
 
@@ -94,12 +52,10 @@ const Login = () => {
 
   return (
     <>
-      {/* ── Forget password modal ── */}
       <AnimatePresence>
         {showForgot && <ForgetPassword onClose={() => setShowForgot(false)} />}
       </AnimatePresence>
 
-      {/* ── Login form ── */}
       <div
         className={`min-h-screen flex items-center justify-center p-4 ${
           isDark
@@ -115,7 +71,6 @@ const Login = () => {
                 : "bg-white shadow-2xl"
             }`}
           >
-            {/* Header */}
             <div className="text-center mb-8">
               <Link to="/">
                 <div
@@ -141,7 +96,6 @@ const Login = () => {
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Phone */}
               <div className="relative">
                 <Phone
                   size={17}
@@ -173,7 +127,6 @@ const Login = () => {
                 )}
               </div>
 
-              {/* Password */}
               <div className="relative">
                 <Lock
                   size={17}
@@ -210,7 +163,6 @@ const Login = () => {
                 )}
               </div>
 
-              {/* Forgot password link */}
               <div className="flex justify-end">
                 <button
                   type="button"

@@ -32,7 +32,11 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import toast from "react-hot-toast";
-import axiosPublic from "../../../hooks/axiosPublic";
+import axiosPublic, {
+  getApiMessage,
+  TOKEN_KEY,
+} from "../../../hooks/axiosPublic";
+
 import { useAuth } from "../../../context/AuthContext";
 import type { AuthUser } from "../../../context/AuthContext";
 import { getDivisions, getDistricts, getThanas } from "../../../data/bd-geo";
@@ -374,7 +378,6 @@ const Signup = () => {
   }, []);
 
   const onSubmit = async (data: SignupForm) => {
-    // Guard: dobIso must be set
     if (!dobIso) {
       toast.error("জন্ম তারিখ দিন");
       return;
@@ -430,18 +433,22 @@ const Signup = () => {
 
       if (avatarFile) fd.append("avatar", avatarFile);
 
-      const { data: res } = await axiosPublic.post<{ user: AuthUser }>(
-        "/api/auth/signup",
-        fd,
-        { headers: { "Content-Type": "multipart/form-data" } },
-      );
+      // ✅ response type properly defined
+      const { data: res } = await axiosPublic.post<{
+        success: boolean;
+        token: string;
+        user: AuthUser;
+      }>("/api/auth/signup", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
+      // ✅ token save — res.token (not res.data.token)
+      localStorage.setItem(TOKEN_KEY, res.token);
       setUser(res.user);
       toast.success("অ্যাকাউন্ট তৈরি হয়েছে! 🎉");
       navigate("/");
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? "কিছু একটা সমস্যা হয়েছে");
+      toast.error(getApiMessage(err, "কিছু একটা সমস্যা হয়েছে"));
     }
   };
 

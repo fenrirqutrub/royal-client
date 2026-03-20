@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import axiosPublic from "../../../hooks/axiosPublic";
+import axiosPublic, { getApiMessage } from "../../../hooks/axiosPublic";
 import DatePicker from "../../../components/common/Datepicker";
 
 interface Step1Form {
@@ -95,10 +95,7 @@ const ForgetPassword = ({ onClose }: { onClose: () => void }) => {
       setResetToken(res.data.resetToken);
       goNext();
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        e?.response?.data?.message ?? "ফোন নম্বর বা জন্ম তারিখ সঠিক নয়",
-      );
+      toast.error(getApiMessage(err, "ফোন নম্বর বা জন্ম তারিখ সঠিক নয়"));
     } finally {
       setVerifying(false);
     }
@@ -119,8 +116,7 @@ const ForgetPassword = ({ onClose }: { onClose: () => void }) => {
       });
       goNext();
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? "পাসওয়ার্ড পরিবর্তন ব্যর্থ");
+      toast.error(getApiMessage(err, "পাসওয়ার্ড পরিবর্তন ব্যর্থ"));
     } finally {
       setSaving(false);
     }

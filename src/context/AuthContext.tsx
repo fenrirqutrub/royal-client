@@ -1,8 +1,10 @@
-// src/context/AuthContext.tsx
 import { createContext, useContext, useCallback, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import axiosPublic from "../hooks/axiosPublic";
+import axiosPublic, { TOKEN_KEY } from "../hooks/axiosPublic";
+import type { AxiosError } from "axios";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface AuthUser {
   id: string;
@@ -19,6 +21,16 @@ export interface AuthUser {
   };
 }
 
+interface AuthApiError {
+  message?: string;
+}
+
+interface LoginResponse {
+  success: boolean;
+  token: string;
+  user: AuthUser;
+}
+
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
@@ -28,22 +40,51 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const shouldLogout = (error: unknown): boolean =>
+  (error as AxiosError)?.response?.status === 401;
+
+const shouldRetry = (failureCount: number, error: unknown): boolean => {
+  if (shouldLogout(error)) return false;
+  return failureCount < 3;
+};
+
+// ── Context ───────────────────────────────────────────────────────────────────
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // ✅ useQuery দিয়ে token always check — stale হলে refetch করবে
-  const { data: user = null, isLoading: loading } = useQuery<AuthUser | null>({
+  const { data: user = null, isLoading: loading } = useQuery<
+    AuthUser | null,
+    AxiosError<AuthApiError>
+  >({
     queryKey: ["auth", "me"],
-    queryFn: async () => {
-      const res = await axiosPublic.get<{ user: AuthUser }>("/api/auth/me");
-      return res.data.user ?? null;
+    queryFn: async (): Promise<AuthUser | null> => {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) return null;
+
+      try {
+        const res = await axiosPublic.get<{ user: AuthUser }>("/api/auth/me");
+        return res.data.user ?? null;
+      } catch (error: unknown) {
+        if (shouldLogout(error)) {
+          localStorage.removeItem(TOKEN_KEY);
+          return null;
+        }
+        throw error;
+      }
     },
-    staleTime: 1000 * 60 * 5, // 5 মিনিট fresh
-    retry: false, // 401 এ retry করবে না
-    refetchOnWindowFocus: true, // window focus এ recheck
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    retry: shouldRetry,
+    retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 8000),
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
   });
 
   const setUser = useCallback(
@@ -54,14 +95,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const login = useCallback(
-    async (phoneOrEmail: string, password: string) => {
+    async (phoneOrEmail: string, password: string): Promise<void> => {
       const isEmail = phoneOrEmail.includes("@");
       const payload = isEmail
         ? { email: phoneOrEmail, password }
         : { phone: phoneOrEmail, password };
-      const { data } = await axiosPublic.post("/api/auth/login", payload);
 
-      // cache এ set করো — আলাদা /me call লাগবে না
+      const { data } = await axiosPublic.post<LoginResponse>(
+        "/api/auth/login",
+        payload,
+      );
+
+      localStorage.setItem(TOKEN_KEY, data.token);
       queryClient.setQueryData(["auth", "me"], data.user);
 
       if (!data.user.onboardingComplete) {
@@ -73,11 +118,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [navigate, queryClient],
   );
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (): Promise<void> => {
     await axiosPublic.post("/api/auth/logout").catch(() => {});
-    // cache clear করো
+    localStorage.removeItem(TOKEN_KEY);
     queryClient.setQueryData(["auth", "me"], null);
-    queryClient.clear();
+    queryClient.removeQueries({ queryKey: ["auth"] });
     navigate("/", { replace: true });
   }, [navigate, queryClient]);
 
@@ -97,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
