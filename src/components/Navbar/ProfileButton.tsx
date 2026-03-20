@@ -8,12 +8,10 @@ import {
   LayoutDashboard,
   UserCircle,
   Key,
-  Sun,
-  Moon,
 } from "lucide-react";
 import { FaUserAlt } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
-import { useTheme } from "../../context/ThemeProvider";
+import ThemeToggle from "./ThemeToggle";
 
 interface ProfileButtonProps {
   onLogout?: () => void;
@@ -128,81 +126,6 @@ const Avatar = memo<AvatarProps>(({ avatarUrl, size, className = "" }) => {
 });
 Avatar.displayName = "Avatar";
 
-/* ─── ThemeRow ────────────────────────────────────────────────────────────── */
-const ThemeRow = memo(({ onClose }: { onClose: () => void }) => {
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === "dark";
-
-  const handleClick = useCallback(() => {
-    toggleTheme();
-    onClose(); // ✅ theme change-এর পর popup বন্ধ
-  }, [toggleTheme, onClose]);
-
-  return (
-    <button
-      onClick={handleClick}
-      className="w-full flex items-center justify-between px-4 py-2.5 outline-none cursor-pointer transition-colors"
-      style={{ color: "var(--color-text)" }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-          "var(--color-active-bg)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-          "transparent";
-      }}
-    >
-      <span className="text-sm font-medium">Theme</span>
-
-      {/* Toggle pill */}
-      <div
-        className="relative flex items-center rounded-full p-0.5 transition-colors duration-300"
-        style={{
-          width: 52,
-          height: 28,
-          backgroundColor: isDark
-            ? "rgba(99,102,241,0.25)"
-            : "rgba(234,179,8,0.2)",
-          border: `1px solid ${isDark ? "rgba(99,102,241,0.4)" : "rgba(234,179,8,0.4)"}`,
-        }}
-      >
-        <motion.div
-          className="absolute rounded-full flex items-center justify-center"
-          animate={{ x: isDark ? 24 : 0 }}
-          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          style={{
-            width: 22,
-            height: 22,
-            background: isDark
-              ? "linear-gradient(135deg,#6366f1,#818cf8)"
-              : "linear-gradient(135deg,#fbbf24,#f59e0b)",
-            boxShadow: isDark
-              ? "0 0 8px rgba(99,102,241,0.5)"
-              : "0 0 8px rgba(251,191,36,0.5)",
-          }}
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={theme}
-              initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
-              animate={{ opacity: 1, rotate: 0, scale: 1 }}
-              exit={{ opacity: 0, rotate: 90, scale: 0.5 }}
-              transition={{ duration: 0.2 }}
-            >
-              {isDark ? (
-                <Moon size={12} color="white" />
-              ) : (
-                <Sun size={12} color="white" />
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </motion.div>
-      </div>
-    </button>
-  );
-});
-ThemeRow.displayName = "ThemeRow";
-
 /* ─── ProfileButton ───────────────────────────────────────────────────────── */
 const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
   const [popupOpen, setPopupOpen] = useState(false);
@@ -216,7 +139,6 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
   const avatarUrl = user?.avatar?.url ?? null;
   const displayPhone = user?.phone ?? "";
   const displayName = user?.name ?? "User";
-  const isStudent = role === "student";
 
   // outside click → close
   useEffect(() => {
@@ -351,16 +273,10 @@ const ProfileButton = memo<ProfileButtonProps>(({ onLogout, size = 35 }) => {
                   {badge.label}
                 </span>
               </div>
-            </div>
-
-            {/* ── Theme toggle — শুধু student ── */}
-            {isStudent && (
-              <div
-                style={{ borderBottom: "1px solid var(--color-active-border)" }}
-              >
-                <ThemeRow onClose={closePopup} />
+              <div className="">
+                <ThemeToggle size={40} />
               </div>
-            )}
+            </div>
 
             {/* ── Menu items ── */}
             {menuItems.length > 0 && (
