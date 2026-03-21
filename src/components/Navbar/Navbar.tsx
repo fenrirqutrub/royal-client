@@ -7,8 +7,8 @@ import axiosPublic from "../../hooks/axiosPublic";
 import DesktopNavbar from "./DesktopNavbar";
 import MobileNavbar, { type BadgeCounts } from "./MobileNavbar";
 import ProfileButton from "./ProfileButton";
-import logo from "../../assets/logo 2.png";
 import type { NoticeItem } from "../../pages/Notice/NoticeModal";
+import Logo from "./Logo";
 
 export type MenuItem = { readonly name: string; readonly path: string };
 
@@ -172,19 +172,8 @@ const Navbar = memo(() => {
 
             {/* Mobile: logo + profile */}
             <div className="flex md:hidden items-center justify-between w-full">
-              <button
-                className="cursor-pointer outline-none select-none"
-                onClick={handleLogo}
-                aria-label="Go home"
-              >
-                <img
-                  src={logo}
-                  alt="Royal Academy"
-                  className="h-8 w-auto object-contain"
-                  draggable={false}
-                />
-              </button>
-
+              {/* ✅ wrapper <button> removed — onClick lives inside Logo now */}
+              <Logo className="h-12 w-auto pt-5" onClick={handleLogo} />
               <ProfileButton size={32} />
             </div>
           </div>

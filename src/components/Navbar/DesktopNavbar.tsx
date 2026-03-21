@@ -2,8 +2,8 @@
 import { memo } from "react";
 import { motion } from "framer-motion";
 import ProfileButton from "./ProfileButton";
-import logo from "../../assets/logo 2.png";
 import type { MenuItem } from "./Navbar";
+import Logo from "./Logo";
 
 const SPRING_TRANSITION = {
   type: "spring",
@@ -21,15 +21,7 @@ interface NavItemProps {
 
 const NavItem = memo<NavItemProps>(({ item, isActive, onClick }) => (
   <li className="relative">
-    <button
-      onClick={() => onClick(item.path)}
-      className="px-5 py-2.5 rounded-lg font-medium capitalize transition-colors cursor-pointer relative z-10 outline-none bangla"
-      style={{
-        color: isActive ? "var(--color-active-text)" : "var(--color-gray)",
-      }}
-    >
-      {item.name}
-    </button>
+    {/* Active pill — rendered FIRST so it sits behind the button text */}
     {isActive && (
       <motion.div
         layoutId="desktopActiveTab"
@@ -41,6 +33,15 @@ const NavItem = memo<NavItemProps>(({ item, isActive, onClick }) => (
         transition={SPRING_TRANSITION}
       />
     )}
+    <button
+      onClick={() => onClick(item.path)}
+      className="relative z-10 px-5 py-2.5 rounded-lg font-medium capitalize transition-colors cursor-pointer outline-none bangla"
+      style={{
+        color: isActive ? "var(--color-active-text)" : "var(--color-gray)",
+      }}
+    >
+      {item.name}
+    </button>
   </li>
 ));
 NavItem.displayName = "NavItem";
@@ -57,20 +58,9 @@ const DesktopNavbar = memo<DesktopNavbarProps>(
   ({ menuConfig, activeItem, onNavigate, onLogoClick }) => (
     <>
       {/* Logo — left */}
-      <button
-        className="cursor-pointer outline-none select-none flex-shrink-0"
-        onClick={onLogoClick}
-        aria-label="Go home"
-      >
-        <img
-          src={logo}
-          alt="Royal Academy"
-          className="h-10 md:h-12 w-auto object-contain"
-          draggable={false}
-        />
-      </button>
+      <Logo className="" onClick={onLogoClick} />
 
-      {/* Nav links — center, desktop only */}
+      {/* Nav links — center */}
       <ul className="hidden md:flex items-center space-x-1 relative">
         {menuConfig.map((item) => (
           <NavItem
@@ -82,7 +72,7 @@ const DesktopNavbar = memo<DesktopNavbarProps>(
         ))}
       </ul>
 
-      {/* Profile — right, desktop only */}
+      {/* Profile — right */}
       <div className="hidden md:flex items-center flex-shrink-0">
         <ProfileButton size={35} />
       </div>

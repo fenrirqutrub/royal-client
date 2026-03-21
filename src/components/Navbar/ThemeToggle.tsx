@@ -1,3 +1,4 @@
+// ThemeToggle.tsx
 import { memo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
@@ -36,7 +37,9 @@ const ThemeToggle = memo<ThemeToggleProps>(
       <motion.button
         onClick={handleClick}
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        className="relative flex items-center justify-center outline-none border-none rounded-full cursor-pointer p-2 w-full"
+        // ✅ Fixed: removed `w-full` — it conflicted with the explicit `width: size` inline style,
+        //    causing the button to stretch full-width inside flex containers (e.g. the profile dropdown)
+        className="relative flex items-center justify-center outline-none border-none rounded-full cursor-pointer p-2 flex-shrink-0"
         style={{ width: size, height: size, ...btnBaseStyle }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}

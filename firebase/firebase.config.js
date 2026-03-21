@@ -5,12 +5,12 @@ import { initializeApp } from "firebase/app";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAm828IkAwxMmnDoiSjWluvz27cPC5JECA",
-  authDomain: "royal-academy-belkuchi.firebaseapp.com",
-  projectId: "royal-academy-belkuchi",
-  storageBucket: "royal-academy-belkuchi.firebasestorage.app",
-  messagingSenderId: "478867087483",
-  appId: "1:478867087483:web:168c320b133eb77dc042de",
+  apiKey: "AIzaSyCt882szzCcibofUIGcBYow1O3_Xl3uj-Q",
+  authDomain: "ra-edu.firebaseapp.com",
+  projectId: "ra-edu",
+  storageBucket: "ra-edu.firebasestorage.app",
+  messagingSenderId: "400108741598",
+  appId: "1:400108741598:web:c02d733e83bf30ea3b334f",
 };
 
 // Initialize Firebase

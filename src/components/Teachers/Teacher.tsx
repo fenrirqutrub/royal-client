@@ -82,12 +82,12 @@ const Teacher = () => {
           transition={{ duration: 0.4, delay: 0.2 }}
           className="flex flex-col gap-5"
         >
-          <Marquee pauseOnHover speed={40} gradient={false}>
+          <Marquee speed={40} gradient={false}>
             {isLoading
               ? skeletons.map((_, i) => <SkeletonCard key={i} />)
               : teachers.map((t) => <TeacherCard key={t._id} teacher={t} />)}
           </Marquee>
-          <Marquee pauseOnHover speed={40} gradient={false} direction="right">
+          <Marquee speed={40} gradient={false} direction="right">
             {isLoading
               ? skeletons.map((_, i) => <SkeletonCard key={i} />)
               : teachers.map((t) => <TeacherCard key={t._id} teacher={t} />)}
