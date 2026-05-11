@@ -27,6 +27,7 @@ import DailyLessonCard from "./DailyLessonCard";
 import { useNavigate } from "react-router";
 import DailyLessonHeader from "./DailyLessonHeader";
 import { Helmet } from "react-helmet-async";
+import Loader from "../../components/common/Loader";
 
 const GUEST_PREVIEW_CLASS = "ষষ্ঠ শ্রেণি";
 
@@ -190,10 +191,11 @@ const DailyLesson = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  // ─── Date param ───────────────────────────────────────────────────────────
+  // ─── Date param ───────────────────────────────────
   const dateParam = useMemo(() => toDateParam(selectedDate), [selectedDate]);
 
-  // ─── Main Query — filtered by backend ────────────────────────────────────
+  // ─── Main Query — filtered by backend ────────────────────
+
   const {
     data = [],
     isLoading,
@@ -203,6 +205,7 @@ const DailyLesson = () => {
     queryKey: ["daily-lessons", dateParam],
     queryFn: async () => {
       const params: Record<string, string> = { date: dateParam };
+
       const res = await axiosPublic.get("/api/daily-lesson", { params });
       const payload = res.data;
       if (Array.isArray(payload)) return payload;
@@ -244,7 +247,6 @@ const DailyLesson = () => {
     return new Set<string>(activeDatesQuery.data ?? []);
   }, [activeDatesQuery.data]);
 
-  // ─── Frontend filters (class/teacher/subject) ─────────────────────────────
   const teacherBaseData = useMemo(() => {
     let result = data;
     if (selectedClass !== "all")
@@ -378,7 +380,7 @@ const DailyLesson = () => {
     defaultTeacherFilter,
   ]);
 
-  // ─── Auto reset invalid filters ───────────────────────────────────────────
+  // ─── Auto reset invalid filters ─────────────────────
   useEffect(() => {
     if (selectedSubject === "all") return;
     if (!subjectOptions.some((o) => o.value === selectedSubject))
@@ -391,7 +393,7 @@ const DailyLesson = () => {
       setSelectedTeacher(defaultTeacherFilter);
   }, [teacherOptions, selectedTeacher, defaultTeacherFilter]);
 
-  // ─── Permissions ──────────────────────────────────────────────────────────
+  // ─── Permissions ──────────────────────
   const getLessonPermissions = (lesson: DailyLessonData) => {
     if (isGuest) return { canEdit: false, canDelete: false };
     if (isManager) return { canEdit: true, canDelete: true };
@@ -400,7 +402,7 @@ const DailyLesson = () => {
     return { canEdit: isOwn, canDelete: isOwn };
   };
 
-  // ─── Handlers ─────────────────────────────────────────────────────────────
+  // ─── Handlers ─────────────────────────────
   const handleReset = () => {
     setSelectedDate(new Date());
     setSelectedClass("all");
@@ -427,7 +429,7 @@ const DailyLesson = () => {
     return classId;
   };
 
-  // ─── Delete Mutation ──────────────────────────────────────────────────────
+  // ─── Delete Mutation ────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: (id: string) => axiosPublic.delete(`/api/daily-lesson/${id}`),
     onSuccess: () => {
@@ -441,7 +443,7 @@ const DailyLesson = () => {
       ),
   });
 
-  // ─── Guest Content ────────────────────────────────────────────────────────
+  // ─── Guest Content ──────────────────────────────
   const buildGuestContent = () => {
     const class6 = groupedByClass.find(
       ({ className }) => className === GUEST_PREVIEW_CLASS,
@@ -480,11 +482,11 @@ const DailyLesson = () => {
     );
   };
 
-  // ─── Loading — শুধু প্রথমবার skeleton ─────────────────────────────────────
+  // ─── Loading — শুধু প্রথমবার skeleton ───────────
   if (isLoading && data.length === 0)
     return <Skeleton variant="daily-lesson" />;
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── Render ─────────────────────────
   return (
     <div className="relative mx-auto max-w-7xl">
       <Helmet>
@@ -500,9 +502,7 @@ const DailyLesson = () => {
         />
       </Helmet>
       {/* subtle fetching indicator */}
-      {isFetching && (
-        <div className="fixed top-0 left-0 right-0 z-[9999] h-[2px] bg-gradient-to-r from-[var(--color-brand)] to-[var(--color-brand-hover)] animate-pulse" />
-      )}
+      {isFetching && <Loader />}
 
       <DailyLessonHeader
         isGuest={isGuest}
