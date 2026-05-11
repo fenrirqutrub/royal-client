@@ -1,0 +1,139 @@
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axiosPublic from "../../hooks/axiosPublic";
+import Skeleton from "../common/Skeleton";
+import { type Teacher, TeacherCard } from "./TeacherFiles.Ui";
+import SearchBar from "../common/Searchbar";
+import EmptyState from "../common/Emptystate";
+import { useAuth } from "../../context/AuthContext";
+import { toBn } from "../../utility/Formatters";
+import type { SessionSummary } from "../common/SessionSections";
+
+const TeacherFiles = () => {
+  const [search, setSearch] = useState("");
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const canDelete = ["owner", "admin", "principal"].includes(user?.role ?? "");
+
+  const {
+    data: teachers = [],
+    isLoading,
+    isError,
+  } = useQuery<Teacher[]>({
+    queryKey: ["teacherFiles"],
+    queryFn: async () => {
+      const { data } = await axiosPublic.get("/api/users");
+      const list = Array.isArray(data) ? data : [];
+      return list.filter(
+        (u: Teacher) =>
+          (u.role === "teacher" ||
+            u.role === "admin" ||
+            u.role === "principal") &&
+          !u.isHardcoded,
+      );
+    },
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: sessionSummary = [] } = useQuery<SessionSummary[]>({
+    queryKey: ["sessions-summary"],
+    queryFn: async () => {
+      const { data } = await axiosPublic.get("/api/sessions/summary");
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!user,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+
+  const sessionMap = useMemo(() => {
+    return new Map(sessionSummary.map((s) => [String(s._id), s]));
+  }, [sessionSummary]);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await axiosPublic.delete(`/api/users/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacherFiles"] });
+      queryClient.invalidateQueries({ queryKey: ["sessions-summary"] });
+    },
+  });
+
+  const handleDelete = async (id: string) => {
+    await deleteMutation.mutateAsync(id);
+  };
+
+  // Wire up your edit handler here — open a drawer/modal as needed
+  const handleEdit = (teacher: Teacher) => {
+    // e.g. setEditingTeacher(teacher) to open an edit modal/drawer
+    console.log("Edit teacher:", teacher);
+  };
+
+  const filtered = teachers.filter((t) => {
+    const q = search.toLowerCase();
+    return (
+      !q ||
+      t.name?.toLowerCase().includes(q) ||
+      t.phone?.includes(q) ||
+      t.email?.toLowerCase().includes(q) ||
+      t.collegeName?.toLowerCase().includes(q) ||
+      t.district?.toLowerCase().includes(q) ||
+      t.thana?.toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div className="min-h-screen px-4 sm:px-6 bg-[var(--color-bg)] relative">
+      <div className="flex items-end justify-center md:justify-between flex-wrap gap-4 mb-10">
+        <div>
+          <p className="text-xl text-[var(--color-gray)]">
+            মোট{" "}
+            <span className="font-semibold" style={{ color: "#3b82f6" }}>
+              {toBn(teachers.length)}
+            </span>{" "}
+            জন নিবন্ধিত
+          </p>
+        </div>
+        <div className="w-full sm:w-72">
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="নাম, ফোন বা জেলা দিয়ে খুঁজুন..."
+          />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <Skeleton variant="teacher-card" count={6} />
+      ) : isError ? (
+        <div className="text-center py-20 text-rose-400 text-sm bangla">
+          ডেটা লোড করতে সমস্যা হয়েছে।
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          query={search}
+          message={!search ? "কোনো শিক্ষক পাওয়া যায়নি" : undefined}
+        />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((t, i) => (
+            <TeacherCard
+              key={t._id}
+              teacher={t}
+              sessionInfo={sessionMap.get(String(t._id)) ?? null}
+              index={i}
+              onDelete={canDelete ? handleDelete : undefined}
+              onEdit={canDelete ? handleEdit : undefined}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TeacherFiles;
