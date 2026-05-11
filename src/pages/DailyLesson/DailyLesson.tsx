@@ -27,7 +27,6 @@ import DailyLessonCard from "./DailyLessonCard";
 import { useNavigate } from "react-router";
 import DailyLessonHeader from "./DailyLessonHeader";
 import { Helmet } from "react-helmet-async";
-import Loader from "../../components/common/Loader";
 
 const GUEST_PREVIEW_CLASS = "ষষ্ঠ শ্রেণি";
 
@@ -194,7 +193,7 @@ const DailyLesson = () => {
   // ─── Date param ───────────────────────────────────
   const dateParam = useMemo(() => toDateParam(selectedDate), [selectedDate]);
 
-  // ─── Main Query — filtered by backend ────────────────────
+  // DailyLesson.tsx — শুধু query অংশ পরিবর্তন
 
   const {
     data = [],
@@ -205,7 +204,6 @@ const DailyLesson = () => {
     queryKey: ["daily-lessons", dateParam],
     queryFn: async () => {
       const params: Record<string, string> = { date: dateParam };
-
       const res = await axiosPublic.get("/api/daily-lesson", { params });
       const payload = res.data;
       if (Array.isArray(payload)) return payload;
@@ -216,6 +214,7 @@ const DailyLesson = () => {
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
     refetchInterval: false,
+    // ✅ keepPreviousData — date switch এ flash হবে না
     placeholderData: (prev) => prev ?? [],
   });
 
@@ -502,7 +501,9 @@ const DailyLesson = () => {
         />
       </Helmet>
       {/* subtle fetching indicator */}
-      {isFetching && <Loader />}
+      {isFetching && (
+        <div className="fixed top-0 left-0 right-0 z-[9999] h-[2px] bg-gradient-to-r from-[var(--color-brand)] to-[var(--color-brand-hover)] animate-pulse" />
+      )}
 
       <DailyLessonHeader
         isGuest={isGuest}
