@@ -190,10 +190,11 @@ const DailyLesson = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  // ─── Date param ───────────────────────────────────────────────────────────
+  // ─── Date param ───────────────────────────────────
   const dateParam = useMemo(() => toDateParam(selectedDate), [selectedDate]);
 
-  // ─── Main Query — filtered by backend ────────────────────────────────────
+  // DailyLesson.tsx — শুধু query অংশ পরিবর্তন
+
   const {
     data = [],
     isPending,
@@ -213,6 +214,7 @@ const DailyLesson = () => {
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
     refetchInterval: false,
+    // ✅ keepPreviousData — date switch এ flash হবে না
     placeholderData: (prev) => prev ?? [],
   });
 
@@ -252,7 +254,6 @@ const DailyLesson = () => {
     return new Set<string>(activeDatesQuery.data ?? []);
   }, [activeDatesQuery.data]);
 
-  // ─── Frontend filters (class/teacher/subject) ─────────────────────────────
   const teacherBaseData = useMemo(() => {
     let result = data;
     if (selectedClass !== "all")
@@ -386,7 +387,7 @@ const DailyLesson = () => {
     defaultTeacherFilter,
   ]);
 
-  // ─── Auto reset invalid filters ───────────────────────────────────────────
+  // ─── Auto reset invalid filters ─────────────────────
   useEffect(() => {
     if (selectedSubject === "all") return;
     if (!subjectOptions.some((o) => o.value === selectedSubject))
@@ -399,7 +400,7 @@ const DailyLesson = () => {
       setSelectedTeacher(defaultTeacherFilter);
   }, [teacherOptions, selectedTeacher, defaultTeacherFilter]);
 
-  // ─── Permissions ──────────────────────────────────────────────────────────
+  // ─── Permissions ──────────────────────
   const getLessonPermissions = (lesson: DailyLessonData) => {
     if (isGuest) return { canEdit: false, canDelete: false };
     if (isManager) return { canEdit: true, canDelete: true };
@@ -408,7 +409,7 @@ const DailyLesson = () => {
     return { canEdit: isOwn, canDelete: isOwn };
   };
 
-  // ─── Handlers ─────────────────────────────────────────────────────────────
+  // ─── Handlers ─────────────────────────────
   const handleReset = () => {
     setSelectedDate(new Date());
     setSelectedClass("all");
@@ -435,7 +436,7 @@ const DailyLesson = () => {
     return classId;
   };
 
-  // ─── Delete Mutation ──────────────────────────────────────────────────────
+  // ─── Delete Mutation ────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: (id: string) => axiosPublic.delete(`/api/daily-lesson/${id}`),
     onSuccess: () => {
@@ -449,7 +450,7 @@ const DailyLesson = () => {
       ),
   });
 
-  // ─── Guest Content ────────────────────────────────────────────────────────
+  // ─── Guest Content ──────────────────────────────
   const buildGuestContent = () => {
     const class6 = groupedByClass.find(
       ({ className }) => className === GUEST_PREVIEW_CLASS,
@@ -491,7 +492,7 @@ const DailyLesson = () => {
   // ─── Loading — শুধু প্রথমবার skeleton ─────────────────────────────────────
   if (isPending) return <Skeleton variant="daily-lesson" />;
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── Render ─────────────────────────
   return (
     <div className="relative mx-auto max-w-7xl">
       <Helmet>

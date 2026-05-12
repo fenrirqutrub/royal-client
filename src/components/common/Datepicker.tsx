@@ -176,7 +176,7 @@ const DatePicker = ({
   const hasActivity = (day: number) =>
     activeDates?.has(`${viewYear}-${viewMonth}-${day}`) ?? false;
 
-  // ── Pick handlers ──────────────────────────────────────────────────────────
+  // ── Pick handlers ──────────────────────────────────
   const pickDay = (day: number) => {
     if (isDis(day)) return;
     const date = new Date(viewYear, viewMonth, day);
