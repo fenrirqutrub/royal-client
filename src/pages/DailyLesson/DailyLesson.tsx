@@ -196,7 +196,7 @@ const DailyLesson = () => {
   // ─── Main Query — filtered by backend ────────────────────────────────────
   const {
     data = [],
-    isLoading,
+    isPending,
     isError,
     isFetching,
   } = useQuery<DailyLessonData[]>({
@@ -215,6 +215,14 @@ const DailyLesson = () => {
     refetchInterval: false,
     placeholderData: (prev) => prev ?? [],
   });
+
+  useEffect(() => {
+    if (isFetching) {
+      console.time("fetch");
+    } else {
+      console.timeEnd("fetch");
+    }
+  }, [isFetching]);
 
   // ─── Active Dates Query — calendar highlight ──────────────────────────────
   const activeDatesQuery = useQuery<string[]>({
@@ -481,8 +489,7 @@ const DailyLesson = () => {
   };
 
   // ─── Loading — শুধু প্রথমবার skeleton ─────────────────────────────────────
-  if (isLoading && data.length === 0)
-    return <Skeleton variant="daily-lesson" />;
+  if (isPending) return <Skeleton variant="daily-lesson" />;
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -556,7 +563,9 @@ const DailyLesson = () => {
             exit="exit"
             className="px-2 sm:px-3 md:px-0"
           >
-            {groupedByClass.length > 0 ? (
+            {isFetching ? (
+              <Skeleton variant="daily-lesson" />
+            ) : groupedByClass.length > 0 ? (
               isGuest ? (
                 buildGuestContent()
               ) : (

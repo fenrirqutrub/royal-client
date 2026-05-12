@@ -144,7 +144,6 @@ const WeeklyExam = () => {
   const [deleteTarget, setDeleteTarget] = useState<WeeklyExamData | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-  // ─── Live Dhaka time — প্রতি ৩০ সেকেন্ডে update ────────────
   const [dhakaNow, setDhakaNow] = useState<Date>(getDhakaNow());
 
   useEffect(() => {
@@ -154,7 +153,6 @@ const WeeklyExam = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // ─── User info ───────────────────────────────────────────────
   const userRole = user?.role ?? "student";
   const userSlug = user?.slug ?? "";
   const isManager = MANAGER_ROLES.includes(userRole);
@@ -175,19 +173,13 @@ const WeeklyExam = () => {
     prevDefaultRef.current = defaultTeacherFilter;
   }, [defaultTeacherFilter]);
 
-  // ─────────────────────────────────────────────────────────────
-  // ✅ Saturday noon check — live dhakaNow দিয়ে
-  // ─────────────────────────────────────────────────────────────
   const isAfterSaturdayNoon = useMemo(() => {
-    const day = dhakaNow.getDay(); // 6 = Saturday
+    const day = dhakaNow.getDay();
     const hour = dhakaNow.getHours();
     const minute = dhakaNow.getMinutes();
     return day === 6 && (hour > 12 || (hour === 12 && minute >= 0));
   }, [dhakaNow]);
 
-  // ─────────────────────────────────────────────────────────────
-  // ✅ Meta query
-  // ─────────────────────────────────────────────────────────────
   const { data: metaData, isLoading: isMetaLoading } =
     useQuery<ExamMetaResponse>({
       queryKey: ["weekly-exams-meta"],
@@ -215,9 +207,6 @@ const WeeklyExam = () => {
     return String(Number(lastExamNumber) + 1);
   }, [lastExamNumber]);
 
-  // ─────────────────────────────────────────────────────────────
-  // ✅ displayExamNumbers — pagination এ কী দেখাবে
-  // ─────────────────────────────────────────────────────────────
   const displayExamNumbers = useMemo(() => {
     if (isAfterSaturdayNoon) {
       return Array.from(new Set([...examNumbers, nextExpectedExamNumber]));
@@ -225,11 +214,7 @@ const WeeklyExam = () => {
     return examNumbers;
   }, [examNumbers, isAfterSaturdayNoon, nextExpectedExamNumber]);
 
-  // ─────────────────────────────────────────────────────────────
-  // ✅ activeExamNumber — কোন exam number active/selected
-  // ─────────────────────────────────────────────────────────────
   const activeExamNumber = useMemo(() => {
-    // User manually select করলে সেটা
     if (
       selectedExamNumber &&
       displayExamNumbers.includes(String(selectedExamNumber).trim())
@@ -237,12 +222,10 @@ const WeeklyExam = () => {
       return String(selectedExamNumber).trim();
     }
 
-    // Saturday 12 PM এর পরে → next exam number
     if (isAfterSaturdayNoon) {
       return nextExpectedExamNumber;
     }
 
-    // Otherwise → last real exam
     return lastExamNumber ?? nextExpectedExamNumber;
   }, [
     selectedExamNumber,
@@ -273,27 +256,37 @@ const WeeklyExam = () => {
     navigate(`/dashboard/add-weekly-exam?exam=${exam}`);
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // ✅ Main data query
-  // — activeExamNumber দিয়ে fetch
-  // — placeholderData নেই (পুরনো data দেখাবে না)
-  // — staleTime: 0 (সবসময় fresh fetch)
-  // ─────────────────────────────────────────────────────────────
+  // ✅ Query 1 — teacher dropdown এর জন্য (filter ছাড়া)
+  const { data: allExamData } = useQuery<WeeklyExamData[]>({
+    queryKey: ["weekly-exams-all-teachers", activeExamNumber],
+    queryFn: async () => {
+      const res = await axiosPublic.get("/api/weekly-exams", {
+        params: { examNumber: activeExamNumber },
+      });
+      const payload = res.data;
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload?.data)) return payload.data;
+      return [];
+    },
+    enabled: !!activeExamNumber,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  // ✅ Query 2 — card দেখানোর জন্য (teacher filter সহ)
   const {
-    data: examData,
+    data: filteredExamData,
     isLoading: isExamLoading,
     isError,
   } = useQuery<WeeklyExamData[]>({
-    queryKey: ["weekly-exams", activeExamNumber, selectedTeacher],
+    queryKey: ["weekly-exams-filtered", activeExamNumber, selectedTeacher],
     queryFn: async () => {
       const params: Record<string, string> = {};
-
       if (activeExamNumber) params.examNumber = activeExamNumber;
       if (selectedTeacher !== "all") params.teacherSlug = selectedTeacher;
 
       const res = await axiosPublic.get("/api/weekly-exams", { params });
       const payload = res.data;
-
       if (Array.isArray(payload)) return payload;
       if (Array.isArray(payload?.data)) return payload.data;
       return [];
@@ -302,23 +295,19 @@ const WeeklyExam = () => {
     staleTime: 0,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
     retry: 1,
-    // ❌ placeholderData নেই — পুরনো data আর দেখাবে না
   });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const data = examData ?? [];
+  const data = useMemo(() => filteredExamData ?? [], [filteredExamData]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
 
-  // ─── Teacher options ──────────────────────────────────────────
   const teacherOptions = useMemo(() => {
     const map = new Map<string, string>();
 
-    data.forEach((e) => {
+    (allExamData ?? []).forEach((e) => {
       if (e.teacherSlug && e.teacher) {
         map.set(e.teacherSlug, e.teacher);
       }
@@ -335,7 +324,7 @@ const WeeklyExam = () => {
         label: name,
       })),
     ];
-  }, [data, userRole, userSlug, user?.name]);
+  }, [allExamData, userRole, userSlug, user?.name]);
 
   useEffect(() => {
     const exists = teacherOptions.some((opt) => opt.value === selectedTeacher);
@@ -430,7 +419,8 @@ const WeeklyExam = () => {
     mutationFn: (id: string) => axiosPublic.delete(`/api/weekly-exams/${id}`),
     onSuccess: () => {
       toast.success("সফলভাবে মুছে ফেলা হয়েছে");
-      qc.invalidateQueries({ queryKey: ["weekly-exams"] });
+      qc.invalidateQueries({ queryKey: ["weekly-exams-all-teachers"] });
+      qc.invalidateQueries({ queryKey: ["weekly-exams-filtered"] });
       qc.invalidateQueries({ queryKey: ["weekly-exams-meta"] });
       setDeleteTarget(null);
     },
@@ -624,7 +614,8 @@ const WeeklyExam = () => {
             record={editTarget}
             onClose={() => setEditTarget(null)}
             onSuccess={() => {
-              qc.invalidateQueries({ queryKey: ["weekly-exams"] });
+              qc.invalidateQueries({ queryKey: ["weekly-exams-all-teachers"] });
+              qc.invalidateQueries({ queryKey: ["weekly-exams-filtered"] });
               qc.invalidateQueries({ queryKey: ["weekly-exams-meta"] });
             }}
           />
