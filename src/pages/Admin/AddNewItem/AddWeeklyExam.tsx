@@ -292,46 +292,6 @@ const NumberTypeToggle = ({ value, onChange }: NumberTypeToggleProps) => {
   );
 };
 
-// ─── Hint chips ────────────────────────────────────────────
-interface HintChipsProps {
-  numberType: NumberType;
-  onPick: (hint: string) => void;
-}
-
-const HintChips = ({ numberType, onPick }: HintChipsProps) => {
-  const examples =
-    numberType === "chapterNumber"
-      ? ["১", "২.৫", "১, ৩", "১-৩", "৪, ৬-৮"]
-      : ["১০", "১০-১৫", "২০, ২২", "৫-৮, ১২"];
-
-  return (
-    <motion.div
-      key={numberType}
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4 }}
-      transition={{ duration: 0.2 }}
-      className="flex flex-wrap gap-1.5 mt-2"
-    >
-      {examples.map((ex) => (
-        <motion.button
-          key={ex}
-          type="button"
-          whileHover={{ scale: 1.06, y: -1 }}
-          whileTap={{ scale: 0.94 }}
-          onClick={() => onPick(ex)}
-          className="px-2.5 py-1 rounded-lg text-[11px] font-medium bangla border
-            border-[var(--color-active-border)] bg-[var(--color-active-bg)]
-            text-[var(--color-gray)] hover:border-violet-500 hover:text-violet-500
-            transition-colors duration-150 select-none"
-        >
-          {ex}
-        </motion.button>
-      ))}
-    </motion.div>
-  );
-};
-
 // ─── TopicsField ───────────────────────────────────────────
 interface TextAreaFieldProps {
   field: ControllerRenderProps<WeeklyExamFormData, "topics">;
@@ -998,7 +958,7 @@ const AddWeeklyExam = () => {
                     validate: (v) => validateNumberValue(v, numberTypeLabel),
                   }}
                   render={({ field, fieldState }) => (
-                    <div className="flex items-start gap-3">
+                    <div className="flex flex-col lg:flex-row items-start gap-3">
                       {/* Left: tab only needed width */}
                       <div className="shrink-0 w-fit">
                         <NumberTypeToggle
@@ -1009,7 +969,7 @@ const AddWeeklyExam = () => {
 
                       {/* Right: input takes all remaining space */}
                       <div className="flex-1 min-w-0">
-                        <div className="relative">
+                        <div className="relative ">
                           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
                             <AnimatePresence mode="wait">
                               <motion.span
@@ -1062,18 +1022,6 @@ const AddWeeklyExam = () => {
                             isValid={fieldState.isTouched && !fieldState.error}
                           />
                         </div>
-
-                        <AnimatePresence mode="wait">
-                          {!field.value && (
-                            <HintChips
-                              numberType={numberType}
-                              onPick={(h) => {
-                                field.onChange(h);
-                                field.onBlur?.();
-                              }}
-                            />
-                          )}
-                        </AnimatePresence>
 
                         <ErrorMsg msg={fieldState.error?.message} />
 
@@ -1180,7 +1128,7 @@ const AddWeeklyExam = () => {
                       justify-center gap-2 transition-all duration-300 bangla border-2
                       ${
                         isValid && !mutation.isPending
-                          ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-transparent shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30"
+                          ? "bg-[var(--color-text)] text-[var(--color-bg)] border-transparent shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30"
                           : "bg-[var(--color-active-bg)] text-[var(--color-gray)] border-[var(--color-active-border)] cursor-not-allowed"
                       }`}
                   >
@@ -1211,10 +1159,10 @@ const AddWeeklyExam = () => {
                         </div>
                       </div>
                     ) : (
-                      <>
+                      <div className="flex items-center gap-x-1">
                         <Sparkles className="w-4 h-4" />
                         পরীক্ষা যোগ করুন
-                      </>
+                      </div>
                     )}
                   </motion.button>
 
