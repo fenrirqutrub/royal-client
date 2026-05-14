@@ -1,4 +1,8 @@
-import type { ColorConfig } from "../utility/Formatters";
+export interface ColorConfig {
+  from: string;
+  to: string;
+  text?: string;
+}
 
 export type ClassColor = {
   from: string;
@@ -7,7 +11,7 @@ export type ClassColor = {
   text: string;
 };
 
-/* ─── Colors ─────────────────────────────────────────────────────────────── */
+/* ─── Colors ──────────────────────────────────── */
 
 export const COLORS: ColorConfig[] = [
   { from: "#6366f1", to: "#8b5cf6", text: "#6366f1" },

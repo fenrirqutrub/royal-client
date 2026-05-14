@@ -33,14 +33,10 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { getCloudinaryOptimizedUrls } from "../../hooks/useCloudinaryUpload";
-import type { ExamModalProps } from "../../types/types";
-
-// ─── ZoomableImage ───────────────────────────────────────────────────────────
-interface ZoomableImageProps {
-  src: string;
-  alt: string;
-  onSingleTap: () => void;
-}
+import type {
+  ExamModalProps,
+  ZoomableImageProps,
+} from "../../types/WeeklyExamTypes";
 
 const ZoomableImage = ({ src, alt, onSingleTap }: ZoomableImageProps) => {
   const [zoom, setZoom] = useState(1);
@@ -55,7 +51,6 @@ const ZoomableImage = ({ src, alt, onSingleTap }: ZoomableImageProps) => {
   const zoomRef = useRef(1);
   const offsetRef = useRef({ x: 0, y: 0 });
 
-  // keep refs in sync
   useEffect(() => {
     zoomRef.current = zoom;
   }, [zoom]);

@@ -31,13 +31,12 @@ import { uploadEditedBlobsToCloudinary } from "../../../hooks/useCloudinaryUploa
 import ImageUploadWithEditor, {
   type EditedImage,
 } from "../../../components/common/ImageUploadWithEditor";
+import type { SelectOption, TeacherItem } from "../../../types/types";
+import { toBn, toEn } from "../../../utility/Formatters";
 import type {
-  SelectOption,
-  TeacherItem,
   WeeklyExamData,
   WeeklyExamFormData,
-} from "../../../types/types";
-import { toBn, toEn } from "../../../utility/Formatters";
+} from "../../../types/WeeklyExamTypes";
 
 // ─── Types ─────────────────────────────────────────────────
 type NumberType = "chapterNumber" | "pageNumber";

@@ -22,23 +22,13 @@ import {
   normalizeStudentClass,
   STAFF_ROLES,
 } from "../../utility/Constants";
-import type {
-  NormalizedImage,
-  RawImage,
-  WeeklyExamData,
-} from "../../types/types";
+import type { NormalizedImage, RawImage } from "../../types/types";
 import { useNavigate } from "react-router";
 import WeeklyExamHeaderFilters from "./WeeklyExamHeaderFilters";
-
-// ─── Types ───────────────────────────────────────────────────
-interface ExamMetaResponse {
-  examNumbers: string[];
-  examMeta: {
-    examNumber: string;
-    firstCreatedAt: string;
-    count: number;
-  }[];
-}
+import type {
+  ExamMetaResponse,
+  WeeklyExamData,
+} from "../../types/WeeklyExamTypes";
 
 // ─── Helpers ─────────────────────────────────────────────────
 const formatCreatedAt = (iso: string): string => {

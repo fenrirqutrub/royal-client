@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import Swal from "sweetalert2";
 
-// ── formatDOB ─────────────────────────────────────────────────────────────────
+// ── formatDOB ───────────────────────────
 export const formatDOB = (dob: string): string => {
   try {
     return new Date(dob).toLocaleDateString("bn-BD", {

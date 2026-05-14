@@ -46,11 +46,9 @@ const TeacherStudentTab = () => {
     });
   };
 
-  // Find active tab based on current path
   const activeTab =
     tabs.find((t) => location.pathname.includes(t.to)) ?? tabs[0];
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -63,7 +61,6 @@ const TeacherStudentTab = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
-      {/* ── Sticky header ── */}
       <div className="sticky top-0 z-20 bg-[var(--color-bg)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-14 lg:pt-4 pb-4">
           <motion.div
@@ -72,9 +69,7 @@ const TeacherStudentTab = () => {
             transition={{ duration: 0.3, delay: 0.06, ease: "easeOut" }}
             className="flex justify-center"
           >
-            {/* Dropdown container */}
             <div ref={ref} className="relative inline-flex justify-center">
-              {/* Trigger Button */}
               <motion.button
                 onClick={() => setOpen((p) => !p)}
                 whileTap={{ scale: 0.95 }}

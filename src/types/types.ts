@@ -1,9 +1,4 @@
 import type { ReactNode, RefObject } from "react";
-import type { ColorConfig } from "../utility/Formatters";
-
-// ─────────────────────────────────────────────────────────────
-// 🔹 FORM TYPES
-// ─────────────────────────────────────────────────────────────
 
 export interface SignupForm {
   fullName: string;
@@ -55,13 +50,6 @@ export interface TeacherInfo {
   slug?: string;
 }
 
-// FIX: Single source of truth — duplicate removed
-export interface ExamImage {
-  imageUrl?: string;
-  url?: string;
-  publicId?: string;
-}
-
 export interface DailyLessonItem {
   _id: string;
   subject: string;
@@ -99,16 +87,6 @@ export interface DailyLessonModalProps {
   onDelete?: () => void;
 }
 
-export interface ExamModalProps {
-  exam: Exam;
-  color: ColorConfig;
-  onClose: () => void;
-  canEdit?: boolean;
-  canDelete?: boolean;
-  onEdit?: () => void;
-  onDelete?: () => void;
-}
-
 export interface LoginPromptOverlayProps {
   isOpen: boolean;
   onClose: () => void;
@@ -123,7 +101,6 @@ export interface DailyLessonFormData {
   date: string;
 }
 
-// FIX: Single declaration with _id included — duplicate removed
 export interface TeacherItem {
   _id: string;
   name: string;
@@ -132,36 +109,6 @@ export interface TeacherItem {
 }
 
 export type ReferenceType = "chapter" | "page";
-
-export interface WeeklyExamFormData {
-  subject: string;
-  teacher: string;
-  class: string;
-  mark: number;
-  ExamNumber: string;
-  numberType: "pageNumber" | "chapterNumber";
-  numberValue: string;
-  topics: string;
-  question: string;
-  slug?: string;
-}
-
-export interface WeeklyExamData {
-  _id: string;
-  slug: string;
-  subject: string;
-  teacher: string;
-  teacherSlug?: string;
-  class: string;
-  mark: number;
-  ExamNumber: string;
-  topics: string;
-  question?: string | null;
-  images: (string | ExamImage)[];
-  viewCount?: number;
-  viewedBy?: ViewData["viewedBy"];
-  createdAt: string;
-}
 
 export interface EditFormValues {
   subject: string;
@@ -187,36 +134,6 @@ export interface CompactSelectProps {
   disabled?: boolean;
 }
 
-export interface WeeklyExamHeaderFiltersProps {
-  isGuest: boolean;
-  isStaff: boolean;
-  activeExamNumber: string | null;
-
-  selectedTeacher: string;
-  onTeacherChange: (value: string) => void;
-  teacherOptions: SelectOption[];
-
-  selectedClass: string;
-  onClassChange: (value: string) => void;
-  availableClasses: string[];
-
-  totalExamsInNumber: number;
-  filteredCount: number;
-  activeFilterCount: number;
-
-  onAddExam: () => void;
-  onReset: () => void;
-  onGuestAction: () => void;
-
-  badgeText?: string;
-  title?: string;
-  description?: string;
-  teacherLabel?: string;
-  addButtonLabel?: string;
-  classLabel?: string;
-  resetTitle?: string;
-}
-
 export interface NormalizedImage {
   url: string;
   publicId: string;
@@ -225,16 +142,6 @@ export interface NormalizedImage {
 export type RawImage =
   | string
   | { imageUrl?: string; url?: string; publicId?: string };
-
-export interface WeeklyExamCardProps {
-  exam: Exam;
-  index: number;
-  activeExamNumber?: string | null;
-  canEdit?: boolean;
-  canDelete?: boolean;
-  onEdit?: () => void;
-  onDelete?: () => void;
-}
 
 export interface SelectOption {
   value: string;
@@ -283,35 +190,6 @@ export interface DailyLessonHeaderProps {
 export interface ViewData {
   viewCount: number;
   viewedBy: {
-    userId: {
-      _id: string;
-      name: string;
-      role?: string;
-      studentClass?: string;
-      roll?: string;
-      avatar?: { url: string };
-    };
-    viewedAt: string;
-  }[];
-}
-
-export interface Exam {
-  _id: string;
-  ExamNumber: number | string;
-  subject: string;
-  class: string;
-  mark: number | string;
-  topics: string;
-  teacher?: string;
-  date: string;
-  images?: (string | ExamImage)[];
-  numberType?: "pageNumber" | "chapterNumber";
-  pageNumber?: string | number | null;
-  chapterNumber?: string | number | null;
-  question?: string | null;
-
-  viewCount?: number;
-  viewedBy?: {
     userId: {
       _id: string;
       name: string;

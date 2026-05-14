@@ -31,7 +31,7 @@ const getClassIndex = (cls?: string | null): number => {
 
 const StudentsFiles = () => {
   const [search, setSearch] = useState("");
-  const [classFilter, setClassFilter] = useState("");
+  const [classFilter, setClassFilter] = useState("ষষ্ঠ শ্রেণি");
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -197,30 +197,27 @@ const StudentsFiles = () => {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
 
-    return (
-      students
-        // StudentsFiles.tsx — filter এ trim() যোগ করুন
-        .filter((s) => {
-          if (
-            classFilter &&
-            normalizeStudentClass(s.studentClass) !== classFilter.trim()
-          )
-            return false;
-          if (
-            q &&
-            !s.name?.toLowerCase().includes(q) &&
-            !s.phone?.includes(q) &&
-            !s.studentClass?.toLowerCase().trim().includes(q) &&
-            !s.district?.toLowerCase().includes(q)
-          )
-            return false;
-          return true;
-        })
-        .sort(
-          (a, b) =>
-            getClassIndex(a.studentClass) - getClassIndex(b.studentClass),
+    return students
+
+      .filter((s) => {
+        if (
+          classFilter &&
+          normalizeStudentClass(s.studentClass) !== classFilter.trim()
         )
-    );
+          return false;
+        if (
+          q &&
+          !s.name?.toLowerCase().includes(q) &&
+          !s.phone?.includes(q) &&
+          !s.studentClass?.toLowerCase().trim().includes(q) &&
+          !s.district?.toLowerCase().includes(q)
+        )
+          return false;
+        return true;
+      })
+      .sort(
+        (a, b) => getClassIndex(a.studentClass) - getClassIndex(b.studentClass),
+      );
   }, [students, search, classFilter]);
 
   // ── Count per class (for display) ──

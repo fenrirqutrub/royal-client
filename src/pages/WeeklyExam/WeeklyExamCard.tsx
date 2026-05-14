@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
@@ -27,15 +27,15 @@ import Button from "../../components/common/Button";
 import { getCloudinaryOptimizedUrls } from "../../hooks/useCloudinaryUpload";
 import toast from "react-hot-toast";
 import { COLORS } from "../../styles/colors";
-import type {
-  ExamImage,
-  ViewData,
-  WeeklyExamCardProps,
-} from "../../types/types";
+import type { ViewData } from "../../types/types";
 import LoginPromptOverlay from "../Admin/Auth/LoginPromptOverlay";
 import SeenUserAvatar from "../../components/common/SeenUserAvatar";
 import ViewDetailsModal from "../../components/common/ViewDetailsModal";
 import { axiosPublic } from "../../hooks/axiosPublic";
+import type {
+  ExamImage,
+  WeeklyExamCardProps,
+} from "../../types/WeeklyExamTypes";
 
 const WeeklyExamCard = ({
   exam,
@@ -48,10 +48,9 @@ const WeeklyExamCard = ({
 }: WeeklyExamCardProps) => {
   const { user, isAuthenticated } = useAuth();
 
-  // ✅ Initial view data — main list থেকে শুধু viewCount আসবে
   const [viewData, setViewData] = useState<ViewData>(() => ({
     viewCount: exam.viewCount || 0,
-    viewedBy: [],
+    viewedBy: exam.viewedBy || [],
   }));
 
   const [viewersFetched, setViewersFetched] = useState(false);
@@ -80,15 +79,12 @@ const WeeklyExamCard = ({
     return false;
   };
 
-  // ✅ Lazy fetch viewers — শুধু যখন modal open করবে
   const fetchViewers = useCallback(async () => {
     if (viewersFetched) return;
-
     try {
       const response = await axiosPublic.get(
         `/api/weekly-exams/${exam._id}/viewers`,
       );
-
       if (response.data) {
         setViewData({
           viewCount: response.data.viewCount ?? viewData.viewCount,
@@ -150,7 +146,6 @@ const WeeklyExamCard = ({
           ...prev,
           viewCount: response.data.viewCount ?? prev.viewCount,
         }));
-        // viewedBy re-fetch দরকার হলে invalidate করবে
         setViewersFetched(false);
       }
     } catch (error) {
@@ -165,7 +160,12 @@ const WeeklyExamCard = ({
     }
   };
 
-  // ✅ View details modal open হলে viewers fetch করো
+  // ─── Eager fetch on mount ─────────────────────────────────────
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetchViewers();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleViewDetails = () => {
     fetchViewers();
     setShowViewDetails(true);

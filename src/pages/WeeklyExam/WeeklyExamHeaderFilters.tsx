@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import AnimatedFilterPills from "../../components/common/AnimatedFilterPills";
 import SelectInput from "../../components/common/SelectInput";
 import { toBn } from "../../utility/Formatters";
-import type { WeeklyExamHeaderFiltersProps } from "../../types/types";
+import type { WeeklyExamHeaderFiltersProps } from "../../types/WeeklyExamTypes";
 
 const WeeklyExamHeaderFilters = ({
   isGuest,

@@ -8,6 +8,8 @@ import EmptyState from "../common/Emptystate";
 import { useAuth } from "../../context/AuthContext";
 import { toBn } from "../../utility/Formatters";
 import type { SessionSummary } from "../common/SessionSections";
+import axiosSecure from "../../hooks/axiosSecure";
+import { toast } from "react-hot-toast";
 
 const TeacherFiles = () => {
   const [search, setSearch] = useState("");
@@ -55,11 +57,19 @@ const TeacherFiles = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await axiosPublic.delete(`/api/users/${id}`);
+      await axiosSecure.delete(`/api/users/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teacherFiles"] });
       queryClient.invalidateQueries({ queryKey: ["sessions-summary"] });
+    },
+    onError: (err: unknown) => {
+      const message =
+        err instanceof Error
+          ? err.message
+          : ((err as any)?.response?.data ?? "মুছতে সমস্যা হয়েছে");
+      console.error("Delete failed:", message);
+      toast.error("মুছতে সমস্যা হয়েছে");
     },
   });
 
@@ -67,9 +77,7 @@ const TeacherFiles = () => {
     await deleteMutation.mutateAsync(id);
   };
 
-  // Wire up your edit handler here — open a drawer/modal as needed
   const handleEdit = (teacher: Teacher) => {
-    // e.g. setEditingTeacher(teacher) to open an edit modal/drawer
     console.log("Edit teacher:", teacher);
   };
 

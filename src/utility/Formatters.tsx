@@ -1,28 +1,10 @@
 import { motion } from "framer-motion";
-// FIX: ExamImage now lives only in types.ts — import from there
-import type { Exam, ExamImage } from "../types/types";
-
-export interface ColorConfig {
-  from: string;
-  to: string;
-  text?: string;
-}
-
-interface AnimatedSlideProps {
-  img: string | ExamImage;
-  isActive: boolean;
-  className?: string;
-}
-
-interface SlideDotsProps {
-  count: number;
-  active: number;
-  color: ColorConfig;
-}
-
-interface SlideProgressProps {
-  color: ColorConfig;
-}
+import type { Exam } from "../types/WeeklyExamTypes";
+import type {
+  AnimatedSlideProps,
+  SlideDotsProps,
+  SlideProgressProps,
+} from "../types/sliderTypes";
 
 export const BN_DAYS_SHORT = [
   "রবি",

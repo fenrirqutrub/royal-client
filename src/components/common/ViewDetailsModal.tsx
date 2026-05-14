@@ -6,7 +6,6 @@ import { toBn } from "../../utility/Formatters";
 import { useAuth } from "../../context/AuthContext";
 import { isStaffRole, ROLE_LABELS } from "./SeenUserAvatar";
 
-// ✅ role যোগ করা হয়েছে
 interface ViewedByUser {
   userId: {
     _id: string;
@@ -34,7 +33,6 @@ const ViewDetailsModal = ({
 }: ViewDetailsModalProps) => {
   const { user } = useAuth();
 
-  // ✅ _id এর বদলে id
   const currentUserId = user?.id ?? "";
   const currentUserIsStudent = (user?.role ?? "student") === "student";
 
@@ -44,7 +42,6 @@ const ViewDetailsModal = ({
       )
     : [];
 
-  // ✅ count সহ unique users
   const uniqueUsers = safeViewedBy.reduce<(ViewedByUser & { count: number })[]>(
     (acc, cur) => {
       const existing = acc.findIndex((v) => v.userId._id === cur.userId._id);

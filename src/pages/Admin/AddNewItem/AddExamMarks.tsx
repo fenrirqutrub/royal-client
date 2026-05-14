@@ -3,20 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState } from "react";
 import axiosPublic from "../../../hooks/axiosPublic";
 import { FileText, Loader2, Trash2, Upload } from "lucide-react";
-
-interface ExamMarksPage {
-  pageNumber: number;
-  url: string;
-  publicId: string;
-}
-
-interface ExamMarksData {
-  _id: string;
-  pages: ExamMarksPage[];
-  totalPages: number;
-  isActive: boolean;
-  createdAt: string;
-}
+import type { ExamMarksData } from "../../../types/WeeklyExamTypes";
 
 const AddExamMarks = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -24,7 +11,6 @@ const AddExamMarks = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  // fetch all exam marks
   const { data: allExamMarks = [], isLoading: listLoading } = useQuery({
     queryKey: ["all-exam-marks"],
     queryFn: async () => {
@@ -33,7 +19,6 @@ const AddExamMarks = () => {
     },
   });
 
-  // upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();

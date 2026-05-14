@@ -9,16 +9,10 @@ import axiosPublic from "../../hooks/axiosPublic";
 import SelectInput from "../../components/common/SelectInput";
 import { CLASS_OPTIONS, getSubjects } from "../../utility/Constants";
 import { uploadMultipleToCloudinary } from "../../hooks/useCloudinaryUpload";
-import type {
-  EditFormValues,
-  ExamImage,
-  TeacherOption,
-  WeeklyExamData,
-} from "../../types/types";
+import type { EditFormValues, TeacherOption } from "../../types/types";
+import type { ExamImage, WeeklyExamData } from "../../types/WeeklyExamTypes";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ──────────────────────
 const MARK_OPTIONS = [
   { value: "10", label: "১০" },
   { value: "15", label: "১৫" },
@@ -34,7 +28,7 @@ const MARK_OPTIONS = [
   { value: "100", label: "১০০" },
 ];
 
-// ─── Style helpers ────────────────────────────────────────────────────────────
+// ─── Style helpers ──────────────────────────────
 const inputCls = (isError: boolean, isValidTouched = false) =>
   `w-full px-4 py-3 rounded-xl border text-sm transition-all duration-200
    focus:outline-none focus:ring-2 focus:border-transparent
