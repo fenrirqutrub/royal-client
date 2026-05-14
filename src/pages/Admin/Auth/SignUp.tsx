@@ -68,7 +68,6 @@ import {
   STAFF_GENDER_OPTIONS,
   STAFF_ROLE_LABELS,
   BD_PHONE_REGEX,
-  getSubjects,
   toAsciiDigits,
   toLocalIso,
   validateBdPhone,
@@ -90,7 +89,7 @@ interface PhoneCheckResult {
   role: StaffRole;
 }
 
-// ─── Staff Phone Check Step ───────────────────────────────────────────────────
+// ─── Staff Phone Check Step ───────────────────────────
 
 const StaffPhoneCheck = ({
   onVerified,
@@ -403,7 +402,11 @@ const Signup = () => {
     [errors, touchedFields, watch],
   );
 
-  const needsSubject = getSubjects(selectedClass)?.length > 0;
+  const needsSubject =
+    !!selectedClass &&
+    SUBJECT_REQUIRED_CLASSES.includes(
+      normalizeStudentClass(selectedClass) as never,
+    );
   const geoComplete = !!(division && district && thana);
   const pGeoComplete = !!(pDivision && pDistrict && pThana);
 
@@ -990,8 +993,13 @@ const Signup = () => {
                   selected={selectedClass === cls}
                   onClick={() => {
                     setSelectedClass(cls);
-                    if (!SUBJECT_REQUIRED_CLASSES.includes(cls as never))
+
+                    const normalized = normalizeStudentClass(cls);
+                    if (
+                      !SUBJECT_REQUIRED_CLASSES.includes(normalized as never)
+                    ) {
                       setSelectedSubject("");
+                    }
                   }}
                 >
                   🎓 {cls}

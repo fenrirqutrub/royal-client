@@ -214,7 +214,7 @@ const DailyLesson = () => {
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
     refetchInterval: false,
-    // ✅ keepPreviousData — date switch এ flash হবে না
+
     placeholderData: (prev) => prev ?? [],
   });
 
@@ -226,7 +226,7 @@ const DailyLesson = () => {
     }
   }, [isFetching]);
 
-  // ─── Active Dates Query — calendar highlight ──────────────────────────────
+  // ─── Active Dates Query — calendar highlight ────────────────
   const activeDatesQuery = useQuery<string[]>({
     queryKey: [
       "daily-lesson-active-dates",

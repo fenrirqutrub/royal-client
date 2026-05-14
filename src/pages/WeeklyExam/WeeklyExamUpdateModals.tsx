@@ -1,5 +1,5 @@
 // WeeklyExamUpdateModals.tsx
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useForm, Controller, type SubmitHandler } from "react-hook-form";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -10,7 +10,7 @@ import SelectInput from "../../components/common/SelectInput";
 import { CLASS_OPTIONS, getSubjects } from "../../utility/Constants";
 import { uploadMultipleToCloudinary } from "../../hooks/useCloudinaryUpload";
 import type { EditFormValues, TeacherOption } from "../../types/types";
-import type { ExamImage, WeeklyExamData } from "../../types/WeeklyExamTypes";
+import type { WeeklyExamData } from "../../types/WeeklyExamTypes";
 
 // ─── Constants ──────────────────────
 const MARK_OPTIONS = [
@@ -292,15 +292,25 @@ export const EditModal = ({
     return found?.slug || "";
   }, [record, teachers]);
 
-  const initialExisting = (record.images ?? []).map((img) =>
-    typeof img === "string"
-      ? { imageUrl: img, publicId: "" }
-      : {
-          imageUrl: (img as ExamImage).imageUrl || "",
-          publicId: (img as ExamImage).publicId || "",
-        },
+  const initialExisting = useMemo(
+    () =>
+      (record.images ?? []).map((img) => {
+        if (typeof img === "string") return { imageUrl: img, publicId: "" };
+        const o = img as Record<string, string>;
+        return {
+          imageUrl: o.imageUrl || o.url || "",
+          publicId: o.publicId || "",
+        };
+      }),
+    [record.images],
   );
+
   const [existingImages, setExistingImages] = useState(initialExisting);
+
+  useEffect(() => {
+    setExistingImages(initialExisting);
+  }, [initialExisting, record._id]);
+
   const allPreviews = [
     ...existingImages.map((i) => i.imageUrl),
     ...newPreviews,

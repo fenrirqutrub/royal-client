@@ -43,6 +43,7 @@ const StudentsFiles = () => {
     data: students = [],
     isLoading,
     isError,
+    refetch,
   } = useQuery<Student[]>({
     queryKey: ["students"],
     queryFn: async () => {
@@ -227,6 +228,8 @@ const StudentsFiles = () => {
       (s) => normalizeStudentClass(s.studentClass) === classFilter.trim(),
     ).length;
   }, [students, classFilter]);
+
+  refetch();
 
   return (
     <div className="min-h-screen px-4 sm:px-6 bg-[var(--color-bg)] relative">
