@@ -1,9 +1,9 @@
 // src/hooks/axiosSecure.ts
 import axios from "axios";
-import { TOKEN_KEY } from "./axiosPublic"; // ✅ "royal_auth_token"
+import { TOKEN_KEY } from "./axiosPublic";
 
 const axiosSecure = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // ✅ axiosPublic এর same variable
+  baseURL: import.meta.env.VITE_API_URL,
   timeout: 8_000,
   withCredentials: true,
   headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -11,7 +11,7 @@ const axiosSecure = axios.create({
 
 axiosSecure.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem(TOKEN_KEY); // ✅ সঠিক key
+    const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

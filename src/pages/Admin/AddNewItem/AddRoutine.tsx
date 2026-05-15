@@ -1,38 +1,106 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
+import axios, { AxiosError } from "axios";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import axiosPublic from "../../../hooks/axiosPublic";
+import { AnimatePresence, motion } from "framer-motion";
+import axiosSecure from "../../../hooks/axiosSecure";
+
+type SignUploadResponse = {
+  success: boolean;
+  data: {
+    slug: string;
+    timestamp: number;
+    signature: string;
+    publicId: string;
+    apiKey: string;
+    cloudName: string;
+    overwrite: boolean;
+    uploadUrl: string;
+  };
+};
+
+// Custom error type for the mutation
+type UploadError = AxiosError<{ message?: string }> | Error;
 
 const AddRoutine = () => {
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState("");
+  const [progress, setProgress] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const { mutate, isPending, isSuccess } = useMutation({
     mutationFn: async () => {
+      if (!file) throw new Error("PDF file is required");
+
+      // 1) get signed upload info from backend
+      const signRes = await axiosSecure.post<SignUploadResponse>(
+        "/api/routines/sign-upload",
+      );
+
+      const signData = signRes.data.data;
+
+      // 2) direct upload to Cloudinary
       const formData = new FormData();
-      formData.append("pdf", file!); // title সরানো
-      const res = await axiosPublic.post("/api/routines", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      formData.append("file", file);
+      formData.append("api_key", signData.apiKey);
+      formData.append("timestamp", String(signData.timestamp));
+      formData.append("signature", signData.signature);
+      formData.append("public_id", signData.publicId);
+      formData.append("overwrite", String(signData.overwrite));
+
+      const cloudinaryRes = await axios.post(signData.uploadUrl, formData, {
         timeout: 300000,
+        onUploadProgress: (e) => {
+          if (!e.total) return;
+          const percent = Math.round((e.loaded * 100) / e.total);
+          setProgress(percent);
+        },
       });
-      return res.data;
+
+      const uploaded = cloudinaryRes.data;
+
+      // 3) save metadata to backend
+      const saveRes = await axiosSecure.post(
+        "/api/routines",
+        {
+          slug: signData.slug,
+          publicId: uploaded.public_id,
+          secureUrl: uploaded.secure_url,
+          format: uploaded.format || "pdf",
+          totalPages: uploaded.pages || 1,
+          originalFilename: file.name,
+          bytes: uploaded.bytes || file.size,
+        },
+        { timeout: 30000 },
+      );
+
+      return saveRes.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["active-routine"] });
       queryClient.invalidateQueries({ queryKey: ["routines"] });
       setFile(null);
       setError("");
+      setProgress(0);
+      if (fileRef.current) fileRef.current.value = "";
     },
-    onError: (err: any) => {
-      setError(err?.response?.data?.message || "আপলোড ব্যর্থ হয়েছে");
+    onError: (err: UploadError) => {
+      let message = "আপলোড ব্যর্থ হয়েছে";
+
+      if (axios.isAxiosError(err)) {
+        message = err.response?.data?.message || err.message || message;
+      } else if (err instanceof Error) {
+        message = err.message || message;
+      }
+
+      setError(message);
+      setProgress(0);
     },
   });
 
   const handleSubmit = () => {
-    if (!file) return setError("PDF ফাইল সিলেক্ট করুন"); // title check সরানো
+    if (!file) return setError("PDF ফাইল সিলেক্ট করুন");
     mutate();
   };
 
@@ -41,10 +109,12 @@ const AddRoutine = () => {
       setError("শুধুমাত্র PDF ফাইল গ্রহণযোগ্য");
       return;
     }
+
     if (f.size > 20 * 1024 * 1024) {
       setError("ফাইলের সাইজ সর্বোচ্চ ২০MB হতে হবে");
       return;
     }
+
     setError("");
     setFile(f);
   };
@@ -55,7 +125,6 @@ const AddRoutine = () => {
         রুটিন যোগ করুন
       </h2>
 
-      {/* PDF Drop Zone */}
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -108,6 +177,8 @@ const AddRoutine = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   setFile(null);
+                  setProgress(0);
+                  if (fileRef.current) fileRef.current.value = "";
                 }}
                 className="text-xs opacity-50 hover:opacity-100 underline transition-opacity"
               >
@@ -132,7 +203,20 @@ const AddRoutine = () => {
         </AnimatePresence>
       </div>
 
-      {/* Error */}
+      {isPending && progress > 0 && (
+        <div className="mt-4">
+          <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+            <div
+              className="h-full bg-[var(--color-text)] transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs opacity-60 text-center">
+            আপলোড হচ্ছে... {progress}%
+          </p>
+        </div>
+      )}
+
       <AnimatePresence>
         {error && (
           <motion.p
@@ -146,7 +230,6 @@ const AddRoutine = () => {
         )}
       </AnimatePresence>
 
-      {/* Success */}
       <AnimatePresence>
         {isSuccess && (
           <motion.p
@@ -160,7 +243,6 @@ const AddRoutine = () => {
         )}
       </AnimatePresence>
 
-      {/* Submit */}
       <motion.button
         onClick={handleSubmit}
         disabled={isPending}
@@ -169,12 +251,12 @@ const AddRoutine = () => {
           bg-[var(--color-text)] text-[var(--color-bg)]
           disabled:opacity-40 transition-opacity"
       >
-        {isPending ? "আপলোড হচ্ছে... (একটু সময় লাগবে)" : "আপলোড করুন"}
+        {isPending ? "আপলোড হচ্ছে..." : "আপলোড করুন"}
       </motion.button>
 
       <p className="mt-3 text-xs opacity-40 text-center">
-        PDF এর প্রতিটি পৃষ্ঠা WebP ছবিতে রূপান্তর হয়ে Cloudinary তে সংরক্ষিত
-        হবে
+        PDF সরাসরি Cloudinary তে আপলোড হবে, পরে page-wise WebP হিসেবে দেখানো
+        যাবে
       </p>
     </div>
   );
