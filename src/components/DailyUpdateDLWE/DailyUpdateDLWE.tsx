@@ -415,7 +415,7 @@ const DailyUpdateDLWE = () => {
         }
         className="relative rounded-b-xl py-2 overflow-hidden"
       >
-        <Marquee speed={35} gradient={false} direction="left">
+        <Marquee speed={100} gradient={false} direction="left">
           <div className="flex items-stretch gap-0 px-2">
             {repeated.map((item, i) =>
               isLesson ? (
