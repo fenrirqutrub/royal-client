@@ -315,14 +315,4 @@ export const uploadEditedBlobsToCloudinary = async (
   return results;
 };
 
-/**
- * Render helper — returns the best <source> srcSet for a <picture> element.
- * Usage:
- *   const urls = getCloudinaryOptimizedUrls(imageUrl);
- *   <picture>
- *     <source type="image/avif" srcSet={urls.avif} />
- *     <source type="image/webp" srcSet={urls.webp} />
- *     <img src={urls.original} alt="..." />
- *   </picture>
- */
 export { getAVIFSupport };

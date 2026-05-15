@@ -74,6 +74,16 @@ const ExamModal = ({
   const isStudent = user?.role === "student";
   const canSeeQuestion = !isStudent && !!exam.question;
 
+  // ── current backdrop blur URL (low quality for performance) ─────────
+  const currentBgUrl = useMemo(() => {
+    const img = images[activeIndex];
+    if (!img) return "";
+    const raw = getImageUrl(img);
+    if (!raw) return "";
+    const urls = getCloudinaryOptimizedUrls(raw);
+    return urls.thumb ?? urls.auto ?? raw;
+  }, [images, activeIndex]);
+
   useEffect(() => {
     const check = () => {
       const mobile =
@@ -243,7 +253,31 @@ const ExamModal = ({
 
           {/* ── Images ─────────────────────────────────────────────── */}
           {hasImages && (
-            <div className="relative w-full bg-black">
+            <div className="relative w-full">
+              {/* ── Glass backdrop — sits behind swiper, fills same area ── */}
+              <div
+                className="absolute inset-0 overflow-hidden z-0"
+                aria-hidden="true"
+              >
+                {currentBgUrl && (
+                  <img
+                    key={currentBgUrl}
+                    src={currentBgUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover
+                      scale-125 blur-2xl saturate-[1.3] opacity-50"
+                    style={{
+                      transition: "opacity 0.6s ease",
+                    }}
+                    loading="eager"
+                    draggable={false}
+                  />
+                )}
+                {/* subtle dark tint so main image pops */}
+                <div className="absolute inset-0 bg-black/30" />
+              </div>
+
+              {/* ── Swiper — relative so it defines the container height ── */}
               <Swiper
                 onSwiper={(s) => (swiperRef.current = s)}
                 onSlideChange={(s) => {
@@ -261,7 +295,7 @@ const ExamModal = ({
                 }
                 pagination={{ clickable: true }}
                 navigation={multipleImages}
-                className="w-full"
+                className="w-full relative z-[1]"
               >
                 {images.map((img, i) => {
                   const imgUrl = getImageUrl(img);
@@ -280,7 +314,7 @@ const ExamModal = ({
               </Swiper>
 
               {/* gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent pointer-events-none z-10" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none z-10" />
 
               {/* question badge */}
               {canSeeQuestion && (
@@ -451,8 +485,7 @@ const ExamModal = ({
                     }}
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.94 }}
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded
-                      text-xs font-bold shrink-0 bg-red-800 text-[var(--color-bg)]"
+                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded text-xs font-bold shrink-0 bg-red-600 text-[var(--color-text)]"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Delete
@@ -466,8 +499,7 @@ const ExamModal = ({
                     }}
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.94 }}
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded
-                      text-xs font-bold shrink-0 bg-amber-400 text-[var(--color-bg)]"
+                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded text-xs font-bold shrink-0 bg-[var(--color-text)] text-[var(--color-bg)]"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     Edit
@@ -478,10 +510,10 @@ const ExamModal = ({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className={[
-                    "flex shrink-0 items-center gap-2 rounded px-4 py-2.5 text-sm font-black transition-all duration-200 border border-green-800",
+                    "flex shrink-0 items-center gap-2 rounded px-4 py-2.5 text-sm font-black transition-all duration-200 border border-[var(--color-active-border)]",
                     copied
-                      ? "bg-green-800 text-[var(--color-bg)]"
-                      : "bg-green-700 text-[var(--color-bg)] shadow-md",
+                      ? "bg-[var(--color-text)] text-[var(--color-bg)]"
+                      : "bg-[var(--color-text)] text-[var(--color-bg)] shadow-md",
                   ].join(" ")}
                 >
                   <AnimatePresence mode="wait">

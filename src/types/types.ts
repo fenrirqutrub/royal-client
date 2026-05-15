@@ -110,17 +110,6 @@ export interface TeacherItem {
 
 export type ReferenceType = "chapter" | "page";
 
-export interface EditFormValues {
-  subject: string;
-  class: string;
-  ExamNumber: string;
-  topics: string;
-  teacher: string;
-  teacherSlug: string;
-  mark: string;
-  question: string;
-}
-
 export interface TeacherOption {
   slug: string;
   name: string;

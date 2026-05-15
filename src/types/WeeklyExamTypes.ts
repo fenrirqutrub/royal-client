@@ -41,7 +41,6 @@ export interface WeeklyExamCardProps {
   onDelete?: () => void;
 }
 
-// FIX: Single source of truth — duplicate removed
 export interface ExamImage {
   imageUrl?: string;
   url?: string;
@@ -57,17 +56,25 @@ export interface WeeklyExamData {
   class: string;
   mark: number;
   ExamNumber: string;
+
+  numberType?: "pageNumber" | "chapterNumber" | null;
+  pageNumber?: string | number | null;
+  chapterNumber?: string | number | null;
+  numberValue?: string | number | null;
+
   topics: string;
   question?: string | null;
   images: (string | ExamImage)[];
   viewCount?: number;
   viewedBy?: ViewData["viewedBy"];
   createdAt: string;
+  updatedAt?: string;
+  id?: string;
 }
 
 export interface ExamModalProps {
   exam: Exam;
-  color: ColorConfig;
+  color?: ColorConfig;
   onClose: () => void;
   canEdit?: boolean;
   canDelete?: boolean;
@@ -90,10 +97,14 @@ export interface WeeklyExamFormData {
   class: string;
   mark: number;
   ExamNumber: string;
-  numberType: "pageNumber" | "chapterNumber";
-  numberValue: string;
+
+  numberType?: "pageNumber" | "chapterNumber" | "" | null;
+  numberValue?: string;
+  pageNumber?: string | number | null;
+  chapterNumber?: string | number | null;
+
   topics: string;
-  question: string;
+  question?: string;
   slug?: string;
 }
 
@@ -145,4 +156,20 @@ export interface ZoomableImageProps {
   src: string;
   alt: string;
   onSingleTap: () => void;
+  onZoomChange?: (zoomed: boolean) => void;
+}
+
+export interface EditFormValues {
+  subject: string;
+  class: string;
+  ExamNumber: string;
+  topics: string;
+  teacher: string;
+  teacherSlug: string;
+  mark: string;
+  question?: string;
+
+  numberType?: "" | "chapterNumber" | "pageNumber";
+  chapterNumber?: string;
+  pageNumber?: string;
 }
