@@ -41,9 +41,9 @@ const Principal = () => {
           </p>
 
           {/* signature */}
-          <p className="text-[var(--color-text)]  ml-8">ধন্যবাদান্তে ——</p>
+          <p className="text-[var(--color-text)]  ml-8">ধন্যবাদান্তে —</p>
           <p className="font-bold flex items-center gap-2 text-[var(--color-text)] text-2xl">
-            <IoCaretForwardOutline className="mt-2" />
+            <IoCaretForwardOutline className="" />
             <span>আব্দুর রাজ্জাক</span>
           </p>
           <p className="text-[var(--color-gray)] ml-8">
