@@ -1,5 +1,5 @@
 // src/components/WeeklyExam/ExamModal.tsx
-import { useEffect, useCallback, useState, useRef } from "react";
+import { useEffect, useCallback, useState, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   X,
@@ -18,6 +18,7 @@ import {
   Download,
   Pause,
   Play,
+  ExternalLink,
 } from "lucide-react";
 import { toBn, getNumberInfo } from "../../utility/Formatters";
 import { useAuth } from "../../context/AuthContext";
@@ -34,6 +35,15 @@ import { getCloudinaryOptimizedUrls } from "../../hooks/useCloudinaryUpload";
 import type { ExamModalProps } from "../../types/WeeklyExamTypes";
 import ZoomableImage from "./ZoomableImage";
 
+const getImageUrl = (img: unknown): string => {
+  if (typeof img === "string") return img;
+  if (img && typeof img === "object") {
+    const o = img as Record<string, string>;
+    return o.imageUrl ?? o.url ?? o.secure_url ?? "";
+  }
+  return "";
+};
+
 const ExamModal = ({
   exam,
   onClose,
@@ -44,12 +54,18 @@ const ExamModal = ({
 }: ExamModalProps) => {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const swiperRef = useRef<SwiperType | null>(null);
+  const userPausedRef = useRef(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const images = Array.isArray(exam.images) ? exam.images : [];
+  const images = useMemo(
+    () => (Array.isArray(exam.images) ? exam.images : []),
+    [exam.images],
+  );
+
   const hasImages = images.length > 0;
   const multipleImages = images.length > 1;
 
@@ -58,22 +74,67 @@ const ExamModal = ({
   const isStudent = user?.role === "student";
   const canSeeQuestion = !isStudent && !!exam.question;
 
-  const getImageUrl = (img: unknown): string => {
-    if (typeof img === "string") return img;
-    if (img && typeof img === "object") {
-      const o = img as Record<string, string>;
-      return o.imageUrl ?? o.url ?? o.secure_url ?? "";
-    }
-    return "";
-  };
+  useEffect(() => {
+    const check = () => {
+      const mobile =
+        /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent,
+        ) || window.innerWidth < 768;
+      setIsMobile(mobile);
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  const handleOpenInBrowser = useCallback(() => {
+    const currentImg = images[activeIndex];
+    if (!currentImg) return;
+    const imgUrl = getImageUrl(currentImg);
+    if (imgUrl) window.open(imgUrl, "_blank", "noopener,noreferrer");
+  }, [images, activeIndex]);
 
   const togglePause = useCallback(() => {
-    setIsPaused((p) => {
-      if (p) swiperRef.current?.autoplay?.start();
-      else swiperRef.current?.autoplay?.stop();
-      return !p;
+    if (isImageZoomed) return;
+    if (!multipleImages) return;
+    const swiper = swiperRef.current;
+    if (!swiper) return;
+
+    setIsPaused((prev) => {
+      const next = !prev;
+      userPausedRef.current = next;
+      if (next) {
+        swiper.autoplay?.stop();
+      } else {
+        swiper.autoplay?.start();
+      }
+      return next;
     });
-  }, []);
+  }, [isImageZoomed, multipleImages]);
+
+  const handleZoomChange = useCallback(
+    (zoomed: boolean) => {
+      setIsImageZoomed(zoomed);
+      const swiper = swiperRef.current;
+      if (!swiper || !multipleImages) return;
+
+      if (zoomed) {
+        swiper.autoplay?.stop();
+        swiper.allowTouchMove = false;
+      } else {
+        swiper.allowTouchMove = true;
+        if (!userPausedRef.current) {
+          swiper.autoplay?.start();
+          setIsPaused(false);
+        }
+      }
+    },
+    [multipleImages],
+  );
+
+  const handleSingleTap = useCallback(() => {
+    togglePause();
+  }, [togglePause]);
 
   const handleDownloadAll = useCallback(async () => {
     for (let i = 0; i < images.length; i++) {
@@ -185,7 +246,10 @@ const ExamModal = ({
             <div className="relative w-full bg-black">
               <Swiper
                 onSwiper={(s) => (swiperRef.current = s)}
-                onSlideChange={() => setIsImageZoomed(false)}
+                onSlideChange={(s) => {
+                  setIsImageZoomed(false);
+                  setActiveIndex(s.realIndex);
+                }}
                 modules={[Navigation, Pagination, Autoplay]}
                 loop={multipleImages}
                 allowTouchMove={!isImageZoomed}
@@ -207,8 +271,8 @@ const ExamModal = ({
                       <ZoomableImage
                         src={urls.auto}
                         alt={exam.subject}
-                        onSingleTap={togglePause}
-                        onZoomChange={setIsImageZoomed}
+                        onSingleTap={handleSingleTap}
+                        onZoomChange={handleZoomChange}
                       />
                     </SwiperSlide>
                   );
@@ -217,23 +281,6 @@ const ExamModal = ({
 
               {/* gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent pointer-events-none z-10" />
-
-              {/* paused indicator */}
-              <AnimatePresence>
-                {isPaused && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.75 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.75 }}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20
-                      bg-black/55 backdrop-blur-sm rounded-full px-4 py-2.5
-                      text-white text-xs font-bold flex items-center gap-2 pointer-events-none"
-                  >
-                    <Pause className="w-3.5 h-3.5" />
-                    Paused
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
               {/* question badge */}
               {canSeeQuestion && (
@@ -250,24 +297,44 @@ const ExamModal = ({
                 </motion.div>
               )}
 
-              {/* pause + download */}
+              {/* top-right controls */}
               <div
                 className="absolute top-4 right-16 z-20 flex items-center gap-2"
                 onClick={(e) => e.stopPropagation()}
               >
+                {!isMobile && (
+                  <motion.button
+                    onClick={handleOpenInBrowser}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.92 }}
+                    title="Open image in new tab"
+                    className="p-2 rounded-full bg-black/60 text-white backdrop-blur-sm
+                      hover:bg-white/20 transition-colors duration-200"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </motion.button>
+                )}
+
                 {multipleImages && (
                   <motion.button
                     onClick={togglePause}
                     whileTap={{ scale: 0.9 }}
-                    className="p-2 rounded-full bg-black/60 text-white backdrop-blur-sm"
+                    className={[
+                      "p-2 rounded-full backdrop-blur-sm transition-colors duration-200",
+                      isPaused || isImageZoomed
+                        ? "bg-white/20 text-white/60"
+                        : "bg-black/60 text-white",
+                    ].join(" ")}
+                    title={isPaused ? "Play slideshow" : "Pause slideshow"}
                   >
-                    {isPaused ? (
+                    {isPaused || isImageZoomed ? (
                       <Play className="w-4 h-4" />
                     ) : (
                       <Pause className="w-4 h-4" />
                     )}
                   </motion.button>
                 )}
+
                 <motion.button
                   onClick={handleDownloadAll}
                   whileHover={{ scale: 1.05 }}
@@ -284,7 +351,6 @@ const ExamModal = ({
 
           {/* ── Content ────────────────────────────────────────────── */}
           <div className="flex flex-col gap-5 p-5 sm:p-6">
-            {/* title */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -299,7 +365,6 @@ const ExamModal = ({
               </h2>
             </motion.div>
 
-            {/* teacher */}
             {exam.teacher && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
@@ -312,7 +377,6 @@ const ExamModal = ({
               </motion.div>
             )}
 
-            {/* info tags */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -331,7 +395,6 @@ const ExamModal = ({
               ))}
             </motion.div>
 
-            {/* topics */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -353,7 +416,6 @@ const ExamModal = ({
               </div>
             </motion.div>
 
-            {/* question */}
             {canSeeQuestion && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
@@ -376,7 +438,6 @@ const ExamModal = ({
               </motion.div>
             )}
 
-            {/* actions */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <p className="text-[11px] text-[var(--color-gray)] leading-snug">
                 পরীক্ষার তথ্য ও বিষয়বস্তু কপি হবে

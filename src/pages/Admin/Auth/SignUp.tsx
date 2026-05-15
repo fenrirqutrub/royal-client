@@ -662,6 +662,7 @@ const Signup = () => {
       if (clientData) {
         fd.append("clientData", JSON.stringify(clientData));
       }
+      console.log("[signup] sending request...");
 
       const { data: res } = await axiosPublic.post<{
         success: boolean;
@@ -678,6 +679,7 @@ const Signup = () => {
     } catch (err: unknown) {
       toast.error(getApiMessage(err, "কিছু একটা সমস্যা হয়েছে"));
     }
+    console.log("[signup] onSubmit fired");
   };
 
   // ─── Render Step ──────────────────────────────────────────────────────

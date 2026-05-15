@@ -19,37 +19,65 @@ const ZoomableImage = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // all transform state in refs — zero re-renders during drag/zoom
   const zoomRef = useRef(1);
   const offsetRef = useRef({ x: 0, y: 0 });
+  const wasZoomedRef = useRef(false);
 
-  // interaction state
   const isDraggingRef = useRef(false);
   const movedRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
 
-  // pinch state
   const lastPinchDistRef = useRef<number | null>(null);
   const lastPinchCenterRef = useRef({ x: 0, y: 0 });
 
-  // tap detection
   const lastTapRef = useRef(0);
   const lastTapPosRef = useRef({ x: 0, y: 0 });
   const tapTimerRef = useRef<number | null>(null);
 
-  // velocity for inertia
   const velocityRef = useRef({ x: 0, y: 0 });
   const lastMoveTimeRef = useRef(0);
   const lastMovePosRef = useRef({ x: 0, y: 0 });
   const inertiaRef = useRef(0);
 
-  // only this triggers re-render (for UI badges)
+  // debounced display zoom to avoid re-renders during pinch
+  const displayZoomTimerRef = useRef<number | null>(null);
   const [displayZoom, setDisplayZoom] = useState(1);
 
   const MAX_ZOOM = 5;
   const DRAG_THRESHOLD = 5;
-  const INERTIA_FRICTION = 0.92;
-  const INERTIA_STOP = 0.4;
+  const INERTIA_FRICTION = 0.94;
+  const INERTIA_STOP = 0.3;
+
+  // ── notify zoom state changes (debounced to avoid spam) ─────────────
+  const notifyZoomChange = useCallback(
+    (z: number) => {
+      const isZoomed = z > 1;
+      if (isZoomed !== wasZoomedRef.current) {
+        wasZoomedRef.current = isZoomed;
+        onZoomChange?.(isZoomed);
+      }
+    },
+    [onZoomChange],
+  );
+
+  // ── update display zoom with debounce during continuous gestures ─────
+  const updateDisplayZoom = useCallback(
+    (z: number, immediate = false) => {
+      notifyZoomChange(z);
+      if (immediate) {
+        if (displayZoomTimerRef.current)
+          cancelAnimationFrame(displayZoomTimerRef.current);
+        setDisplayZoom(z);
+        return;
+      }
+      if (displayZoomTimerRef.current) return; // already scheduled
+      displayZoomTimerRef.current = requestAnimationFrame(() => {
+        setDisplayZoom(zoomRef.current);
+        displayZoomTimerRef.current = null;
+      });
+    },
+    [notifyZoomChange],
+  );
 
   // ── apply transform directly to DOM ─────────────────────────────────
   const applyTransform = useCallback((animated = false) => {
@@ -57,23 +85,26 @@ const ZoomableImage = ({
     if (!img) return;
     const { x, y } = offsetRef.current;
     const z = zoomRef.current;
-    img.style.transition = animated ? "transform 0.22s ease-out" : "none";
+    if (animated) {
+      img.style.transition =
+        "transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+    } else {
+      img.style.transition = "none";
+    }
     img.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${z})`;
   }, []);
 
-  // ── clamp offset based on actual image layout size ──────────────────
+  // ── clamp offset ───────────────────────────────────────────────────
   const clampOffset = useCallback((x: number, y: number, z: number) => {
     const container = containerRef.current;
     const img = imgRef.current;
     if (!container || !img || z <= 1) return { x: 0, y: 0 };
 
-    // offsetWidth/Height ignores current transform — gives base layout size
     const baseW = img.offsetWidth;
     const baseH = img.offsetHeight;
     const cW = container.clientWidth;
     const cH = container.clientHeight;
 
-    // how much the zoomed image overflows the container on each side
     const maxX = Math.max(0, (baseW * z - cW) / 2);
     const maxY = Math.max(0, (baseH * z - cH) / 2);
 
@@ -85,7 +116,12 @@ const ZoomableImage = ({
 
   // ── set zoom toward a focus point ───────────────────────────────────
   const setZoomLevel = useCallback(
-    (nextZoom: number, focus?: { x: number; y: number }, animated = false) => {
+    (
+      nextZoom: number,
+      focus?: { x: number; y: number },
+      animated = false,
+      immediate = false,
+    ) => {
       const container = containerRef.current;
       const prevZ = zoomRef.current;
       const z = Math.max(1, Math.min(MAX_ZOOM, nextZoom));
@@ -105,26 +141,25 @@ const ZoomableImage = ({
       const clamped = z <= 1 ? { x: 0, y: 0 } : clampOffset(nx, ny, z);
       zoomRef.current = z;
       offsetRef.current = clamped;
-      setDisplayZoom(z);
-      onZoomChange?.(z > 1);
+      updateDisplayZoom(z, immediate);
       applyTransform(animated);
     },
-    [applyTransform, clampOffset, onZoomChange],
+    [applyTransform, clampOffset, updateDisplayZoom],
   );
 
   const resetZoom = useCallback(() => {
     cancelAnimationFrame(inertiaRef.current);
     velocityRef.current = { x: 0, y: 0 };
-    setZoomLevel(1, undefined, true);
+    setZoomLevel(1, undefined, true, true);
   }, [setZoomLevel]);
 
   const zoomIn = useCallback(
-    () => setZoomLevel(zoomRef.current + 0.5, undefined, true),
+    () => setZoomLevel(zoomRef.current + 0.5, undefined, true, true),
     [setZoomLevel],
   );
 
   const zoomOut = useCallback(
-    () => setZoomLevel(zoomRef.current - 0.5, undefined, true),
+    () => setZoomLevel(zoomRef.current - 0.5, undefined, true, true),
     [setZoomLevel],
   );
 
@@ -155,7 +190,7 @@ const ZoomableImage = ({
     inertiaRef.current = requestAnimationFrame(step);
   }, [clampOffset, applyTransform]);
 
-  // ── touch events (pinch + drag + double-tap) ────────────────────────
+  // ── touch events ────────────────────────────────────────────────────
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -164,7 +199,6 @@ const ZoomableImage = ({
       cancelAnimationFrame(inertiaRef.current);
       velocityRef.current = { x: 0, y: 0 };
 
-      // pinch start
       if (e.touches.length === 2) {
         e.preventDefault();
         isDraggingRef.current = false;
@@ -184,7 +218,6 @@ const ZoomableImage = ({
       const tapDx = t.clientX - lastTapPosRef.current.x;
       const tapDy = t.clientY - lastTapPosRef.current.y;
 
-      // double-tap
       if (now - lastTapRef.current < 300 && Math.hypot(tapDx, tapDy) < 30) {
         e.preventDefault();
         if (tapTimerRef.current) {
@@ -195,7 +228,7 @@ const ZoomableImage = ({
         if (zoomRef.current > 1) {
           resetZoom();
         } else {
-          setZoomLevel(2.5, { x: t.clientX, y: t.clientY }, true);
+          setZoomLevel(2.5, { x: t.clientX, y: t.clientY }, true, true);
         }
         return;
       }
@@ -216,7 +249,6 @@ const ZoomableImage = ({
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      // pinch
       if (e.touches.length === 2 && lastPinchDistRef.current !== null) {
         e.preventDefault();
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -246,13 +278,11 @@ const ZoomableImage = ({
         const clamped = newZ <= 1 ? { x: 0, y: 0 } : clampOffset(nx, ny, newZ);
         zoomRef.current = newZ;
         offsetRef.current = clamped;
-        setDisplayZoom(newZ);
-        onZoomChange?.(newZ > 1);
+        updateDisplayZoom(newZ); // debounced during pinch
         applyTransform(false);
         return;
       }
 
-      // single finger drag
       if (e.touches.length !== 1 || !isDraggingRef.current) return;
       const t = e.touches[0];
       const dx = t.clientX - dragStartRef.current.x;
@@ -260,7 +290,6 @@ const ZoomableImage = ({
 
       if (!movedRef.current && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
 
-      // not zoomed — let Swiper handle it
       if (zoomRef.current <= 1) {
         isDraggingRef.current = false;
         return;
@@ -269,7 +298,6 @@ const ZoomableImage = ({
       e.preventDefault();
       movedRef.current = true;
 
-      // velocity tracking
       const now = Date.now();
       const dt = now - lastMoveTimeRef.current;
       if (dt > 0) {
@@ -286,20 +314,25 @@ const ZoomableImage = ({
       const rawY = dragStartRef.current.oy + dy;
       const clamped = clampOffset(rawX, rawY, zoomRef.current);
 
-      // light rubber-band at edges
+      // softer rubber-band
       offsetRef.current = {
-        x: clamped.x + (rawX - clamped.x) * 0.2,
-        y: clamped.y + (rawY - clamped.y) * 0.2,
+        x: clamped.x + (rawX - clamped.x) * 0.15,
+        y: clamped.y + (rawY - clamped.y) * 0.15,
       };
       applyTransform(false);
     };
 
     const onTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length < 2) lastPinchDistRef.current = null;
+      if (e.touches.length < 2) {
+        if (lastPinchDistRef.current !== null) {
+          // pinch just ended — update display immediately
+          updateDisplayZoom(zoomRef.current, true);
+        }
+        lastPinchDistRef.current = null;
+      }
       if (e.touches.length !== 0) return;
 
       if (isDraggingRef.current && movedRef.current && zoomRef.current > 1) {
-        // snap back from rubber-band
         const clamped = clampOffset(
           offsetRef.current.x,
           offsetRef.current.y,
@@ -316,7 +349,6 @@ const ZoomableImage = ({
         }
       }
 
-      // single tap
       if (isDraggingRef.current && !movedRef.current && zoomRef.current <= 1) {
         tapTimerRef.current = window.setTimeout(() => {
           onSingleTap();
@@ -328,15 +360,17 @@ const ZoomableImage = ({
       movedRef.current = false;
     };
 
-    // wheel zoom
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
       cancelAnimationFrame(inertiaRef.current);
-      setZoomLevel(zoomRef.current - e.deltaY * 0.003, {
-        x: e.clientX,
-        y: e.clientY,
-      });
+      const delta = e.deltaY > 0 ? -0.3 : 0.3;
+      setZoomLevel(
+        zoomRef.current + delta,
+        { x: e.clientX, y: e.clientY },
+        true,
+        true,
+      );
     };
 
     el.addEventListener("touchstart", onTouchStart, { passive: false });
@@ -351,20 +385,22 @@ const ZoomableImage = ({
       el.removeEventListener("wheel", onWheel);
       cancelAnimationFrame(inertiaRef.current);
       if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+      if (displayZoomTimerRef.current)
+        cancelAnimationFrame(displayZoomTimerRef.current);
     };
   }, [
     onSingleTap,
-    onZoomChange,
     clampOffset,
     applyTransform,
     setZoomLevel,
     resetZoom,
     startInertia,
+    updateDisplayZoom,
   ]);
 
   // ── mouse drag (desktop) ────────────────────────────────────────────
   const onPointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType === "touch") return; // handled above
+    if (e.pointerType === "touch") return;
     if (zoomRef.current <= 1) return;
     e.preventDefault();
     e.stopPropagation();
@@ -422,12 +458,13 @@ const ZoomableImage = ({
     movedRef.current = false;
   };
 
-  // desktop click → single tap
   const handleClick = (e: React.MouseEvent) => {
     if (zoomRef.current > 1) return;
     e.stopPropagation();
     onSingleTap();
   };
+
+  const isZoomed = displayZoom > 1;
 
   return (
     <div
@@ -435,8 +472,8 @@ const ZoomableImage = ({
       className="relative w-full overflow-hidden flex items-center justify-center select-none"
       style={{
         maxHeight: "90dvh",
-        touchAction: displayZoom > 1 ? "none" : "pan-y",
-        cursor: displayZoom > 1 ? "grab" : "pointer",
+        touchAction: isZoomed ? "none" : "pan-y",
+        cursor: isZoomed ? "grab" : "pointer",
       }}
       onClick={handleClick}
       onPointerDown={onPointerDown}
@@ -470,12 +507,13 @@ const ZoomableImage = ({
         onPointerDown={(e) => e.stopPropagation()}
       >
         <AnimatePresence>
-          {displayZoom > 1 && (
+          {isZoomed && (
             <motion.button
               key="reset"
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ duration: 0.15 }}
               onClick={(e) => {
                 e.stopPropagation();
                 resetZoom();
@@ -490,12 +528,13 @@ const ZoomableImage = ({
         </AnimatePresence>
 
         <AnimatePresence>
-          {displayZoom > 1 && (
+          {isZoomed && (
             <motion.button
               key="zoomout"
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ duration: 0.15 }}
               whileTap={{ scale: 0.92 }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -521,11 +560,19 @@ const ZoomableImage = ({
       </div>
 
       {/* hint */}
-      <div className="absolute bottom-3 left-3 text-white/40 text-[10px] pointer-events-none leading-tight select-none">
-        {displayZoom === 1
-          ? "double-tap · scroll · button to zoom"
-          : "drag to see all parts · reset to 100%"}
-      </div>
+      <AnimatePresence>
+        {!isZoomed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute bottom-3 left-3 text-white/40 text-[10px] pointer-events-none leading-tight select-none"
+          >
+            double-tap · scroll · button to zoom
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
