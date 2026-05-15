@@ -617,15 +617,20 @@ const AddWeeklyExam = () => {
         (t) => t.slug === data.formData.teacher,
       );
 
-      const payload = {
+      const resolvedNumberType = data.formData.numberType as
+        | "chapterNumber"
+        | "pageNumber";
+      const resolvedNumberValue = toEn(data.formData.numberValue ?? "");
+
+      const payload: Record<string, unknown> = {
         subject: data.formData.subject,
         teacher: selectedTeacher?.name ?? user?.name,
         teacherSlug: selectedTeacher?.slug ?? user?.slug,
         class: data.formData.class,
         mark: data.formData.mark,
         ExamNumber: toEn(data.formData.ExamNumber),
-        numberType: data.formData.numberType,
-        [data.formData.numberType]: toEn(data.formData.numberValue),
+        numberType: resolvedNumberType,
+        [resolvedNumberType]: resolvedNumberValue,
         topics: data.formData.topics,
         question: data.formData.question,
         images: uploadedImages,
@@ -954,7 +959,8 @@ const AddWeeklyExam = () => {
                   name="numberValue"
                   control={control}
                   rules={{
-                    validate: (v) => validateNumberValue(v, numberTypeLabel),
+                    validate: (v) =>
+                      validateNumberValue(v ?? "", numberTypeLabel),
                   }}
                   render={({ field, fieldState }) => (
                     <div className="flex flex-col lg:flex-row items-start gap-3">

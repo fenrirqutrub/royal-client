@@ -12,7 +12,7 @@ export interface Exam {
   teacher?: string;
   date: string;
   images?: (string | ExamImage)[];
-  numberType?: "pageNumber" | "chapterNumber";
+  numberType?: "pageNumber" | "chapterNumber" | null;
   pageNumber?: string | number | null;
   chapterNumber?: string | number | null;
   question?: string | null;
