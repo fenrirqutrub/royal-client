@@ -406,12 +406,9 @@ const Teacher = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-        className="text-center bangla relative z-10 mb-5 "
+        className="text-center  bangla relative z-10 mb-5 "
       >
-        <h2
-          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold
-                       text-[var(--color-text)]"
-        >
+        <h2 className="text-2xl lg:text-4xl font-bold text-[var(--color-text)]">
           শিক্ষক মন্ডলী
         </h2>
         <motion.p

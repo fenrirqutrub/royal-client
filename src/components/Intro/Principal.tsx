@@ -9,11 +9,10 @@ const Principal = () => {
     <section className="bangla relative  ">
       <Border />
 
-      <div className="text-left mb-3">
-        <h2 className="text-4xl md:text-5xl font-bold text-[var(--color-text)]">
-          অধ্যক্ষের বাণী
+      <div className="text-center lg:text-right ">
+        <h2 className="text-2xl md:text-4xl font-bold text-[var(--color-text)]">
+          পরিচালকের বাণী
         </h2>
-        <p className="text-[var(--color-gray)] text-2xl mt-2">রয়েল একাডেমি</p>
       </div>
 
       <div className="flex flex-col-reverse md:flex-row gap-10 items-center">
@@ -48,7 +47,7 @@ const Principal = () => {
             <span>আব্দুর রাজ্জাক</span>
           </p>
           <p className="text-[var(--color-gray)] ml-8">
-            অধ্যক্ষ <br /> রয়েল একাডেমি <br /> বেলকুচি, সিরাজগঞ্জ
+            পরিচালক <br /> রয়েল একাডেমি <br /> বেলকুচি, সিরজগঞ্জ
           </p>
         </div>
 
