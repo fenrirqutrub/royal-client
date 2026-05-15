@@ -16,15 +16,11 @@ export type MenuItem = { readonly name: string; readonly path: string };
 /* ─── Menu config ───────────────────────────────────────────────────────── */
 const BASE_MENU: MenuItem[] = [
   { name: "হোম", path: "/" },
-  // { name: "ফটোগ্রাফি", path: "/photography" },
+
   { name: "প্রতিদিনের পড়া", path: "/dailylesson" },
   { name: "সাপ্তাহিক পরিক্ষা", path: "/weekly-exam" },
+  { name: "ক্যালকুলেটর", path: "/tools" },
 ];
-
-// const AUTH_MENU: MenuItem[] = [
-//   { name: "প্রতিদিনের পড়া", path: "/dailylesson" },
-//   { name: "সাপ্তাহিক পরিক্ষা", path: "/weekly-exam" },
-// ];
 
 const PRIVILEGED_MENU: MenuItem[] = [{ name: "ব্যবহারকারী", path: "/people" }];
 
@@ -72,11 +68,7 @@ const Navbar = memo(() => {
 
   const menuConfig = useMemo<MenuItem[]>(() => {
     if (!isAuthenticated) return BASE_MENU;
-    return [
-      ...BASE_MENU,
-      // ...AUTH_MENU,
-      ...(isPrivileged ? PRIVILEGED_MENU : []),
-    ];
+    return [...BASE_MENU, ...(isPrivileged ? PRIVILEGED_MENU : [])];
   }, [isAuthenticated, isPrivileged]);
 
   const activeItem = useMemo(() => {
