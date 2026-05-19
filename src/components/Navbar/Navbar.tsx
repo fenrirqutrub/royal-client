@@ -19,7 +19,7 @@ const BASE_MENU: MenuItem[] = [
 
   { name: "প্রতিদিনের পড়া", path: "/dailylesson" },
   { name: "সাপ্তাহিক পরিক্ষা", path: "/weekly-exam" },
-  { name: "ক্যালকুলেটর", path: "/tools" },
+  // { name: "ক্যালকুলেটর", path: "/tools" },
 ];
 
 const PRIVILEGED_MENU: MenuItem[] = [{ name: "ব্যবহারকারী", path: "/people" }];

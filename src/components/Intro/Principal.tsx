@@ -1,7 +1,4 @@
 import { IoCaretForwardOutline } from "react-icons/io5";
-
-// import p from "../../assets/images/sir.webp";
-import p from "../../assets/images/bal.webp";
 import Border from "../common/Border";
 
 const Principal = () => {
@@ -54,7 +51,7 @@ const Principal = () => {
         {/* image */}
         <figure className="md:w-1/3 border-8 border-[var(--color-active-bg)] rounded-lg ">
           <img
-            src={p}
+            src="https://res.cloudinary.com/ddsfmccyi/image/upload/v1779163394/razzak_f1utug.webp"
             alt="principal"
             className=" shadow-xl w-full object-cover"
           />
