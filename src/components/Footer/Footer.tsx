@@ -15,7 +15,7 @@ const Footer = () => (
           target="_blank"
           className="font-extrabold rubik underline  "
         >
-          Masud Ibn Belat
+          MiB
         </Link>
       </p>
     </div>
