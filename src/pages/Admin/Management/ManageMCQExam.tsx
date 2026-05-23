@@ -1,5 +1,3 @@
-// src/pages/mcq/ManageMCQExam.tsx
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,12 +5,10 @@ import {
   FileText,
   Trash2,
   Calendar,
-  BookOpen,
   Search,
   Loader2,
   AlertCircle,
   RefreshCw,
-  GraduationCap,
 } from "lucide-react";
 import axiosPublic from "../../../hooks/axiosPublic";
 
@@ -21,15 +17,9 @@ import axiosPublic from "../../../hooks/axiosPublic";
 interface MCQExam {
   _id: string;
   slug: string;
-  class: string;
-  subject: string;
   description: string;
   examDate: string;
   createdAt: string;
-  createdBy?: {
-    _id: string;
-    name: string;
-  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -67,9 +57,8 @@ const ManageMCQExam = () => {
   // ── Filter ──
   const filtered = exams.filter(
     (e) =>
-      e.class.toLowerCase().includes(search.toLowerCase()) ||
-      e.subject.toLowerCase().includes(search.toLowerCase()) ||
-      e.slug.toLowerCase().includes(search.toLowerCase()),
+      e.slug.toLowerCase().includes(search.toLowerCase()) ||
+      e.description.toLowerCase().includes(search.toLowerCase()),
   );
 
   // ── Format date ──
@@ -147,7 +136,7 @@ const ManageMCQExam = () => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="শ্রেণি, বিষয় বা স্লাগ দিয়ে খুঁজুন..."
+              placeholder="স্লাগ বা বিবরণ দিয়ে খুঁজুন..."
               className="w-full rounded-lg border border-[var(--color-active-border)] bg-[var(--color-bg)] py-2 pl-9 pr-3 text-sm text-[var(--color-text)] transition-colors placeholder:text-[var(--color-gray)]/60 hover:border-[var(--color-gray)]/50 focus:border-[var(--color-gray)] focus:outline-none bangla"
             />
           </div>
@@ -189,20 +178,8 @@ const ManageMCQExam = () => {
                 <div className="flex items-start justify-between gap-3">
                   {/* info */}
                   <div className="min-w-0 flex-1">
-                    {/* class + subject */}
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span className="flex items-center gap-1 rounded-md bg-[var(--color-brand)]/10 px-2 py-0.5 text-xs font-medium text-[var(--color-brand)] bangla">
-                        <GraduationCap size={12} />
-                        {exam.class}
-                      </span>
-                      <span className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 bangla">
-                        <BookOpen size={12} />
-                        {exam.subject}
-                      </span>
-                    </div>
-
                     {/* slug */}
-                    <p className="mb-1 truncate text-xs text-[var(--color-gray)]">
+                    <p className="mb-2 truncate text-xs text-[var(--color-gray)]">
                       {exam.slug}
                     </p>
 
@@ -223,9 +200,6 @@ const ManageMCQExam = () => {
                         <Calendar size={11} />
                         তৈরি: {formatDate(exam.createdAt)}
                       </span>
-                      {exam.createdBy?.name && (
-                        <span className="bangla">— {exam.createdBy.name}</span>
-                      )}
                     </div>
                   </div>
 

@@ -1,27 +1,14 @@
-// src/pages/mcq/AddMCQExam.tsx
-
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, Calendar, Save, Loader2 } from "lucide-react";
-import {
-  CLASS_OPTIONS,
-  getSubjects,
-  toLocalIso,
-} from "../../../utility/Constants";
+import { toLocalIso } from "../../../utility/Constants";
 import axiosSecure from "../../../hooks/axiosSecure";
-import SelectInput from "../../../components/common/SelectInput";
 
 const AddMCQExam = () => {
   const [examDate, setExamDate] = useState(toLocalIso(new Date()));
-  const [selectedClass, setSelectedClass] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("");
   const [description, setDescription] = useState("");
 
-  const [touched, setTouched] = useState({
-    examDate: false,
-    selectedClass: false,
-    selectedSubject: false,
-  });
+  const [touched, setTouched] = useState({ examDate: false });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -33,24 +20,14 @@ const AddMCQExam = () => {
     day: "numeric",
   });
 
-  const subjectOptions = selectedClass ? getSubjects(selectedClass) : [];
-
-  const handleClassChange = (v: string) => {
-    setSelectedClass(v);
-    setSelectedSubject("");
-  };
-
   const touch = (f: keyof typeof touched) =>
     setTouched((p) => ({ ...p, [f]: true }));
 
   const errors = {
     examDate: !examDate ? "পরীক্ষার তারিখ দিন" : "",
-    selectedClass: !selectedClass ? "শ্রেণি নির্বাচন করুন" : "",
-    selectedSubject: !selectedSubject ? "বিষয় নির্বাচন করুন" : "",
   };
 
-  const isValid =
-    !errors.examDate && !errors.selectedClass && !errors.selectedSubject;
+  const isValid = !errors.examDate;
 
   const handleSubmit = async () => {
     if (!isValid || isSubmitting) return;
@@ -58,37 +35,20 @@ const AddMCQExam = () => {
     setIsSubmitting(true);
     setSubmitError("");
 
-    const payload = {
-      examDate,
-      class: selectedClass,
-      subject: selectedSubject,
-      description,
-    };
-
     try {
-      const res = await axiosSecure.post("/api/mcq-exams", payload);
-
-      console.log("✅ POST response:", res.data);
+      const res = await axiosSecure.post("/api/mcq-exams", {
+        examDate,
+        description,
+      });
 
       if (res.data?.success) {
         setSubmitSuccess(true);
-        setSelectedClass("");
-        setSelectedSubject("");
         setDescription("");
         setExamDate(toLocalIso(new Date()));
-        setTouched({
-          examDate: false,
-          selectedClass: false,
-          selectedSubject: false,
-        });
-
+        setTouched({ examDate: false });
         setTimeout(() => setSubmitSuccess(false), 3000);
       }
     } catch (error: any) {
-      console.error(
-        "❌ MCQ create error:",
-        error?.response?.data || error.message,
-      );
       setSubmitError(
         error?.response?.data?.message || "পরীক্ষা তৈরি করা যায়নি",
       );
@@ -208,37 +168,6 @@ const AddMCQExam = () => {
                 )}
               </AnimatePresence>
             </div>
-
-            {/* class */}
-            <SelectInput
-              label="শ্রেণি নির্বাচন"
-              placeholder="শ্রেণি বাছাই করুন"
-              options={CLASS_OPTIONS}
-              value={selectedClass}
-              onChange={handleClassChange}
-              onBlur={() => touch("selectedClass")}
-              required
-              error={touched.selectedClass ? errors.selectedClass : undefined}
-              isTouched={touched.selectedClass}
-            />
-
-            {/* subject */}
-            <SelectInput
-              label="বিষয় নির্বাচন"
-              placeholder={
-                selectedClass ? "বিষয় বাছাই করুন" : "আগে শ্রেণি বাছাই করুন"
-              }
-              options={subjectOptions}
-              value={selectedSubject}
-              onChange={setSelectedSubject}
-              onBlur={() => touch("selectedSubject")}
-              required
-              disabled={!selectedClass}
-              error={
-                touched.selectedSubject ? errors.selectedSubject : undefined
-              }
-              isTouched={touched.selectedSubject}
-            />
 
             {/* description */}
             <div className="sm:col-span-2">
