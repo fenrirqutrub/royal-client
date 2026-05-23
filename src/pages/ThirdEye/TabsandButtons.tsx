@@ -248,7 +248,7 @@ export const MobileDropdown = memo(() => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute top-full left-0 mt-1.5 z-50 min-w-[160px] rounded-lg overflow-hidden
+            className="absolute top-full left-0 mt-1.5 z-[9999] min-w-[160px] rounded-lg overflow-hidden
                        border border-[var(--color-active-border)] bg-[var(--color-bg)]"
             style={{ boxShadow: "0 8px 28px var(--color-shadow-md)" }}
           >
@@ -432,7 +432,7 @@ export const FormatToast = memo(({ visible }: { visible: boolean }) => (
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 8, scale: 0.95 }}
         transition={{ duration: 0.2 }}
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2
                    px-3.5 py-2 rounded-lg bg-[var(--color-active-bg)]
                    border border-[var(--color-active-border)]
                    text-[11px] font-mono text-[var(--color-text-hover)]"

@@ -16,7 +16,6 @@ export type MenuItem = { readonly name: string; readonly path: string };
 /* ─── Menu config ───────────────────────────────────────────────────────── */
 const BASE_MENU: MenuItem[] = [
   { name: "হোম", path: "/" },
-
   { name: "প্রতিদিনের পড়া", path: "/dailylesson" },
   { name: "সাপ্তাহিক পরিক্ষা", path: "/weekly-exam" },
   { name: "Third Eye", path: "/thirdeye" },

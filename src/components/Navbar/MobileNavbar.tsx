@@ -8,7 +8,7 @@ import {
   BookOpen,
   ClipboardList,
   GraduationCap,
-  Calculator,
+  Eye,
 } from "lucide-react";
 import type { MenuItem } from "./Navbar";
 
@@ -19,7 +19,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   "/photography": Camera,
   "/dailylesson": BookOpen,
   "/weekly-exam": ClipboardList,
-  "/tools": Calculator,
+  "/thirdeye": Eye,
   "/people": GraduationCap,
 };
 

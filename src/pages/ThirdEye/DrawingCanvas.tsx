@@ -729,7 +729,6 @@ const FloatingToolbar = memo(
             ? {
                 left: 12,
                 right: 12,
-                justifyContent: "space-between",
               }
             : {
                 left: "50%",

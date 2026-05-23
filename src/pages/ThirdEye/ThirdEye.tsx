@@ -220,39 +220,6 @@ const ThirdEye = () => {
         className="min-h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-text)]"
         style={isDrawMode ? { overflow: "hidden", height: "100vh" } : {}}
       >
-        {/* ── Desktop layout ── */}
-        {isDesktop && (
-          <div
-            className="flex "
-            style={
-              isDrawMode
-                ? { height: "calc(100vh)", overflow: "hidden" }
-                : { minHeight: "100vh" }
-            }
-          >
-            <DesktopTabs />
-
-            <div
-              className="flex-1 flex flex-col"
-              style={isDrawMode ? { overflow: "hidden" } : {}}
-            >
-              {isDrawMode ? (
-                <DrawingCanvas />
-              ) : (
-                <Editor textareaRef={textareaRef} outputOpen={!!state.output} />
-              )}
-            </div>
-
-            {!isDrawMode && (
-              <div className="flex flex-col  px-4 gap-2 flex-shrink-0">
-                <RunButton />
-                <FormatButton />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Mobile layout ── */}
         {/* ── Mobile layout ── */}
         {!isDesktop && (
           <div
