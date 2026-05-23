@@ -72,6 +72,8 @@ export const SyntaxHighlightOverlay = memo(
         style={{
           paddingTop: 80,
           paddingBottom: outputOpen ? "calc(40vh + 80px)" : "80px",
+          pointerEvents: "none",
+          userSelect: "none",
         }}
         dangerouslySetInnerHTML={{ __html: highlighted }}
       />
@@ -198,21 +200,7 @@ export const Editor = memo(({ textareaRef, outputOpen }: EditorProps) => {
         )}
       </AnimatePresence>
 
-      {/*
-        SCROLL ARCHITECTURE:
-        ┌─ page (overflow: auto via body/html) ──────────────┐
-        │  ┌─ this wrapper (position: relative, NO overflow) ┤
-        │  │   overlay  (position: absolute, full size)      │
-        │  │   textarea (position: relative z-index 2,       │
-        │  │             height = scrollHeight, no scroll)   │
-        │  └──────────────────────────────────────────────── ┘
-        └─────────────────────────────────────────────────── ┘
-
-        The textarea grows to its full content height (via onInput + useEffect).
-        The page itself scrolls. Overlay is absolute so it always lines up.
-        No flex constraint traps the content.
-      */}
-      <div className="relative flex-1">
+      <div className="relative flex-1" style={{ minHeight: 0 }}>
         {state.lang.mono && (
           <SyntaxHighlightOverlay
             text={state.text}
@@ -234,8 +222,7 @@ export const Editor = memo(({ textareaRef, outputOpen }: EditorProps) => {
           style={{
             paddingTop: 80,
             paddingBottom,
-            minHeight: "100vh",
-            // No overflow on textarea — page scrolls instead
+            minHeight: "100%",
             overflow: "hidden",
             resize: "none",
             display: "block",

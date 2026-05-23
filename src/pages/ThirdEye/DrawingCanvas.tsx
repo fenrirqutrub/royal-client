@@ -399,10 +399,12 @@ const ToolSheet = memo(
                       transform: "translateX(-50%)",
                     }
                   : {
-                      top: 12,
+                      top: 60,
                       bottom: "auto",
                       left: "50%",
                       transform: "translateX(-50%)",
+                      minWidth: 300,
+                      borderRadius: 14,
                     }),
                 background: "var(--color-bg)",
                 border: "1px solid var(--color-active-border)",
@@ -791,7 +793,7 @@ const FloatingToolbar = memo(
         </motion.button>
 
         {!isMobile && (
-          <div>
+          <>
             {sep}
             {TOOLS.map((t) => {
               const isA = activeTool === t.id;
@@ -809,17 +811,16 @@ const FloatingToolbar = memo(
                       ? "var(--color-text-hover)"
                       : "var(--color-gray)",
                     background: isA ? "var(--color-active-bg)" : "none",
+                    padding: isMobile ? 8 : 8,
                   }}
                 >
                   <t.Icon size={sz} />
                 </motion.button>
               );
             })}
-          </div>
+          </>
         )}
-
         {sep}
-
         <motion.button
           whileHover={canUndo ? { scale: 1.1 } : {}}
           whileTap={canUndo ? { scale: 0.9 } : {}}
@@ -848,9 +849,7 @@ const FloatingToolbar = memo(
         >
           <Redo2 size={sz} />
         </motion.button>
-
         {sep}
-
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}

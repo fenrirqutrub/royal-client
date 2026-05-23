@@ -1,5 +1,34 @@
 /* ThirdEye.css */
 
+/* ── Syntax highlight color variables ── */
+:root {
+  --syn-text: #abb2bf;
+  --syn-comment: #5c6370;
+  --syn-punctuation: #abb2bf;
+  --syn-number: #d19a66;
+  --syn-string: #98c379;
+  --syn-operator: #56b6c2;
+  --syn-keyword: #c678dd;
+  --syn-function: #61afef;
+  --syn-variable: #e06c75;
+  --syn-type: #e5c07b;
+  --syn-decorator: #e5c07b;
+}
+
+[data-theme="light"] {
+  --syn-text: #383a42;
+  --syn-comment: #a0a1a7;
+  --syn-punctuation: #383a42;
+  --syn-number: #986801;
+  --syn-string: #50a14f;
+  --syn-operator: #0184bc;
+  --syn-keyword: #a626a4;
+  --syn-function: #4078f2;
+  --syn-variable: #e45649;
+  --syn-type: #c18401;
+  --syn-decorator: #c18401;
+}
+
 .tb-spinner {
   width: 10px;
   height: 10px;

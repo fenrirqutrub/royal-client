@@ -18,7 +18,7 @@ const BASE_MENU: MenuItem[] = [
   { name: "হোম", path: "/" },
   { name: "প্রতিদিনের পড়া", path: "/dailylesson" },
   { name: "সাপ্তাহিক পরিক্ষা", path: "/weekly-exam" },
-  { name: "Third Eye", path: "/thirdeye" },
+  { name: "নোটপ্যাড", path: "/thirdeye" },
 ];
 
 const PRIVILEGED_MENU: MenuItem[] = [{ name: "ব্যবহারকারী", path: "/people" }];

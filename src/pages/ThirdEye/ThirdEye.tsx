@@ -227,7 +227,7 @@ const ThirdEye = () => {
             style={isDrawMode ? { height: "100vh", overflow: "hidden" } : {}}
           >
             <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-1 min-w-0">
-              <div className="flex-1 min-w-0 overflow-hidden">
+              <div className="flex-1 min-w-0">
                 <MobileDropdown />
               </div>
               {!isDrawMode && (
@@ -243,6 +243,31 @@ const ThirdEye = () => {
             ) : (
               <Editor textareaRef={textareaRef} outputOpen={!!state.output} />
             )}
+          </div>
+        )}
+
+        {/* ── Desktop layout ── */}
+        {isDesktop && (
+          <div
+            className="flex flex-1 min-h-0"
+            style={isDrawMode ? { height: "100vh", overflow: "hidden" } : {}}
+          >
+            <DesktopTabs />
+
+            <div className="flex flex-col flex-1 min-w-0">
+              {!isDrawMode && (
+                <div className="flex items-center gap-2 px-4 pt-2 pb-1 flex-shrink-0">
+                  <FormatButton />
+                  <RunButton />
+                </div>
+              )}
+
+              {isDrawMode ? (
+                <DrawingCanvas />
+              ) : (
+                <Editor textareaRef={textareaRef} outputOpen={!!state.output} />
+              )}
+            </div>
           </div>
         )}
 
