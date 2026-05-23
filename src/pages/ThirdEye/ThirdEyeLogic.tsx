@@ -15,7 +15,6 @@ import type {
 export const LANGUAGES: Language[] = [
   { label: "Text", value: "text", mono: false },
   { label: "JavaScript", value: "javascript", mono: true },
-  { label: "TypeScript", value: "typescript", mono: true },
   { label: "Python", value: "python", mono: true },
 ];
 

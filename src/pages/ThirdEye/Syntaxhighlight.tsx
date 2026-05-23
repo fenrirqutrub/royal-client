@@ -91,6 +91,69 @@ interface EditorProps {
   outputOpen: boolean;
 }
 
+// ── Line Numbers ──
+const LineNumbers = memo(
+  ({
+    text,
+    paddingTop,
+    outputOpen,
+    errors,
+  }: {
+    text: string;
+    paddingTop: number;
+    outputOpen: boolean;
+    errors: SyntaxError2[];
+  }) => {
+    const lineCount = text ? text.split("\n").length : 1;
+    const errorLines = useMemo(
+      () => new Set(errors.map((e) => e.line)),
+      [errors],
+    );
+
+    return (
+      <div
+        aria-hidden="true"
+        style={{
+          width: 48,
+          flexShrink: 0,
+          paddingTop,
+          paddingBottom: outputOpen ? "calc(40vh + 80px)" : "80px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          paddingRight: 12,
+          paddingLeft: 8,
+          boxSizing: "border-box",
+          borderRight: "1px solid var(--color-active-border)",
+          userSelect: "none",
+          pointerEvents: "none",
+        }}
+      >
+        {Array.from({ length: lineCount }, (_, i) => {
+          const lineNum = i + 1;
+          const hasError = errorLines.has(lineNum);
+          return (
+            <div
+              key={lineNum}
+              style={{
+                fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                fontSize: 13.5,
+                lineHeight: 1.75,
+                color: hasError ? "#ef4444" : "var(--color-gray)",
+                opacity: hasError ? 1 : 0.4,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {lineNum}
+            </div>
+          );
+        })}
+      </div>
+    );
+  },
+);
+LineNumbers.displayName = "LineNumbers";
+
 export const Editor = memo(({ textareaRef, outputOpen }: EditorProps) => {
   const { state, dispatch } = useEditor();
   const [liveErrors, setLiveErrors] = useState<SyntaxError2[]>([]);
@@ -200,35 +263,48 @@ export const Editor = memo(({ textareaRef, outputOpen }: EditorProps) => {
         )}
       </AnimatePresence>
 
-      <div className="relative flex-1" style={{ minHeight: 0 }}>
+      <div className="relative flex-1 flex" style={{ minHeight: 0 }}>
+        {/* ── Line numbers ── */}
         {state.lang.mono && (
-          <SyntaxHighlightOverlay
+          <LineNumbers
             text={state.text}
-            lang={state.lang.value}
-            lintErrors={liveErrors}
-            font={fontClass}
+            paddingTop={80}
             outputOpen={outputOpen}
+            errors={liveErrors}
           />
         )}
-        <textarea
-          ref={textareaRef}
-          value={state.text}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onInput={handleInput}
-          spellCheck={false}
-          placeholder={placeholder}
-          className={`tb-editor tb-textarea w-full${state.lang.mono ? " code" : ` prose ${fontClass}`}`}
-          style={{
-            paddingTop: 80,
-            paddingBottom,
-            minHeight: "100%",
-            overflow: "hidden",
-            resize: "none",
-            display: "block",
-            boxSizing: "border-box",
-          }}
-        />
+
+        {/* ── Syntax overlay + textarea ── */}
+        <div className="relative flex-1" style={{ minHeight: 0 }}>
+          {state.lang.mono && (
+            <SyntaxHighlightOverlay
+              text={state.text}
+              lang={state.lang.value}
+              lintErrors={liveErrors}
+              font={fontClass}
+              outputOpen={outputOpen}
+            />
+          )}
+          <textarea
+            ref={textareaRef}
+            value={state.text}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onInput={handleInput}
+            spellCheck={false}
+            placeholder={placeholder}
+            className={`tb-editor tb-textarea w-full${state.lang.mono ? " code" : ` prose ${fontClass}`}`}
+            style={{
+              paddingTop: 80,
+              paddingBottom,
+              minHeight: "100%",
+              overflow: "hidden",
+              resize: "none",
+              display: "block",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
       </div>
     </div>
   );

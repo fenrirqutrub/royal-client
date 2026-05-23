@@ -187,7 +187,9 @@
   background: transparent !important;
   color: transparent !important;
   -webkit-text-fill-color: transparent !important;
-  caret-color: var(--color-text-hover) !important;
+  caret-color: var(--color-text-hover, #61afef) !important;
+  /* Force caret visibility on webkit */
+  -webkit-caret-color: var(--color-text-hover, #61afef) !important;
 }
 /* Prose / plain-text mode: visible text */
 .tb-textarea.prose {
@@ -413,4 +415,10 @@ canvas {
   height: 4px;
   border-radius: 4px;
   background: var(--color-active-border);
+}
+
+@media (max-width: 767px) {
+  .tb-line-numbers {
+    display: none;
+  }
 }

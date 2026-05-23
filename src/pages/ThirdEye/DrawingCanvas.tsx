@@ -391,21 +391,12 @@ const ToolSheet = memo(
               style={{
                 position: "absolute",
                 zIndex: 100,
-                ...(isMobile
-                  ? {
-                      top: 12,
-                      bottom: "auto",
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                    }
-                  : {
-                      top: 60,
-                      bottom: "auto",
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      minWidth: 300,
-                      borderRadius: 14,
-                    }),
+                top: 12,
+                left: isMobile ? 12 : "50%",
+                right: isMobile ? 12 : "auto",
+                transform: isMobile ? "none" : "translateX(-50%)",
+                width: isMobile ? "auto" : 340,
+                borderRadius: 16,
                 background: "var(--color-bg)",
                 border: "1px solid var(--color-active-border)",
                 boxShadow: "0 8px 40px var(--color-shadow-md)",
@@ -603,7 +594,10 @@ const ToolSheet = memo(
                     </span>
                     <ColorGrid
                       activeColor={activeColor}
-                      onSelect={onColorChange}
+                      onSelect={(c) => {
+                        onColorChange(c);
+                        onClose();
+                      }}
                     />
                   </div>
                 )}
@@ -1318,7 +1312,7 @@ export const DrawingCanvas = memo(() => {
       style={{
         flex: "1 1 0%",
         position: "relative",
-        overflow: "visible",
+        overflow: "hidden",
         touchAction: "none",
         overscrollBehavior: "none",
         width: "100%",
