@@ -49,7 +49,7 @@ export const invalidateCache = (key: string) => {
 // ─── Axios Instance ───────────────────────────────────────
 const axiosPublic = axios.create({
   baseURL: API_URL,
-  timeout: 8_00000000,
+  timeout: 30_000,
   withCredentials: false,
   headers: { "X-Requested-With": "XMLHttpRequest" },
 });

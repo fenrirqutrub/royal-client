@@ -286,26 +286,35 @@ export const uploadEditedBlobsToCloudinary = async (
   options: { folder?: string; onProgress?: (percent: number) => void } = {},
 ): Promise<CloudinaryResult[]> => {
   const { folder = "uploads", onProgress } = options;
-
   if (blobs.length === 0) return [];
 
-  const totalBytes = blobs.reduce((sum, b) => sum + b.size, 0);
-  const results: CloudinaryResult[] = [];
-
-  // No conversion needed — blobs are already WebP from the editor
   onProgress?.(5);
 
+  // ✅ Convert করো — already WebP হলেও resize দরকার হতে পারে
+  const convertedBlobs: Blob[] = [];
   for (let i = 0; i < blobs.length; i++) {
+    const converted = await convertToModernFormats(blobs[i]); // existing function
+    convertedBlobs.push(converted.preferredBlob);
+    onProgress?.(5 + Math.round(((i + 1) / blobs.length) * 25));
+  }
+
+  const totalBytes = convertedBlobs.reduce((sum, b) => sum + b.size, 0);
+  const results: CloudinaryResult[] = [];
+
+  for (let i = 0; i < convertedBlobs.length; i++) {
     const result = await uploadSingleWithProgress(
-      blobs[i],
+      convertedBlobs[i],
       folder,
       `image_${i}`,
       (loaded) => {
-        const prevBytes = blobs.slice(0, i).reduce((s, b) => s + b.size, 0);
-        const currentProgress = loaded / blobs[i].size;
+        const prevBytes = convertedBlobs
+          .slice(0, i)
+          .reduce((s, b) => s + b.size, 0);
         const overall =
-          (prevBytes + blobs[i].size * currentProgress) / totalBytes;
-        onProgress?.(5 + Math.round(overall * 95));
+          (prevBytes +
+            convertedBlobs[i].size * (loaded / convertedBlobs[i].size)) /
+          totalBytes;
+        onProgress?.(30 + Math.round(overall * 70));
       },
     );
     results.push(result);

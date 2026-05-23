@@ -53,38 +53,6 @@ const validatePositiveNumber = (
   return true;
 };
 
-const validateNumberValue = (
-  raw: string,
-  fieldLabel: string,
-): string | true => {
-  if (!raw?.trim()) return `${fieldLabel} আবশ্যিক`;
-
-  const ascii = toEn(raw).replace(/[–—]/g, "-").replace(/।/g, ".").trim();
-
-  const parts = ascii
-    .split(",")
-    .map((p) => p.trim())
-    .filter(Boolean);
-
-  for (const part of parts) {
-    const hyphenCount = (part.match(/-/g) || []).length;
-    if (hyphenCount > 1) {
-      return "রেঞ্জ সঠিক নয় (যেমন: ১০-১৫)";
-    }
-
-    if (!/^\d+\.?\d*$|^\d+\.?\d*-\d+\.?\d*$/.test(part)) {
-      return "সঠিক ফরম্যাট দিন। উদাহরণ: ২.৬, ১৫-২০, ২৫-৩০";
-    }
-    if (part.includes("-")) {
-      const [start, end] = part.split("-").map(Number);
-      if (isNaN(start) || isNaN(end) || start >= end) {
-        return `রেঞ্জ ভুল: ${toBn(part)} → ছোট সংখ্যা আগে দিন`;
-      }
-    }
-  }
-  return true;
-};
-
 // ─── Static Data ──────────────────────────────────────────
 const MARK_OPTIONS: SelectOption[] = [5, 10, 15, 20, 25, 30, 35, 40].map(
   (n) => ({
@@ -620,7 +588,7 @@ const AddWeeklyExam = () => {
       const resolvedNumberType = data.formData.numberType as
         | "chapterNumber"
         | "pageNumber";
-      const resolvedNumberValue = toEn(data.formData.numberValue ?? "");
+      const resolvedNumberValue = toEn(data.formData.numberValue ?? "").trim();
 
       const payload: Record<string, unknown> = {
         subject: data.formData.subject,
@@ -629,8 +597,10 @@ const AddWeeklyExam = () => {
         class: data.formData.class,
         mark: data.formData.mark,
         ExamNumber: toEn(data.formData.ExamNumber),
-        numberType: resolvedNumberType,
-        [resolvedNumberType]: resolvedNumberValue,
+        ...(resolvedNumberValue && {
+          numberType: resolvedNumberType,
+          [resolvedNumberType]: resolvedNumberValue,
+        }),
         topics: data.formData.topics,
         question: data.formData.question,
         images: uploadedImages,
@@ -952,16 +922,11 @@ const AddWeeklyExam = () => {
                       {numberTypeLabel}
                     </motion.span>
                   </AnimatePresence>
-                  <RequiredStar />
                 </label>
 
                 <Controller
                   name="numberValue"
                   control={control}
-                  rules={{
-                    validate: (v) =>
-                      validateNumberValue(v ?? "", numberTypeLabel),
-                  }}
                   render={({ field, fieldState }) => (
                     <div className="flex flex-col lg:flex-row items-start gap-3">
                       {/* Left: tab only needed width */}

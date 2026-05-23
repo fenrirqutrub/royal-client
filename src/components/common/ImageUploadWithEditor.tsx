@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import ImageEditor from "./ImageEditor";
 import { lockScroll, unlockScroll } from "../../utility/scrollLock";
+import { convertToModernFormats } from "../../hooks/useCloudinaryUpload";
 
 // ── Types ───────────────────────────
 export interface EditedImage {
@@ -49,29 +50,6 @@ interface PendingItem {
 
 // ── Helpers ───────────────────────
 const uid = () => Math.random().toString(36).slice(2, 9);
-
-const convertToWebP = async (file: File, quality = 0.88): Promise<Blob> => {
-  const url = URL.createObjectURL(file);
-  const img = await new Promise<HTMLImageElement>((res, rej) => {
-    const i = new Image();
-    i.onload = () => res(i);
-    i.onerror = rej;
-    i.src = url;
-  });
-  URL.revokeObjectURL(url);
-  const canvas = document.createElement("canvas");
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(img, 0, 0);
-  return new Promise((res, rej) =>
-    canvas.toBlob(
-      (b) => (b ? res(b) : rej(new Error("toBlob failed"))),
-      "image/webp",
-      quality,
-    ),
-  );
-};
 
 // ── Review Modal ────────────────────────
 interface ReviewModalProps {
@@ -535,29 +513,29 @@ const ImageUploadWithEditor = ({
     setReEditFile(null);
   }, []);
 
-  // ── Confirm all (Select All instantly processes all pending items) ──
   const handleConfirmAll = useCallback(async () => {
     const results: EditedImage[] = [];
 
     for (const item of pending) {
-      // If manually edited, keep the edit
       if (item.edited && !item.skipped) {
+        // manually edited — editor থেকে আসা blob already processed
         results.push(item.edited);
       } else {
-        // Directly process unedited or skipped files to WebP instantly
+        // skipped বা unprocessed — convert করো
         try {
-          const blob =
-            item.file.type === "image/webp"
-              ? item.file
-              : await convertToWebP(item.file);
+          const converted = await convertToModernFormats(item.file); // ✅ object
+          const blob = converted.preferredBlob; // ✅ blob নাও
           const url = URL.createObjectURL(blob);
           results.push({ blob, previewUrl: url, originalName: item.file.name });
           URL.revokeObjectURL(item.previewUrl);
         } catch {
-          // fallback: use original
-          const blob = item.file;
-          const url = URL.createObjectURL(blob);
-          results.push({ blob, previewUrl: url, originalName: item.file.name });
+          // fallback: original file
+          const url = URL.createObjectURL(item.file);
+          results.push({
+            blob: item.file,
+            previewUrl: url,
+            originalName: item.file.name,
+          });
         }
       }
     }
