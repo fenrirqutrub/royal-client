@@ -30,7 +30,7 @@ import AddExamMarks from "../pages/Admin/AddNewItem/AddExamMarks";
 import TeacherStudentTab from "../components/Teachers/TeacherStudentTab";
 import { PRIVILEGED_ROLES, STAFF_DASHBOARD_ROLES } from "../utility/Constants";
 import Signup from "../pages/Admin/Auth/SignUp";
-import Tools from "../pages/Tools/Tools";
+import ThirdEye from "../pages/ThirdEye/ThirdEye";
 
 const Router = () => {
   return (
@@ -42,7 +42,7 @@ const Router = () => {
         <Route path="photography" element={<Photography />} />
         <Route path="dailylesson" element={<DailyLesson />} />
         <Route path="weekly-exam" element={<WeeklyExam />} />
-        <Route path="tools" element={<Tools />} />
+        <Route path="thirdeye" element={<ThirdEye />} />
 
         <Route
           path="people"

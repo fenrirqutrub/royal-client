@@ -1,5 +1,4 @@
 // src/components/common/ImageEditor.tsx
-// Uses react-image-crop v11 — drop react-easy-crop entirely
 import { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import ReactCrop, {

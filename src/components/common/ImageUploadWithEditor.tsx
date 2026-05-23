@@ -24,7 +24,7 @@ import {
 import ImageEditor from "./ImageEditor";
 import { lockScroll, unlockScroll } from "../../utility/scrollLock";
 
-// ── Types ──────────────────────────────────────────────────
+// ── Types ───────────────────────────
 export interface EditedImage {
   blob: Blob;
   previewUrl: string;
@@ -38,16 +38,16 @@ interface ImageUploadWithEditorProps {
   allowSkipEdit?: boolean;
 }
 
-// ── Pending item (in review flow) ─────────────────────────
+// ── Pending item (in review flow) ───────────
 interface PendingItem {
   id: string;
   file: File;
-  previewUrl: string; // object URL of original file
-  edited: EditedImage | null; // null = not yet processed
+  previewUrl: string;
+  edited: EditedImage | null;
   skipped: boolean;
 }
 
-// ── Helpers ────────────────────────────────────────────────
+// ── Helpers ───────────────────────
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 const convertToWebP = async (file: File, quality = 0.88): Promise<Blob> => {
@@ -73,7 +73,7 @@ const convertToWebP = async (file: File, quality = 0.88): Promise<Blob> => {
   );
 };
 
-// ── Review Modal ───────────────────────────────────────────
+// ── Review Modal ────────────────────────
 interface ReviewModalProps {
   items: PendingItem[];
   activeIdx: number;
