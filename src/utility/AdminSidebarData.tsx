@@ -58,8 +58,8 @@ export const contentNav = (isPrivileged: boolean): NavItem[] => [
         icon: BookOpen,
       },
       {
-        name: "পরিক্ষার ধারণা লিখুন",
-        path: "/dashboard/add-weekly-exam",
+        name: "MCQ পরিক্ষার ধারণা লিখুন",
+        path: "/dashboard/add-mcq-exam",
         icon: BookOpen,
       },
 
@@ -109,8 +109,8 @@ export const managementNav = (isPrivileged: boolean): NavItem[] => [
       ...(isPrivileged
         ? ([
             {
-              name: "ছবি ডিলিট করুন",
-              path: "/dashboard/management/photos",
+              name: "MCQ ডিলিট করুন",
+              path: "/dashboard/management/mcq-exam",
               icon: Camera,
             },
             {

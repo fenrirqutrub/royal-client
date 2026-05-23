@@ -31,6 +31,8 @@ import TeacherStudentTab from "../components/Teachers/TeacherStudentTab";
 import { PRIVILEGED_ROLES, STAFF_DASHBOARD_ROLES } from "../utility/Constants";
 import Signup from "../pages/Admin/Auth/SignUp";
 import ThirdEye from "../pages/ThirdEye/ThirdEye";
+import AddMCQExam from "../pages/Admin/AddNewItem/AddMCQExam";
+import ManageMCQExam from "../pages/Admin/Management/ManageMCQExam";
 
 const Router = () => {
   return (
@@ -89,6 +91,7 @@ const Router = () => {
         >
           <Route path="add-weekly-exam" element={<AddWeeklyExam />} />
           <Route path="add-daily-lesson" element={<AddDailyLesson />} />
+          <Route path="add-mcq-exam" element={<AddMCQExam />} />
         </Route>
 
         {/* ── only admin / principal / owner ── */}
@@ -108,6 +111,7 @@ const Router = () => {
           <Route path="management/photos" element={<ManagePhotos />} />
           <Route path="management/heroes" element={<ManageHero />} />
           <Route path="management/notice" element={<ManageNotice />} />
+          <Route path="management/mcq-exam" element={<ManageMCQExam />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

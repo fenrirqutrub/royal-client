@@ -7,6 +7,7 @@ import Teacher from "../Teachers/Teacher";
 import AmaderKotha from "../Intro/AmaderKotha";
 import Contact from "../Contact/Contact";
 import DailyUpdateDLWE from "../DailyUpdateDLWE/DailyUpdateDLWE";
+import MCQExam from "../../pages/MCQExam/MCQExam";
 
 const Home = () => {
   useEffect(() => {
@@ -15,6 +16,7 @@ const Home = () => {
 
   return (
     <div className="">
+      <MCQExam />
       <Hero />
       <Notice />
       <DailyUpdateDLWE />
