@@ -5,7 +5,6 @@ import Home from "../components/Home/Home";
 import AdminLayout from "../layout/AdminLayout";
 import NotFound from "../pages/NotFound/NotFound";
 import PrivateRoute from "./PrivateRoute";
-import Photography from "../pages/Photography/Photography";
 import DailyLesson from "../pages/DailyLesson/DailyLesson";
 import WeeklyExam from "../pages/WeeklyExam/WeeklyExam";
 import ManagePhotos from "../pages/Admin/Management/ManagePhotos";
@@ -33,6 +32,7 @@ import Signup from "../pages/Admin/Auth/SignUp";
 import ThirdEye from "../pages/ThirdEye/ThirdEye";
 import AddMCQExam from "../pages/Admin/AddNewItem/AddMCQExam";
 import ManageMCQExam from "../pages/Admin/Management/ManageMCQExam";
+import MCQExam from "../pages/MCQExam/MCQExam";
 
 const Router = () => {
   return (
@@ -41,7 +41,7 @@ const Router = () => {
       <Route path="/" element={<Root />}>
         <Route index element={<Home />} />
         <Route path="notice" element={<NoticeBoard />} />
-        <Route path="photography" element={<Photography />} />
+        <Route path="mcq-exam" element={<MCQExam />} />
         <Route path="dailylesson" element={<DailyLesson />} />
         <Route path="weekly-exam" element={<WeeklyExam />} />
         <Route path="thirdeye" element={<ThirdEye />} />

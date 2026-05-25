@@ -11,13 +11,27 @@ import type { NoticeItem } from "../../pages/Notice/NoticeModal";
 import Logo from "./Logo";
 import { Notification } from "./Notification";
 
-export type MenuItem = { readonly name: string; readonly path: string };
+export type MenuItem = {
+  readonly name: string;
+  readonly path: string;
+  readonly children?: readonly {
+    readonly name: string;
+    readonly path: string;
+  }[];
+};
 
 /* ─── Menu config ───────────────────────────────────────────────────────── */
 const BASE_MENU: MenuItem[] = [
   { name: "হোম", path: "/" },
   { name: "প্রতিদিনের পড়া", path: "/dailylesson" },
-  { name: "সাপ্তাহিক পরিক্ষা", path: "/weekly-exam" },
+  {
+    name: "পরিক্ষা",
+    path: "/exams",
+    children: [
+      { name: "সাপ্তাহিক পরিক্ষা", path: "/weekly-exam" },
+      { name: "MCQ পরিক্ষা", path: "/mcq-exam" },
+    ],
+  },
   { name: "নোটপ্যাড", path: "/thirdeye" },
 ];
 
@@ -72,11 +86,13 @@ const Navbar = memo(() => {
 
   const activeItem = useMemo(() => {
     const path = location.pathname;
-    return (
-      menuConfig.find((m) =>
-        m.path === "/" ? path === "/" : path.startsWith(m.path),
-      )?.name ?? ""
-    );
+    for (const m of menuConfig) {
+      // Check children first
+      if (m.children?.some((c) => path.startsWith(c.path))) return m.name;
+      if (m.path === "/" ? path === "/" : path.startsWith(m.path))
+        return m.name;
+    }
+    return "";
   }, [location.pathname, menuConfig]);
 
   useEffect(() => {
