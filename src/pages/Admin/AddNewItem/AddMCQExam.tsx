@@ -1,10 +1,12 @@
 // src/components/mcq/AddMCQExam.tsx
+// src/components/mcq/AddMCQExam.tsx
 
 import {
   useState,
   useRef,
   useEffect,
   useCallback,
+  useMemo,
   type FormEvent,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,7 +22,9 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import axiosSecure from "../../../hooks/axiosSecure";
 import DatePicker from "../../../components/common/Datepicker";
+import SelectInput from "../../../components/common/SelectInput";
 import { BN_MONTHS, toBn } from "../../../utility/Formatters";
+import { CLASS_OPTIONS, getSubjects } from "../../../utility/constants";
 import { toast } from "react-hot-toast";
 import type { AxiosError } from "axios";
 
@@ -54,7 +58,6 @@ const FullscreenTextarea = ({
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-
     textarea.focus();
     const len = textarea.value.length;
     textarea.setSelectionRange(len, len);
@@ -64,12 +67,9 @@ const FullscreenTextarea = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-
     window.addEventListener("keydown", handleKeyDown);
-
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
@@ -95,7 +95,6 @@ const FullscreenTextarea = ({
               {toBn(value.length)} অক্ষর
             </span>
           )}
-
           <button
             type="button"
             onClick={onClose}
@@ -132,9 +131,15 @@ const AddMCQExam = () => {
   const [examDateDisplay, setExamDateDisplay] = useState(
     new Date().toLocaleDateString("en-CA"),
   );
+  const [studentClass, setStudentClass] = useState("");
+  const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
-  const [touched, setTouched] = useState({ examDate: false });
+  const [touched, setTouched] = useState({
+    examDate: false,
+    studentClass: false,
+    subject: false,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: meData } = useQuery<{ user: UserPayload }>({
@@ -147,21 +152,38 @@ const AddMCQExam = () => {
   const user = meData?.user ?? null;
   const avatarUrl = user?.avatar?.url ?? null;
 
+  // Subject options depend on selected class
+  const subjectOptions = useMemo(
+    () => (studentClass ? getSubjects(studentClass) : []),
+    [studentClass],
+  );
+
+  // Reset subject when class changes
+  const handleClassChange = useCallback((val: string) => {
+    setStudentClass(val);
+    setSubject("");
+  }, []);
+
   const examDateError =
     touched.examDate && !examDate ? "পরীক্ষার তারিখ দিন" : "";
+  const classError =
+    touched.studentClass && !studentClass ? "শ্রেণি বেছে নিন" : "";
+  const subjectError = touched.subject && !subject ? "বিষয় বেছে নিন" : "";
 
-  const isValid = !!examDate;
+  const isValid = !!examDate && !!studentClass && !!subject;
 
   const resetForm = useCallback(() => {
     const now = new Date();
     setDescription("");
     setExamDate(now);
     setExamDateDisplay(now.toLocaleDateString("en-CA"));
-    setTouched({ examDate: false });
+    setStudentClass("");
+    setSubject("");
+    setTouched({ examDate: false, studentClass: false, subject: false });
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    setTouched({ examDate: true });
+    setTouched({ examDate: true, studentClass: true, subject: true });
 
     if (!isValid || isSubmitting) return;
 
@@ -170,27 +192,31 @@ const AddMCQExam = () => {
     try {
       const res = await axiosSecure.post("/api/mcq-exams", {
         examDate: examDate!.toISOString(),
+        studentClass,
+        subject,
         description: description.trim(),
       });
 
       if (res.data?.success) {
-        toast.success("সফলভাবে পরীক্ষা তৈরি হয়েছে!", {
-          duration: 4000,
-        });
-
+        toast.success("সফলভাবে পরীক্ষা তৈরি হয়েছে!", { duration: 4000 });
         resetForm();
       }
     } catch (error: unknown) {
       const err = error as AxiosError<{ message?: string }>;
       const message = err.response?.data?.message || "পরীক্ষা তৈরি করা যায়নি";
-
-      toast.error(message, {
-        duration: 4000,
-      });
+      toast.error(message, { duration: 4000 });
     } finally {
       setIsSubmitting(false);
     }
-  }, [description, examDate, isSubmitting, isValid, resetForm]);
+  }, [
+    description,
+    examDate,
+    studentClass,
+    subject,
+    isSubmitting,
+    isValid,
+    resetForm,
+  ]);
 
   const handleFormSubmit = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
@@ -218,7 +244,7 @@ const AddMCQExam = () => {
       </AnimatePresence>
 
       <div className="min-h-screen px-4 py-10 sm:px-6">
-        <div className="mx-auto max-w-[520px]">
+        <div className="mx-auto w-full">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -229,12 +255,10 @@ const AddMCQExam = () => {
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-text)]">
                 <FileText size={18} className="text-[var(--color-bg)]" />
               </div>
-
               <h1 className="bangla text-2xl font-bold text-[var(--color-text)]">
                 MCQ পরীক্ষা
               </h1>
             </div>
-
             <p className="bangla pl-12 text-sm text-[var(--color-gray)]">
               নতুন বহুনির্বাচনী পরীক্ষা তৈরি করুন
             </p>
@@ -250,6 +274,7 @@ const AddMCQExam = () => {
             }}
             className="overflow-hidden rounded-3xl border border-[var(--color-active-border)] bg-[var(--color-bg)]"
           >
+            {/* Poster info */}
             {user && (
               <div className="flex items-center gap-3 border-b border-[var(--color-active-border)] bg-[var(--color-active-bg)] px-5 py-4">
                 <div className="relative shrink-0">
@@ -264,7 +289,6 @@ const AddMCQExam = () => {
                       <User size={16} className="text-[var(--color-bg)]" />
                     </div>
                   )}
-
                   <span className="absolute -bottom-px -right-px h-2.5 w-2.5 rounded-full border-2 border-[var(--color-bg)] bg-[var(--color-text)]" />
                 </div>
 
@@ -284,12 +308,12 @@ const AddMCQExam = () => {
             )}
 
             <form onSubmit={handleFormSubmit} className="space-y-5 p-5 sm:p-6">
+              {/* Date row */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <p className="mb-2 bangla text-[10px] font-bold uppercase tracking-widest text-[var(--color-gray)]">
                     তৈরির তারিখ
                   </p>
-
                   <div className="bangla flex select-none items-center gap-2.5 rounded-xl border border-[var(--color-active-border)] bg-[var(--color-active-bg)] px-3.5 py-2.5 text-sm text-[var(--color-gray)]">
                     <CalendarDays
                       size={14}
@@ -306,7 +330,6 @@ const AddMCQExam = () => {
                       *
                     </span>
                   </p>
-
                   <DatePicker
                     value={toBn(examDateDisplay)}
                     onChange={setExamDateDisplay}
@@ -322,12 +345,46 @@ const AddMCQExam = () => {
                 </div>
               </div>
 
+              {/* Class + Subject row */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <SelectInput
+                  label="শ্রেণি"
+                  required
+                  options={CLASS_OPTIONS}
+                  value={studentClass}
+                  onChange={handleClassChange}
+                  onBlur={() =>
+                    setTouched((prev) => ({ ...prev, studentClass: true }))
+                  }
+                  isTouched={touched.studentClass}
+                  placeholder="শ্রেণি বেছে নিন"
+                  error={classError}
+                />
+
+                <SelectInput
+                  label="বিষয়"
+                  required
+                  options={subjectOptions}
+                  value={subject}
+                  onChange={setSubject}
+                  onBlur={() =>
+                    setTouched((prev) => ({ ...prev, subject: true }))
+                  }
+                  isTouched={touched.subject}
+                  placeholder={
+                    studentClass ? "বিষয় বেছে নিন" : "আগে শ্রেণি বেছে নিন"
+                  }
+                  disabled={!studentClass}
+                  error={subjectError}
+                />
+              </div>
+
+              {/* Description */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <p className="bangla text-[10px] font-bold uppercase tracking-widest text-[var(--color-gray)]">
                     বিবরণ
                   </p>
-
                   <button
                     type="button"
                     onClick={() => setFullscreen(true)}
@@ -353,7 +410,6 @@ const AddMCQExam = () => {
                   >
                     {description || "পরীক্ষার সংক্ষিপ্ত বিবরণ (ঐচ্ছিক)..."}
                   </div>
-
                   <div className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] text-[var(--color-gray)] bangla">
                     <Maximize2 size={9} />
                     Click
