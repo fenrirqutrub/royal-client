@@ -187,7 +187,7 @@ const NoticeModal = ({ notice, onClose }: NoticeModalProps) => {
           <p class="text-center text-[clamp(22px,5vw,52px)] py-8 m-0">জরুরী বিজ্ঞপ্তি</p>
 
           <p class="m-0 text-[clamp(13px,2vw,20px)] leading-[2.1] text-justify min-h-[100px]">
-            এতদ্বারা সকলের অবগতির জন্য জানানো যাইতেছে যে, ${notice.notice}
+            ${notice.notice}
           </p>
 
           <div class="flex justify-end mt-20">
