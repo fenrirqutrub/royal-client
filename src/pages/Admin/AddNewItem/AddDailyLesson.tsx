@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // AddDailyLesson.tsx
 import { useForm, type SubmitHandler, Controller } from "react-hook-form";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
@@ -12,11 +11,6 @@ import axiosPublic from "../../../hooks/axiosPublic";
 import Skeleton from "../../../components/common/Skeleton";
 import ErrorState from "../../../components/common/ErrorState";
 import { useAuth } from "../../../context/AuthContext";
-import {
-  CLASS_OPTIONS,
-  getSubjects,
-  toLocalIso,
-} from "../../../utility/Constants";
 import DatePicker from "../../../components/common/Datepicker";
 import {
   BN_DAYS_FULL,
@@ -31,6 +25,9 @@ import type {
   TeacherItem,
 } from "../../../types/types";
 import ExpandableTextarea from "./ExpandableTextarea";
+import { CLASS_OPTIONS } from "../../../utility/constants/class";
+import { toLocalIso } from "../../../utility/constants/common";
+import { getSubjects } from "../../../utility/constants/subject";
 
 // ─── Bangla numeral helpers ─────────────────
 
@@ -376,6 +373,7 @@ const AddDailyLesson = () => {
 
     const fd = new FormData();
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { date: _date, teacher: _teacher, ...rest } = data;
     const normalised = { ...rest };
 
@@ -693,7 +691,7 @@ const AddDailyLesson = () => {
                   minLength: { value: 5, message: "কমপক্ষে ৫ অক্ষর লিখুন" },
                 }}
                 render={({ field, fieldState }) => (
-                  <>
+                  <div>
                     <ExpandableTextarea
                       value={field.value}
                       onChange={(val) => field.onChange(val)}
@@ -707,11 +705,11 @@ const AddDailyLesson = () => {
                         !!fieldState.error,
                         fieldState.isTouched && !fieldState.error,
                       )} cursor-text min-h-[120px] items-start`}
-                      doneLabel="সম্পন্ন"
+                      doneLabel="Confirm"
                       hintLabel="ESC চাপুন"
                     />
                     <ErrorMsg msg={errors.topics?.message} />
-                  </>
+                  </div>
                 )}
               />
             </motion.div>

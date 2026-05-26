@@ -14,9 +14,9 @@ import {
   CLASS_ORDER,
   CLASSES,
   normalizeStudentClass,
-} from "../../utility/Constants";
+} from "../../utility/constants/class";
 
-// ── Class order for sorting ───────────────────────────────────────────────────
+// ── Class order for sorting ─────────────────────────
 const CLASS_OPTIONS = [
   { value: "", label: "সব শ্রেণি" },
   ...CLASSES.map((c) => ({ value: c, label: c })),

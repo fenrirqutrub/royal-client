@@ -38,19 +38,19 @@ import Skeleton from "../../../components/common/Skeleton";
 import { getDivisions, getDistricts, getThanas } from "../../../data/bd-geo";
 import { AnimatedAvatar } from "../../../components/common/AnimatedAvatar";
 import { uploadToCloudinaryDirect } from "../../../hooks/useCloudinaryUpload";
-
+import { ROLE_CONFIG, type UserRole } from "../../../utility/constants/role";
+import { toLocalIso } from "../../../utility/constants/common";
+import { validateBdPhone } from "../../../utility/constants/validation";
 import {
-  ROLE_CONFIG,
   CLASS_OPTIONS,
-  toLocalIso,
-  validateBdPhone,
-  type UserRole,
   SUBJECT_REQUIRED_CLASSES,
-  SUBJECT_GROUPS,
+} from "../../../utility/constants/class";
+import { RELIGION_SELECT_OPTIONS } from "../../../utility/constants/religion";
+import { SUBJECT_GROUPS } from "../../../utility/constants/subject";
+import {
   DEGREE_SELECT_OPTIONS,
   YEARS,
-  RELIGION_SELECT_OPTIONS,
-} from "../../../utility/Constants";
+} from "../../../utility/constants/degree";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 

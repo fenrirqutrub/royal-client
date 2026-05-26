@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../../context/AuthContext";
 import { useTheme } from "../../../context/ThemeProvider";
 import { SidebarContent } from "./Sidebar.Ui";
-import { ROLE_CONFIG } from "../../../utility/Constants";
 import {
   contentNav,
   dashboardNav,
@@ -15,6 +14,7 @@ import {
 import { AnimatedAvatar } from "../../../components/common/AnimatedAvatar";
 
 import { useComplain } from "../../../context/ComplainContext";
+import { ROLE_CONFIG } from "../../../utility/constants/role";
 
 const buildNav = (role: string): NavItem[] => {
   if (role === "student") return studentNav();

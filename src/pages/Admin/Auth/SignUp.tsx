@@ -56,31 +56,34 @@ import {
 } from "./SignupComponents";
 import SelectInput from "../../../components/common/SelectInput";
 import DatePicker from "../../../components/common/Datepicker";
-import {
-  CLASSES,
-  SUBJECT_GROUPS,
-  SUBJECT_REQUIRED_CLASSES,
-  normalizeStudentClass,
-  DEGREES,
-  RELIGIONS,
-  YEARS,
-  STUDENT_GENDER_OPTIONS,
-  STAFF_GENDER_OPTIONS,
-  STAFF_ROLE_LABELS,
-  BD_PHONE_REGEX,
-  toAsciiDigits,
-  toLocalIso,
-  validateBdPhone,
-  type FieldState,
-  type Gender,
-  type Religion,
-  type StaffRole,
-} from "../../../utility/Constants";
 import type { SignupForm } from "../../../types/types";
 import {
   collectClientData,
   type ClientData,
 } from "../../../utility/collectClientData";
+import {
+  STAFF_ROLE_LABELS,
+  type StaffRole,
+} from "../../../utility/constants/role";
+import {
+  BD_PHONE_REGEX,
+  toAsciiDigits,
+  validateBdPhone,
+} from "../../../utility/constants/validation";
+import { toLocalIso, type FieldState } from "../../../utility/constants/common";
+import { RELIGIONS, type Religion } from "../../../utility/constants/religion";
+import {
+  STAFF_GENDER_OPTIONS,
+  STUDENT_GENDER_OPTIONS,
+  type Gender,
+} from "../../../utility/constants/gender";
+import {
+  CLASSES,
+  normalizeStudentClass,
+  SUBJECT_REQUIRED_CLASSES,
+} from "../../../utility/constants/class";
+import { SUBJECT_GROUPS } from "../../../utility/constants/subject";
+import { DEGREES, YEARS } from "../../../utility/constants/degree";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

@@ -5,7 +5,8 @@ import { UserCircle2 } from "lucide-react";
 import axiosPublic from "../../hooks/axiosPublic";
 import Border from "../common/Border";
 import Skeleton from "../common/Skeleton";
-import { ROLE_CONFIG, type Screen } from "../../utility/Constants";
+import type { Screen } from "../../utility/constants/common";
+import { ROLE_CONFIG } from "../../utility/constants/role";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface TeacherData {

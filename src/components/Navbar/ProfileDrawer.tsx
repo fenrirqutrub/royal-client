@@ -7,17 +7,17 @@ import { useTheme } from "../../context/ThemeProvider";
 import { useProfileDrawer } from "../../context/ProfileDrawerContext";
 import { SidebarContent } from "../../pages/Admin/Dashboard/Sidebar.Ui";
 import {
-  ROLE_CONFIG,
-  isPrivilegedRole,
-  type UserRole,
-} from "../../utility/Constants";
-import {
   contentNav,
   dashboardNav,
   managementNav,
   studentNav,
   type NavItem,
 } from "../../utility/AdminSidebarData";
+import {
+  isPrivilegedRole,
+  ROLE_CONFIG,
+  type UserRole,
+} from "../../utility/constants/role";
 
 const buildNav = (role: UserRole): NavItem[] => {
   if (role === "student") return studentNav();

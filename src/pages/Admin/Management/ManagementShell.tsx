@@ -14,14 +14,6 @@ import ErrorState from "../../../components/common/ErrorState";
 import EmptyState from "../../../components/common/Emptystate";
 import DatePicker from "../../../components/common/Datepicker";
 import { useAuth } from "../../../context/AuthContext";
-import {
-  CLASS_OPTIONS,
-  getSubjects,
-  PRIVILEGED_ROLES,
-  STAFF_DASHBOARD_ROLES,
-  ROLE_BADGE_CLASS,
-  type UserRole,
-} from "../../../utility/Constants";
 import { toBn, toBnDateStr } from "../../../utility/Formatters";
 
 import {
@@ -43,6 +35,14 @@ import {
   inputCls,
   labelCls,
 } from "./ManagementUI";
+import { CLASS_OPTIONS } from "../../../utility/constants/class";
+import { getSubjects } from "../../../utility/constants/subject";
+import {
+  PRIVILEGED_ROLES,
+  ROLE_BADGE_CLASS,
+  STAFF_DASHBOARD_ROLES,
+  type UserRole,
+} from "../../../utility/constants/role";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES

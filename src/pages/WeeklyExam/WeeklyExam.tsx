@@ -16,12 +16,6 @@ import { DeleteModal, EditModal } from "./WeeklyExamUpdateModals";
 import { useGuestPreview } from "../../hooks/useGuestPreview";
 import LoginPromptOverlay from "../Admin/Auth/LoginPromptOverlay";
 import { BN_DAYS_FULL, BN_MONTHS, toBn } from "../../utility/Formatters";
-import {
-  CLASS_ORDER,
-  MANAGER_ROLES,
-  normalizeStudentClass,
-  STAFF_ROLES,
-} from "../../utility/Constants";
 import type { NormalizedImage, RawImage } from "../../types/types";
 import { useNavigate } from "react-router";
 import WeeklyExamHeaderFilters from "./WeeklyExamHeaderFilters";
@@ -29,6 +23,11 @@ import type {
   ExamMetaResponse,
   WeeklyExamData,
 } from "../../types/WeeklyExamTypes";
+import { MANAGER_ROLES, STAFF_ROLES } from "../../utility/constants/role";
+import {
+  CLASS_ORDER,
+  normalizeStudentClass,
+} from "../../utility/constants/class";
 
 // ─── Helpers ─────────────────────────────────────────────────
 const formatCreatedAt = (iso: string): string => {

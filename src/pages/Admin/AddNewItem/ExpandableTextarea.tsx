@@ -2,7 +2,7 @@
 import { useEffect, useRef, useCallback, forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2 } from "lucide-react";
+import { Check } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────
 export interface ExpandableTextareaProps extends Omit<
@@ -139,7 +139,7 @@ const FullscreenTextarea = ({
             onClick={onClose}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--color-text)] text-[var(--color-bg)] hover:opacity-90 active:scale-95 transition-all bangla"
           >
-            <CheckCircle2 className="w-4 h-4" />
+            <Check className="w-4 h-4" />
             {doneLabel}
           </button>
         </div>

@@ -1,11 +1,5 @@
 // AddWeeklyExam.tsx
-import {
-  useForm,
-  type SubmitHandler,
-  Controller,
-  type ControllerRenderProps,
-  type ControllerFieldState,
-} from "react-hook-form";
+import { useForm, type SubmitHandler, Controller } from "react-hook-form";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import {
@@ -26,7 +20,6 @@ import SelectInput from "../../../components/common/SelectInput";
 import Skeleton from "../../../components/common/Skeleton";
 import ErrorState from "../../../components/common/ErrorState";
 import { useAuth } from "../../../context/AuthContext";
-import { CLASS_OPTIONS, getSubjects } from "../../../utility/Constants";
 import { uploadEditedBlobsToCloudinary } from "../../../hooks/useCloudinaryUpload";
 import ImageUploadWithEditor, {
   type EditedImage,
@@ -37,6 +30,9 @@ import type {
   WeeklyExamData,
   WeeklyExamFormData,
 } from "../../../types/WeeklyExamTypes";
+import { CLASS_OPTIONS } from "../../../utility/constants/class";
+import { getSubjects } from "../../../utility/constants/subject";
+import ExpandableTextarea from "./ExpandableTextarea";
 
 // ─── Types ─────────────────────────────────────────────────
 type NumberType = "chapterNumber" | "pageNumber";
@@ -259,78 +255,17 @@ const NumberTypeToggle = ({ value, onChange }: NumberTypeToggleProps) => {
   );
 };
 
-// ─── TopicsField ───────────────────────────────────────────
-interface TextAreaFieldProps {
-  field: ControllerRenderProps<WeeklyExamFormData, "topics">;
-  fieldState: ControllerFieldState;
-}
-
-const TopicsField = ({ field, fieldState }: TextAreaFieldProps) => {
-  const [isFocused, setIsFocused] = useState(false);
-
-  return (
-    <div className="relative">
-      <textarea
-        rows={4}
-        placeholder="পরীক্ষার বিষয়বস্তু লিখুন..."
-        value={field.value}
-        onChange={field.onChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => {
-          setIsFocused(false);
-          field.onBlur();
-        }}
-        className={`${inputCls(
-          !!fieldState.error,
-          fieldState.isTouched && !fieldState.error,
-          isFocused,
-        )} resize-none leading-relaxed bangla pr-10`}
-      />
-      <div className="absolute right-3 top-3">
-        <FieldIcon
-          isError={!!fieldState.error}
-          isValid={fieldState.isTouched && !fieldState.error}
-        />
-      </div>
-    </div>
-  );
-};
-
-// ─── QuestionField ─────────────────────────────────────────
-interface QuestionFieldProps {
-  field: ControllerRenderProps<WeeklyExamFormData, "question">;
-  fieldState: ControllerFieldState;
-}
-
-const QuestionField = ({ field, fieldState }: QuestionFieldProps) => {
-  const [isFocused, setIsFocused] = useState(false);
-
-  return (
-    <div className="relative">
-      <textarea
-        rows={4}
-        placeholder="পরীক্ষার প্রশ্ন লিখুন (যদি থাকে)..."
-        value={field.value}
-        onChange={field.onChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => {
-          setIsFocused(false);
-          field.onBlur();
-        }}
-        className={`${inputCls(
-          !!fieldState.error,
-          fieldState.isTouched && !fieldState.error && !!field.value,
-          isFocused,
-        )} resize-none leading-relaxed bangla pr-10`}
-      />
-      {field.value && (
-        <div className="absolute right-3 top-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-        </div>
-      )}
-    </div>
-  );
-};
+// ─── ExpandableTextarea preview wrapper styles ────────────
+const expandablePreviewCls = (isError: boolean, isValidTouched: boolean) =>
+  `w-full min-h-[108px] px-4 py-3.5 rounded-xl border-2 text-sm transition-all duration-300
+   cursor-text bg-[var(--color-bg)] text-[var(--color-text)]
+   ${
+     isError
+       ? "border-rose-400 shadow-[0_0_0_3px_rgba(244,63,94,0.1)]"
+       : isValidTouched
+         ? "border-emerald-400 shadow-[0_0_0_3px_rgba(16,185,129,0.1)]"
+         : "border-[var(--color-active-border)] hover:border-violet-300"
+   }`;
 
 // ─── BanglaNumberInput ────────────────────────────────────
 const BanglaNumberInput = ({
@@ -406,6 +341,11 @@ const AddWeeklyExam = () => {
   const [editedImages, setEditedImages] = useState<EditedImage[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [numberType, setNumberType] = useState<NumberType>("chapterNumber");
+
+  // ── ExpandableTextarea open states ─────────────────────
+  const [isTopicsOpen, setIsTopicsOpen] = useState(false);
+  const [isQuestionOpen, setIsQuestionOpen] = useState(false);
+
   const hasUserEditedExamNumber = useRef(false);
   const qc = useQueryClient();
 
@@ -901,8 +841,7 @@ const AddWeeklyExam = () => {
                 </AnimatedCard>
               </div>
 
-              {/* ── Row 4: Number Type Toggle (left) + Number Value (right) — SAME ROW ── */}
-              {/* ── Row 4: Tab small + input full remaining width ── */}
+              {/* ── Row 4: Number Type Toggle + Number Value ── */}
               <AnimatedCard index={5}>
                 <label className={labelCls}>
                   <AnimatePresence mode="wait">
@@ -929,7 +868,6 @@ const AddWeeklyExam = () => {
                   control={control}
                   render={({ field, fieldState }) => (
                     <div className="flex flex-col lg:flex-row items-start gap-3">
-                      {/* Left: tab only needed width */}
                       <div className="shrink-0 w-fit">
                         <NumberTypeToggle
                           value={numberType}
@@ -937,9 +875,8 @@ const AddWeeklyExam = () => {
                         />
                       </div>
 
-                      {/* Right: input takes all remaining space */}
                       <div className="flex-1 min-w-0">
-                        <div className="relative ">
+                        <div className="relative">
                           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
                             <AnimatePresence mode="wait">
                               <motion.span
@@ -1016,7 +953,7 @@ const AddWeeklyExam = () => {
                 />
               </AnimatedCard>
 
-              {/* ── Row 5: Topics ── */}
+              {/* ── Row 5: Topics (ExpandableTextarea) ── */}
               <AnimatedCard index={7}>
                 <label className={labelCls}>
                   <BookOpen className="w-4 h-4" />
@@ -1033,13 +970,30 @@ const AddWeeklyExam = () => {
                     },
                   }}
                   render={({ field, fieldState }) => (
-                    <TopicsField field={field} fieldState={fieldState} />
+                    <>
+                      <ExpandableTextarea
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        isOpen={isTopicsOpen}
+                        onOpen={() => setIsTopicsOpen(true)}
+                        onClose={() => setIsTopicsOpen(false)}
+                        placeholder="পরীক্ষার বিষয়বস্তু লিখুন..."
+                        label="বিষয়বস্তু / নির্দেশনা"
+                        doneLabel="Confirm"
+                        hintLabel="ESC চাপুন বা সম্পন্ন বাটন চাপুন"
+                        previewClassName={expandablePreviewCls(
+                          !!fieldState.error,
+                          fieldState.isTouched && !fieldState.error,
+                        )}
+                      />
+                      <ErrorMsg msg={fieldState.error?.message} />
+                    </>
                   )}
                 />
-                <ErrorMsg msg={errors.topics?.message} />
               </AnimatedCard>
 
-              {/* ── Row 6: Question ── */}
+              {/* ── Row 6: Question (ExpandableTextarea) ── */}
               <AnimatedCard index={8}>
                 <label className={labelCls}>
                   <HelpCircle className="w-4 h-4" />
@@ -1048,8 +1002,23 @@ const AddWeeklyExam = () => {
                 <Controller
                   name="question"
                   control={control}
-                  render={({ field, fieldState }) => (
-                    <QuestionField field={field} fieldState={fieldState} />
+                  render={({ field }) => (
+                    <ExpandableTextarea
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      isOpen={isQuestionOpen}
+                      onOpen={() => setIsQuestionOpen(true)}
+                      onClose={() => setIsQuestionOpen(false)}
+                      placeholder="পরীক্ষার প্রশ্ন লিখুন (যদি থাকে)..."
+                      label="প্রশ্ন"
+                      doneLabel="সম্পন্ন"
+                      hintLabel="ESC চাপুন বা সম্পন্ন বাটন চাপুন"
+                      previewClassName={expandablePreviewCls(
+                        false,
+                        !!field.value,
+                      )}
+                    />
                   )}
                 />
                 <p className="text-xs text-[var(--color-gray)] mt-1.5 bangla flex items-center gap-1.5">

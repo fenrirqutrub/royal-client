@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import AnimatedFilterPills from "./AnimatedFilterPills";
-import { CLASS_ORDER } from "../../utility/Constants";
 import type { DailyLessonData } from "../../pages/DailyLesson/DailyLessonUpdateModals";
+import { CLASS_ORDER } from "../../utility/constants/class";
 
 interface ClassFilterBtnsProps {
   activeId: string;

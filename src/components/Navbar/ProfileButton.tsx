@@ -3,12 +3,10 @@ import { memo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { Key } from "lucide-react";
-
 import { useAuth } from "../../context/AuthContext";
 import { useProfileDrawer } from "../../context/ProfileDrawerContext";
-
-import { ROLE_CONFIG } from "../../utility/Constants";
 import { Avatar } from "../common/Avatar";
+import { ROLE_CONFIG } from "../../utility/constants/role";
 
 interface ProfileButtonProps {
   size?: number;

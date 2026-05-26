@@ -24,9 +24,10 @@ import axiosSecure from "../../../hooks/axiosSecure";
 import DatePicker from "../../../components/common/Datepicker";
 import SelectInput from "../../../components/common/SelectInput";
 import { BN_MONTHS, toBn } from "../../../utility/Formatters";
-import { CLASS_OPTIONS, getSubjects } from "../../../utility/constants";
 import { toast } from "react-hot-toast";
 import type { AxiosError } from "axios";
+import { getSubjects } from "../../../utility/constants/subject";
+import { CLASS_OPTIONS } from "../../../utility/constants/class";
 
 interface UserPayload {
   id: string;

@@ -11,13 +11,6 @@ import { useGuestPreview } from "../../hooks/useGuestPreview";
 import LoginPromptOverlay from "../Admin/Auth/LoginPromptOverlay";
 import { BN_DAYS_FULL, BN_MONTHS, toBn } from "../../utility/Formatters";
 import {
-  CLASS_ORDER,
-  normalizeStudentClass,
-  PRIVILEGED_ROLES,
-  STAFF_DASHBOARD_ROLES,
-  type UserRole,
-} from "../../utility/Constants";
-import {
   DeleteModal,
   EditModal,
   resolveTeacherSlug,
@@ -27,6 +20,15 @@ import DailyLessonCard from "./DailyLessonCard";
 import { useNavigate } from "react-router";
 import DailyLessonHeader from "./DailyLessonHeader";
 import { Helmet } from "react-helmet-async";
+import {
+  CLASS_ORDER,
+  normalizeStudentClass,
+} from "../../utility/constants/class";
+import {
+  PRIVILEGED_ROLES,
+  STAFF_DASHBOARD_ROLES,
+  type UserRole,
+} from "../../utility/constants/role";
 
 const GUEST_PREVIEW_CLASS = "ষষ্ঠ শ্রেণি";
 

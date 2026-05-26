@@ -7,13 +7,13 @@ import { BookOpen, FileText, GraduationCap, Folder } from "lucide-react";
 
 import { BN_DAYS_FULL, BN_MONTHS, toBn } from "../../utility/Formatters";
 import axiosPublic, { getCached, setCache } from "../../hooks/axiosPublic";
-import { CLASS_ORDER } from "../../utility/Constants";
 import type { DailyLessonData } from "../../pages/DailyLesson/DailyLessonUpdateModals";
 import {
   CLASS_COLORS,
   DEFAULT_CLASS_COLOR,
   EXAM_COLORS,
 } from "../../styles/colors";
+import { CLASS_ORDER } from "../../utility/constants/class";
 
 // ─── Types ────────────────────────────────────────────────
 interface WeeklyExamRaw {

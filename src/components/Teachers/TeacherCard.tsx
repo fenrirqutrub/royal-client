@@ -1,12 +1,9 @@
 // TeacherCard.tsx
 import { motion } from "framer-motion";
 import { BadgeCheck } from "lucide-react";
-import {
-  DEGREE_LABEL,
-  ROLE_CONFIG,
-  type UserRole,
-} from "../../utility/Constants";
 import { Avatar } from "../common/Avatar";
+import { DEGREE_LABEL } from "../../utility/constants/degree";
+import { ROLE_CONFIG, type UserRole } from "../../utility/constants/role";
 
 export interface TeacherData {
   _id: string;

@@ -27,12 +27,15 @@ import MonthlyReport from "../pages/Admin/Dashboard/MonthlyReport";
 import AddRoutine from "../pages/Admin/AddNewItem/AddRoutine";
 import AddExamMarks from "../pages/Admin/AddNewItem/AddExamMarks";
 import TeacherStudentTab from "../components/Teachers/TeacherStudentTab";
-import { PRIVILEGED_ROLES, STAFF_DASHBOARD_ROLES } from "../utility/Constants";
 import Signup from "../pages/Admin/Auth/SignUp";
 import ThirdEye from "../pages/ThirdEye/ThirdEye";
 import AddMCQExam from "../pages/Admin/AddNewItem/AddMCQExam";
 import ManageMCQExam from "../pages/Admin/Management/ManageMCQExam";
 import MCQExam from "../pages/MCQExam/MCQExam";
+import {
+  PRIVILEGED_ROLES,
+  STAFF_DASHBOARD_ROLES,
+} from "../utility/constants/role";
 
 const Router = () => {
   return (

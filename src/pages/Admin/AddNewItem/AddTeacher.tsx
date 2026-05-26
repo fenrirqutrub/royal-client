@@ -28,13 +28,15 @@ import {
   ROLE_CONFIG,
   ROLE_PERMISSIONS,
   STAFF_ROLE_LIST,
-  validateBdPhone,
-  toAsciiDigits,
   type StaffRole,
   type UserRole,
-} from "../../../utility/Constants";
+} from "../../../utility/constants/role";
+import {
+  toAsciiDigits,
+  validateBdPhone,
+} from "../../../utility/constants/validation";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────
 
 interface StaffMember {
   _id: string;

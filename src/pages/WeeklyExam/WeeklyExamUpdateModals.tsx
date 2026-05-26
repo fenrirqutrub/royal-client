@@ -7,13 +7,14 @@ import toast from "react-hot-toast";
 import { Trash2, X, Loader2, ImagePlus, Images } from "lucide-react";
 import axiosPublic from "../../hooks/axiosPublic";
 import SelectInput from "../../components/common/SelectInput";
-import { CLASS_OPTIONS, getSubjects } from "../../utility/Constants";
 import { uploadMultipleToCloudinary } from "../../hooks/useCloudinaryUpload";
 import type { TeacherOption } from "../../types/types";
 import type {
   EditFormValues,
   WeeklyExamData,
 } from "../../types/WeeklyExamTypes";
+import { CLASS_OPTIONS } from "../../utility/constants/class";
+import { getSubjects } from "../../utility/constants/subject";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const MARK_OPTIONS = [

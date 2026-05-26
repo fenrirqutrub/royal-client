@@ -4,11 +4,10 @@ import { useState } from "react";
 import axiosPublic from "../../hooks/axiosPublic";
 import axiosSecure from "../../hooks/axiosSecure";
 import { Download, Loader2, Printer, Trash2 } from "lucide-react";
-import { PRIVILEGED_ROLES } from "../../utility/Constants";
 import { useAuth } from "../../context/AuthContext";
 import Swal from "sweetalert2";
-import type { UserRole } from "../../utility/Constants";
 import { getRoutinePageViewUrl } from "../../utility/cloudinaryRoutine";
+import { PRIVILEGED_ROLES, type UserRole } from "../../utility/constants/role";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface RoutineData {

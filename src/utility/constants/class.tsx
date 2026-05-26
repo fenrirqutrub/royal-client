@@ -83,7 +83,6 @@ export const CLASS_OPTIONS: SelectOption[] = CLASSES.map((c) => ({
   icon: <MdOutlineClass />,
 }));
 
-// sorting-এর জন্য ব্যবহার করা যাবে
 export const CLASS_ORDER: Record<string, number> = Object.fromEntries(
   CLASS_CONFIG.map((c) => [c.label, c.number]),
 );
