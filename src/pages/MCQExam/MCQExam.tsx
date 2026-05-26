@@ -17,8 +17,8 @@ import axiosPublic from "../../hooks/axiosPublic";
 import { Pagination } from "../../components/common/Pagination";
 import AnimatedFilterPills from "../../components/common/AnimatedFilterPills";
 import SelectInput from "../../components/common/SelectInput";
-import { CLASSES, getStudentClassNumber } from "../../utility/constants";
 import { toBn } from "../../utility/Formatters";
+import { CLASSES, getStudentClassNumber } from "../../utility/constants/class";
 
 /* ═══════════════════════════════════════════
    Types
