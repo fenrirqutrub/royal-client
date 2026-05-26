@@ -1,15 +1,18 @@
-import { useRef, useState, useCallback, useEffect, useMemo } from "react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay } from "swiper/modules";
-import type { Swiper as SwiperType } from "swiper";
+import {
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router";
 import { useHeroes } from "../../hooks/useHeroes";
-import "swiper/css";
 import ErrorState from "../common/ErrorState";
 import Skeleton from "../common/Skeleton";
 import EmptyState from "../common/Emptystate";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface HeroItem {
   _id: string;
@@ -26,38 +29,32 @@ interface HeroItem {
 }
 
 const DELAY = 5000;
-const pad = (n: number) => String(n).padStart(2, "0");
 
-/* ── Word-by-word animated title ── */
-const SlideTitle = ({
-  text,
-  triggerKey,
-}: {
-  text: string;
-  triggerKey: number;
-}) => {
-  const words = useMemo(() => text.split(" "), [text]);
+const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
+const toBn = (n: number) =>
+  String(n)
+    .split("")
+    .map((c) => BN_DIGITS[+c] ?? c)
+    .join("");
 
+/* ── word-by-word stagger title ─────────────────────────────────────── */
+const SlideTitle = ({ text, id }: { text: string; id: number }) => {
+  const words = useMemo(() => text.trim().split(/\s+/), [text]);
   return (
-    <h2
-      key={triggerKey}
+    <h1
+      key={id}
       aria-label={text}
-      className="m-0 flex flex-wrap gap-x-2 bangla text-xl md:text-5xl"
-      style={{
-        fontWeight: 700,
-        lineHeight: 1.3,
-        color: "#fff",
-      }}
+      className="bangla m-0 w-full flex flex-wrap gap-x-[0.22em] gap-y-0.5 text-[1.55rem] sm:text-[2rem] md:text-[2.5rem] lg:text-[3rem] font-bold leading-[1.06] tracking-[-0.03em] text-white"
     >
       {words.map((word, i) => (
-        <span key={i} className="overflow-hidden inline-block">
+        <span key={i} className="inline-block overflow-hidden">
           <motion.span
             className="inline-block"
-            initial={{ y: "100%", opacity: 0, rotateX: -20 }}
-            animate={{ y: "0%", opacity: 1, rotateX: 0 }}
+            initial={{ y: "110%", opacity: 0 }}
+            animate={{ y: "0%", opacity: 1 }}
             transition={{
-              duration: 0.55,
-              delay: 0.1 + i * 0.08,
+              duration: 0.5,
+              delay: 0.05 + i * 0.055,
               ease: [0.16, 1, 0.3, 1],
             }}
           >
@@ -65,372 +62,357 @@ const SlideTitle = ({
           </motion.span>
         </span>
       ))}
-    </h2>
+    </h1>
   );
 };
 
-/* ── Image with zoom-in pan effect ── */
-const HeroImage = ({
-  src,
-  alt,
-  dir,
-}: {
-  src: string;
-  alt: string;
-  dir: number;
-}) => (
-  <motion.div
-    className="absolute inset-0"
-    initial={{ opacity: 0, scale: 1.08, x: dir * 30 }}
-    animate={{ opacity: 1, scale: 1, x: 0 }}
-    exit={{ opacity: 0, scale: 0.96, x: dir * -20 }}
-    transition={{ duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94] }}
-  >
-    <img
-      src={src}
-      alt={alt}
-      className="w-full h-full object-cover object-center"
-      loading="eager"
-      fetchPriority={dir === 1 ? "high" : "auto"}
-      width={1920}
-      height={1080}
-      decoding="async"
-    />
-  </motion.div>
-);
+/* ── preload all images synchronously before first render ───────────── */
+function usePreloadedImages(urls: string[]) {
+  const [loaded, setLoaded] = useState(false);
+  const countRef = useRef(0);
 
-/* ════════════════════════
-   HERO
-════════════════════════ */
+  useEffect(() => {
+    if (!urls.length) return;
+    countRef.current = 0;
+    let cancelled = false;
+
+    urls.forEach((src) => {
+      const img = new Image();
+      img.fetchPriority = "high";
+      img.decoding = "sync";
+      img.onload = img.onerror = () => {
+        if (cancelled) return;
+        countRef.current += 1;
+        if (countRef.current >= urls.length) setLoaded(true);
+      };
+      img.src = src;
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [urls]);
+
+  return urls.length === 0 ? true : loaded;
+}
+
+/* ── main component ─────────────────────────────────────────────────── */
 const Hero = () => {
   const { data, isLoading, isError, error } = useHeroes();
+
   const heroes = useMemo<HeroItem[]>(
     () => (data?.data ?? []) as HeroItem[],
     [data],
   );
   const total = heroes.length;
+  const urls = useMemo(() => heroes.map((h) => h.imageUrl), [heroes]);
+  const allLoaded = usePreloadedImages(urls);
 
-  const swiperRef = useRef<SwiperType | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dragStartX = useRef<number | null>(null);
+  const isDragging = useRef(false);
+
   const [active, setActive] = useState(0);
   const [animKey, setAnimKey] = useState(0);
-  const [dir, setDir] = useState(1);
-  const [busy, setBusy] = useState(false);
+  const [progKey, setProgKey] = useState(0);
 
-  useEffect(() => {
-    heroes.forEach(({ imageUrl }, i) => {
-      if (i > 0) {
-        const img = new Image();
-        img.src = imageUrl;
-      }
-    });
-  }, [heroes]);
-
-  useEffect(() => {
-    if (heroes.length === 0) return;
-
-    const link = document.createElement("link");
-    link.rel = "preload";
-    link.as = "image";
-    link.href = heroes[0].imageUrl;
-    link.fetchPriority = "high";
-    document.head.appendChild(link);
-
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, [heroes]);
-
-  const onSlideChange = useCallback((s: SwiperType) => {
-    setActive(s.realIndex);
-    setAnimKey((k) => k + 1);
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
   }, []);
 
+  const startTimer = useCallback(() => {
+    if (total <= 1) return;
+    stopTimer();
+    timerRef.current = setInterval(() => {
+      setActive((p) => (p + 1) % total);
+      setAnimKey((k) => k + 1);
+      setProgKey((k) => k + 1);
+    }, DELAY);
+  }, [total, stopTimer]);
+
+  useEffect(() => {
+    if (total <= 1) return;
+    startTimer();
+    return stopTimer;
+  }, [total, startTimer, stopTimer]);
+
   const go = useCallback(
-    (d: "prev" | "next") => {
-      if (busy) return;
-      setBusy(true);
-      setDir(d === "next" ? 1 : -1);
-      if (d === "next") swiperRef.current?.slideNext();
-      else swiperRef.current?.slidePrev();
-      setTimeout(() => setBusy(false), 900);
+    (dir: "prev" | "next") => {
+      if (total <= 1) return;
+      setActive((p) =>
+        dir === "next" ? (p + 1) % total : (p - 1 + total) % total,
+      );
+      setAnimKey((k) => k + 1);
+      setProgKey((k) => k + 1);
+      startTimer();
     },
-    [busy],
+    [total, startTimer],
   );
 
   const goTo = useCallback(
-    (i: number) => {
-      if (busy || i === active) return;
-      setBusy(true);
-      setDir(i > active ? 1 : -1);
-      swiperRef.current?.slideToLoop(i);
-      setTimeout(() => setBusy(false), 900);
+    (index: number) => {
+      if (index === active || total <= 1) return;
+      setActive(index);
+      setAnimKey((k) => k + 1);
+      setProgKey((k) => k + 1);
+      startTimer();
     },
-    [busy, active],
+    [active, total, startTimer],
   );
 
-  /* ── Loading ── */
-  if (isLoading) {
-    return <Skeleton variant="hero" />;
-  }
+  const onPointerDown = (e: ReactPointerEvent<HTMLElement>) => {
+    dragStartX.current = e.clientX;
+    isDragging.current = false;
+  };
+  const onPointerMove = (e: ReactPointerEvent<HTMLElement>) => {
+    if (
+      dragStartX.current !== null &&
+      Math.abs(e.clientX - dragStartX.current) > 8
+    )
+      isDragging.current = true;
+  };
+  const onPointerUp = (e: ReactPointerEvent<HTMLElement>) => {
+    if (dragStartX.current === null) return;
+    const delta = e.clientX - dragStartX.current;
+    dragStartX.current = null;
+    if (isDragging.current && Math.abs(delta) > 50 && total > 1)
+      go(delta < 0 ? "next" : "prev");
+    isDragging.current = false;
+  };
 
-  /* ── Error ── */
-  if (isError) {
+  if (isLoading) return <Skeleton variant="hero" />;
+  if (isError)
     return (
       <ErrorState message={(error as Error)?.message ?? "Unexpected error."} />
     );
-  }
+  if (!total) return <EmptyState />;
 
-  /* ── Empty ── */
-  if (!total) {
-    return <EmptyState />;
-  }
+  /* show skeleton until all images are decoded & ready */
+  if (!allLoaded) return <Skeleton variant="hero" />;
 
-  const cur = heroes[active];
+  const current = heroes[active];
 
   return (
     <section
-      className="w-full h-60 sm:h-72 lg:h-[470px] xl:h-[480px] relative overflow-hidden bg-neutral-950"
+      className="relative w-full overflow-hidden select-none"
+      style={{
+        height: "clamp(220px, 46vw, 480px)",
+        cursor: total > 1 ? "grab" : "default",
+      }}
       aria-label="Hero slider"
+      aria-roledescription="carousel"
+      role="region"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={() => {
+        dragStartX.current = null;
+        isDragging.current = false;
+      }}
+      onPointerLeave={() => {
+        dragStartX.current = null;
+        isDragging.current = false;
+      }}
+      onMouseEnter={stopTimer}
+      onMouseLeave={startTimer}
     >
-      {/* Ghost Swiper */}
-      <Swiper
-        modules={total > 1 ? [Autoplay] : []}
-        autoplay={
-          total > 1
-            ? {
-                delay: DELAY,
-                disableOnInteraction: false,
-                pauseOnMouseEnter: true,
-              }
-            : false
-        }
-        loop={total > 1}
-        speed={900}
-        allowTouchMove={false}
-        className="!absolute !inset-0 !opacity-0 !pointer-events-none"
-        onSwiper={(s) => {
-          swiperRef.current = s;
+      {/* ── background images ── */}
+      {heroes.map((hero, i) => (
+        <div
+          key={hero._id}
+          className="absolute inset-0"
+          aria-hidden={i !== active}
+          style={{
+            opacity: i === active ? 1 : 0,
+            transition: "opacity 0.7s cubic-bezier(.16,1,.3,1)",
+            zIndex: i === active ? 1 : 0,
+          }}
+        >
+          <img
+            src={hero.imageUrl}
+            alt={hero.title}
+            className="h-full w-full object-cover object-center"
+            style={{
+              transform: i === active ? "scale(1.035)" : "scale(1)",
+              transition: "transform 6s linear",
+            }}
+            draggable={false}
+          />
+        </div>
+      ))}
+
+      {/* ── cinematic gradient overlays ── */}
+      {/* bottom dark band — where text lives */}
+      <div
+        className="absolute inset-0 z-[2] pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.44) 38%, transparent 62%)",
         }}
-        onSlideChange={onSlideChange}
-      >
-        {heroes.map((h) => (
-          <SwiperSlide key={h._id} />
-        ))}
-      </Swiper>
+      />
+      {/* subtle left-edge vignette */}
+      <div
+        className="absolute inset-0 z-[2] pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(to right, rgba(0,0,0,0.28) 0%, transparent 50%)",
+        }}
+      />
 
-      {/* ── Image with directional pan ── */}
-      <AnimatePresence initial={false} custom={dir}>
-        <HeroImage
-          key={`img-${animKey}`}
-          src={cur.imageUrl}
-          alt={cur.title}
-          dir={dir}
-        />
-      </AnimatePresence>
-
-      {/* ── Overlays ── */}
-      <div className="absolute inset-0 z-[1] bg-black/15" />
-      <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/35 via-black/15 to-transparent" />
-      <div className="absolute inset-0 z-[2] bg-gradient-to-r from-black/55 via-transparent to-transparent" />
-
-      {/* ── Animated corner bracket top-left ── */}
-      <motion.div
-        key={`bracket-${animKey}`}
-        className="absolute top-4 left-4 md:top-6 md:left-7 z-20"
-        initial={{ opacity: 0, scale: 0.7 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <div className="relative w-6 h-6 md:w-8 md:h-8">
-          <span className="absolute top-0 left-0 w-full h-[1.5px] bg-white/60" />
-          <span className="absolute top-0 left-0 w-[1.5px] h-full bg-white/60" />
-        </div>
-      </motion.div>
-
-      {/* ── Animated corner bracket bottom-right ── */}
-      <motion.div
-        key={`bracket2-${animKey}`}
-        className="absolute bottom-8 right-4 md:bottom-10 md:right-7 z-20"
-        initial={{ opacity: 0, scale: 0.7 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <div className="relative w-6 h-6 md:w-8 md:h-8">
-          <span className="absolute bottom-0 right-0 w-full h-[1.5px] bg-white/60" />
-          <span className="absolute bottom-0 right-0 w-[1.5px] h-full bg-white/60" />
-        </div>
-      </motion.div>
-
-      {/* ── Slide number top-right ── */}
-      {total > 1 && (
-        <div className="absolute top-4 right-5 md:top-6 md:right-8 z-20 flex items-baseline gap-1 select-none pointer-events-none">
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={`num-${active}`}
-              className="text-white/90 font-bold leading-none text-lg md:text-2xl"
-              style={{ fontFamily: "'Noto Serif Bengali', serif" }}
-              initial={{ y: -12, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 12, opacity: 0 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            >
-              {pad(active + 1)}
-            </motion.span>
-          </AnimatePresence>
-          <span className="text-white/30 text-[0.6rem] tracking-wide">
-            / {pad(total)}
-          </span>
-        </div>
-      )}
-
-      {/* ── Content bottom ── */}
-      <div className="absolute inset-x-0 bottom-0 z-20 px-5 md:px-12 pb-6 md:pb-9 flex flex-col gap-2">
-        {/* Tag with animated underline */}
+      {/* ── top bar: tag + counter ── */}
+      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pt-3 sm:px-6 sm:pt-4 lg:px-8 lg:pt-5">
         <AnimatePresence mode="wait">
           <motion.div
             key={`tag-${animKey}`}
-            className="flex items-center gap-2 overflow-hidden"
-            initial={{ opacity: 0, x: -16 }}
+            initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 16 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex items-center gap-2.5"
           >
-            <motion.span
-              className="block h-px bg-white/50"
-              initial={{ width: 0 }}
-              animate={{ width: 20 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-            />
-            <span className="text-white/55 uppercase tracking-[0.24em] text-[0.58rem]">
-              {cur.tag ?? "রয়েল একাডেমি, বেলকুচি"}
+            {/* pulsing dot */}
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-50" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-white opacity-80" />
+            </span>
+            <span className="bangla text-[9px] sm:text-[10px] uppercase tracking-[0.3em] text-white/75 font-medium">
+              {current.tag ?? "রয়েল একাডেমি • বেলকুচি"}
             </span>
           </motion.div>
         </AnimatePresence>
 
-        {/* Title */}
+        {total > 1 && (
+          <div className="flex items-center gap-1">
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={`count-${active}`}
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -10, opacity: 0 }}
+                transition={{ duration: 0.22 }}
+                className="text-sm font-semibold text-white tabular-nums"
+                style={{ fontFamily: "'Noto Serif Bengali', serif" }}
+              >
+                {toBn(active + 1)}
+              </motion.span>
+            </AnimatePresence>
+            <span className="text-xs text-white/40 font-light">
+              /{toBn(total)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ── bottom content ── */}
+      <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-4 sm:px-6 sm:pb-5 lg:px-8 lg:pb-6">
+        {/* title — full width */}
         <AnimatePresence mode="wait">
           <motion.div
             key={`title-${animKey}`}
-            exit={{ opacity: 0, y: -8, transition: { duration: 0.15 } }}
+            className="w-full"
+            exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}
           >
-            <SlideTitle text={cur.title} triggerKey={animKey} />
+            <SlideTitle text={current.title} id={animKey} />
           </motion.div>
         </AnimatePresence>
 
-        {/* Subtitle — desktop */}
+        {/* subtitle — desktop only, compact */}
         <AnimatePresence mode="wait">
-          {cur.subtitle && (
+          {current.subtitle && (
             <motion.p
               key={`sub-${animKey}`}
-              className="m-0 text-white/50 hidden md:block bangla"
-              style={{
-                fontSize: "0.82rem",
-                fontWeight: 300,
-                lineHeight: 1.7,
-                maxWidth: "52ch",
-              }}
-              initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              transition={{ delay: 0.35, duration: 0.45 }}
+              transition={{ delay: 0.18, duration: 0.3 }}
+              className="bangla mt-1.5 hidden max-w-[64ch] text-[0.78rem] leading-6 text-white/60 md:block"
             >
-              {cur.subtitle}
+              {current.subtitle}
             </motion.p>
           )}
         </AnimatePresence>
 
-        {/* CTA + dots */}
-        <div className="flex items-center justify-between gap-4 mt-0.5">
-          {cur.ctaLabel ? (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`cta-${animKey}`}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{
-                  delay: 0.45,
-                  duration: 0.4,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-              >
-                <Link
-                  to={cur.ctaHref ?? "#"}
-                  className="group inline-flex items-center gap-2.5 px-4 py-2 border border-white/30 text-white/90 hover:bg-white hover:text-black hover:border-white transition-all duration-300 no-underline bangla"
-                  style={{
-                    fontSize: "0.68rem",
-                    letterSpacing: "0.1em",
-                  }}
+        {/* CTA + nav controls */}
+        <div className="mt-3 flex items-center justify-between gap-4">
+          {/* CTA button */}
+          <div className="min-h-[34px]">
+            {current.ctaLabel && (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`cta-${animKey}`}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ delay: 0.22, duration: 0.28 }}
                 >
-                  {cur.ctaLabel}
-                  <ArrowRight className="w-[11px] h-[11px]" />
-                </Link>
-              </motion.div>
-            </AnimatePresence>
-          ) : (
-            <span />
-          )}
+                  <Link
+                    to={current.ctaHref ?? "#"}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-sm px-4 py-1.5 text-black text-xs sm:text-sm font-semibold transition-all duration-200 hover:bg-white hover:scale-[1.03] active:scale-[0.98]"
+                  >
+                    <span className="bangla">{current.ctaLabel}</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                  </Link>
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </div>
 
-          {/* Dots + prev/next */}
+          {/* prev / dots / next */}
           {total > 1 && (
-            <div className="flex items-center gap-3">
-              {/* Prev */}
+            <div
+              className="flex items-center gap-2"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {/* prev */}
               <button
                 onClick={() => go("prev")}
-                disabled={busy}
-                className="w-7 h-7 flex items-center justify-center border border-white/20 text-white/60 hover:text-white hover:border-white/60 disabled:opacity-20 disabled:cursor-not-allowed transition-colors duration-200 cursor-pointer bg-transparent"
-                aria-label="Previous"
+                aria-label="Previous slide"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 border border-white/20 backdrop-blur-sm text-white transition-all duration-200 hover:bg-white/20 hover:scale-105 active:scale-95"
               >
-                <ChevronLeft className="w-[10px] h-[10px]" />
+                <ChevronLeft className="h-3.5 w-3.5" />
               </button>
 
-              {/* Animated dots */}
-              <div className="flex items-center gap-1.5">
-                {heroes.map((_, i) => (
+              {/* progress dots */}
+              <div className="flex items-center gap-1.5 px-0.5">
+                {heroes.map((hero, i) => (
                   <motion.button
-                    key={i}
+                    key={hero._id}
                     onClick={() => goTo(i)}
-                    className="border-0 p-0 cursor-pointer rounded-full"
+                    aria-label={`স্লাইড ${toBn(i + 1)}`}
+                    className="relative h-[3px] overflow-hidden rounded-full"
                     animate={{
-                      width: i === active ? 22 : 6,
-                      background:
-                        i === active
-                          ? "rgba(255,255,255,0.9)"
-                          : "rgba(255,255,255,0.3)",
+                      width: i === active ? 32 : 12,
+                      opacity: i === active ? 1 : 0.45,
                     }}
-                    style={{ height: 6 }}
-                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                    aria-label={`Slide ${i + 1}`}
-                  />
+                    transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <span className="absolute inset-0 bg-white/30" />
+                    {i === active && (
+                      <motion.span
+                        key={`prog-${progKey}-${i}`}
+                        className="absolute inset-y-0 left-0 w-full origin-left bg-white"
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: 1 }}
+                        transition={{ duration: DELAY / 1000, ease: "linear" }}
+                      />
+                    )}
+                  </motion.button>
                 ))}
               </div>
 
-              {/* Next */}
+              {/* next */}
               <button
                 onClick={() => go("next")}
-                disabled={busy}
-                className="w-7 h-7 flex items-center justify-center border border-white/20 text-white/60 hover:text-white hover:border-white/60 disabled:opacity-20 disabled:cursor-not-allowed transition-colors duration-200 cursor-pointer bg-transparent"
-                aria-label="Next"
+                aria-label="Next slide"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 border border-white/20 backdrop-blur-sm text-white transition-all duration-200 hover:bg-white/20 hover:scale-105 active:scale-95"
               >
-                <ChevronRight className="w-[10px] h-[10px]" />
+                <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
         </div>
       </div>
-
-      {/* ── Progress line ── */}
-      {total > 1 && (
-        <div className="absolute bottom-0 left-0 right-0 z-30 h-[2px] bg-white/10">
-          <motion.div
-            key={`prog-${animKey}`}
-            className="h-full bg-white/60 origin-left"
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: DELAY / 1000, ease: "linear" }}
-          />
-        </div>
-      )}
     </section>
   );
 };

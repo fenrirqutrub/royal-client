@@ -1,4 +1,3 @@
-// src/hooks/useHeroes.ts
 import { useQuery } from "@tanstack/react-query";
 import axiosPublic from "./axiosPublic";
 
@@ -10,6 +9,10 @@ interface Hero {
   imagePublicId: string;
   createdAt: string;
   updatedAt: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+  tag?: string;
 }
 
 interface HeroesResponse {
