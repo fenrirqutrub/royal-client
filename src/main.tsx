@@ -40,7 +40,7 @@ createRoot(document.getElementById("root")!).render(
                     <Router />
 
                     <ScrollToTopOnReload />
-                    <Toaster position="top-center" />
+                    <Toaster position="top-right" />
                     <SpeedInsights />
                   </ComplainProvider>
                 </ProfileDrawerProvider>

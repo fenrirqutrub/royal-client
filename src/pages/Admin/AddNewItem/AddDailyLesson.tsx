@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // AddDailyLesson.tsx
 import { useForm, type SubmitHandler, Controller } from "react-hook-form";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
@@ -30,9 +29,8 @@ import type {
   SelectOption,
   TeacherItem,
 } from "../../../types/types";
-import ExpandableTextarea from "./ExpandableTextarea";
 
-// ─── Bangla numeral helpers ─────────────────
+// ─── Bangla numeral helpers ────────────────────────────────────────────────────
 
 const normaliseInput = (raw: string): string =>
   toBn(raw.replace(/[^0-9০-৯.,\-\s]/g, ""));
@@ -42,6 +40,7 @@ const isValidToken = (token: string): boolean => {
   return /^\d+(\.\d+)?$/.test(n) && parseFloat(n) > 0;
 };
 
+// ✅ FIX: Multiple-hyphen validation (e.g. ১-২-৩ now correctly rejected)
 const validateReference = (raw: string): string | true => {
   if (!raw?.trim()) return true;
 
@@ -60,6 +59,7 @@ const validateReference = (raw: string): string | true => {
       continue;
     }
 
+    // ✅ FIX: Reject triple-hyphen like ১-২-৩
     if (parts.length !== 2 || !parts[0] || !parts[1]) {
       return "রেঞ্জ সঠিক নয় (যেমন: ১০-১৫)";
     }
@@ -78,13 +78,13 @@ const validateReference = (raw: string): string | true => {
   return true;
 };
 
-// ─── Bangla date formatter ───────────────────────────
+// ─── Bangla date formatter ────────────────────────────────────────────────────
 const formatBnDate = (date: Date): string =>
   `${BN_DAYS_FULL[date.getDay()]}, ${toBn(
     date.getDate().toString(),
   )} ${BN_MONTHS[date.getMonth()]} ${toBn(date.getFullYear().toString())}`;
 
-// ─── Animation Variants ──────────────────────────────
+// ─── Animation Variants ────────────────────────────────────────────────────────
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 18 },
   visible: (i: number) => ({
@@ -105,7 +105,7 @@ const slideIn: Variants = {
   exit: { opacity: 0, x: 8, scale: 0.97, transition: { duration: 0.18 } },
 };
 
-// ─── Style helpers ─────────────────────────────────────
+// ─── Style helpers ─────────────────────────────────────────────────────────────
 const inputCls = (isError: boolean, isValid = false) =>
   [
     "w-full px-4 py-3 rounded-xl border text-sm transition-all duration-200",
@@ -140,7 +140,7 @@ const ErrorMsg = ({ msg }: { msg?: string }) => (
   </AnimatePresence>
 );
 
-// ─── Chapter / Page Toggle ───────────────────────────
+// ─── Chapter / Page Toggle ─────────────────────────────────────────────────────
 interface ReferenceToggleProps {
   value: ReferenceType;
   onChange: (v: ReferenceType) => void;
@@ -196,35 +196,78 @@ const ReferenceToggle = ({ value, onChange }: ReferenceToggleProps) => {
   );
 };
 
-// ═════════════════════════════════════════════════════
+// ─── Hint chips ────────────────────────────────────────────────────────────────
+interface HintChipsProps {
+  refType: ReferenceType;
+  onPick: (hint: string) => void;
+}
+
+const HintChips = ({ refType, onPick }: HintChipsProps) => {
+  const examples =
+    refType === "chapter"
+      ? ["১", "২.৫", "১, ৩", "১-৩", "৪, ৬-৮"]
+      : ["১০", "১০-১৫", "২০, ২২", "৫-৮, ১২"];
+
+  return (
+    <motion.div
+      key={refType}
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.2 }}
+      className="flex flex-wrap gap-1.5 mt-2"
+    >
+      {examples.map((ex) => (
+        <motion.button
+          key={ex}
+          type="button"
+          whileHover={{ scale: 1.06, y: -1 }}
+          whileTap={{ scale: 0.94 }}
+          onClick={() => onPick(ex)}
+          className="px-2.5 py-1 rounded-lg text-[11px] font-medium bangla border
+            border-[var(--color-active-border)] bg-[var(--color-active-bg)]
+            text-[var(--color-gray)] hover:border-violet-500 hover:text-violet-500
+            transition-colors duration-150 select-none"
+        >
+          {ex}
+        </motion.button>
+      ))}
+    </motion.div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Main Component
-// ═══════════════════════════════════════════════======
+// ═══════════════════════════════════════════════════════════════════════════════
 const AddDailyLesson = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "owner";
   const [submitted, setSubmitted] = useState(false);
   const [refType, setRefType] = useState<ReferenceType>("chapter");
-  const [topicsOpen, setTopicsOpen] = useState(false);
 
+  // ✅ FIX: Date refs typed as nullable
   const rawDateRef = useRef<Date | null>(new Date());
   const [pickerDate, setPickerDate] = useState<Date | null>(new Date());
 
+  // ✅ FIX: Timer cleanup ref
   const submittedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const qc = useQueryClient();
 
+  // ✅ FIX: Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (submittedTimerRef.current) clearTimeout(submittedTimerRef.current);
     };
   }, []);
 
-  // ── Teacher list ─────────────────────────────
+  // ── Teacher list ─────────────────────────────────────────────────────────────
   const {
     data: teacherList = [],
     isLoading: teachersLoading,
     isError: teachersError,
   } = useQuery<TeacherItem[]>({
+    // ✅ FIX: Include user.id in queryKey so cache refreshes on user change
     queryKey: ["teachers-list", user?.id],
     queryFn: async () => {
       const res = await axiosPublic.get("/api/users");
@@ -254,6 +297,7 @@ const AddDailyLesson = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  // ✅ FIX: Memoize teacher options
   const teacherOptions: SelectOption[] = useMemo(
     () =>
       teacherList.map((t) => ({
@@ -264,7 +308,7 @@ const AddDailyLesson = () => {
     [teacherList],
   );
 
-  // ── Form ──────────────────────────────────────────
+  // ── Form ──────────────────────────────────────────────────────────────────────
   const {
     handleSubmit,
     reset,
@@ -301,11 +345,13 @@ const AddDailyLesson = () => {
     [setValue],
   );
 
+  // Run only on mount
   useEffect(() => {
     applyDate(new Date());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-set teacher for non-admin or when list is ready
   useEffect(() => {
     if (!user?.id) return;
     if (teacherValue) return;
@@ -316,6 +362,7 @@ const AddDailyLesson = () => {
     });
   }, [user?.id, isAdmin, teacherList.length, teacherValue, setValue]);
 
+  // Clear chapterNumber value AND errors on refType switch
   const handleRefTypeChange = useCallback(
     (v: ReferenceType) => {
       setRefType(v);
@@ -328,18 +375,20 @@ const AddDailyLesson = () => {
     [setValue, clearErrors],
   );
 
-  // ── Mutation ────────────────────────────────
+  // ── Mutation ──────────────────────────────────────────────────────────────────
   const mutation = useMutation({
     mutationFn: (fd: FormData) => axiosPublic.post("/api/daily-lesson", fd),
     onSuccess: () => {
       toast.success("প্রতিদিনের পড়া সফলভাবে যোগ হয়েছে!");
       qc.invalidateQueries({ queryKey: ["daily-lessons"] });
 
+      // ✅ FIX: Full reset including refType
       const now = new Date();
       reset();
       setRefType("chapter");
       applyDate(now);
 
+      // ✅ FIX: Auto-set teacher after reset for non-admin
       if (!isAdmin && user?.id) {
         setValue("teacher", user.id, {
           shouldValidate: true,
@@ -348,7 +397,7 @@ const AddDailyLesson = () => {
       }
 
       setSubmitted(true);
-
+      // ✅ FIX: Cleanup previous timer before setting new one
       if (submittedTimerRef.current) clearTimeout(submittedTimerRef.current);
       submittedTimerRef.current = setTimeout(() => setSubmitted(false), 2500);
     },
@@ -362,6 +411,7 @@ const AddDailyLesson = () => {
 
   // ── onSubmit ──────────────────────────────────────────────────────────────────
   const onSubmit: SubmitHandler<DailyLessonFormData> = (data) => {
+    // ✅ FIX: Null-check rawDateRef
     if (!rawDateRef.current) {
       toast.error("তারিখ নির্বাচন করুন।");
       return;
@@ -375,7 +425,7 @@ const AddDailyLesson = () => {
     }
 
     const fd = new FormData();
-
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { date: _date, teacher: _teacher, ...rest } = data;
     const normalised = { ...rest };
 
@@ -388,9 +438,13 @@ const AddDailyLesson = () => {
     });
 
     fd.append("teacher", teacherId);
+
+    // ✅ FIX: Use toLocalIso to prevent timezone shift bugs
     fd.append("date", toLocalIso(rawDateRef.current));
+
     fd.append("referenceType", refType);
 
+    // ✅ FIX: Derive slug from selected teacher (admin) or logged-in user
     if (isAdmin) {
       const selectedTeacher = teacherList.find((t) => t._id === teacherId);
       if (selectedTeacher?.slug) fd.append("teacherSlug", selectedTeacher.slug);
@@ -493,7 +547,7 @@ const AddDailyLesson = () => {
                       value={field.value}
                       onChange={(val) => {
                         field.onChange(val);
-
+                        // ✅ FIX: Use resetField for proper validation state reset
                         resetField("subject", { defaultValue: "" });
                       }}
                       onBlur={field.onBlur}
@@ -667,10 +721,34 @@ const AddDailyLesson = () => {
                           )} pl-10 bangla`}
                         />
                       </div>
+
+                      <AnimatePresence mode="wait">
+                        {!field.value && (
+                          <HintChips
+                            refType={refType}
+                            onPick={(h) => {
+                              field.onChange(h);
+                              field.onBlur?.();
+                            }}
+                          />
+                        )}
+                      </AnimatePresence>
                     </div>
                   )}
                 />
                 <ErrorMsg msg={errors.chapterNumber?.message} />
+
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-[11px] text-[var(--color-gray)] mt-1.5 bangla leading-relaxed"
+                >
+                  <span className="font-medium text-violet-400">কমা</span> দিয়ে
+                  একাধিক,{" "}
+                  <span className="font-medium text-fuchsia-400">হাইফেন</span>{" "}
+                  দিয়ে রেঞ্জ লিখুন
+                </motion.p>
               </motion.div>
             </div>
 
@@ -684,36 +762,31 @@ const AddDailyLesson = () => {
               <label className={labelCls}>
                 বিষয়বস্তু / নির্দেশনা <RequiredStar />
               </label>
-
               <Controller
                 name="topics"
                 control={control}
                 rules={{
                   required: "বিষয়বস্তু আবশ্যিক",
-                  minLength: { value: 5, message: "কমপক্ষে ৫ অক্ষর লিখুন" },
+                  minLength: {
+                    value: 5,
+                    message: "কমপক্ষে ৫ অক্ষর লিখুন",
+                  },
                 }}
                 render={({ field, fieldState }) => (
-                  <>
-                    <ExpandableTextarea
-                      value={field.value}
-                      onChange={(val) => field.onChange(val)}
-                      onBlur={field.onBlur}
-                      isOpen={topicsOpen}
-                      onOpen={() => setTopicsOpen(true)}
-                      onClose={() => setTopicsOpen(false)}
-                      placeholder="পড়ার বিষয়বস্তু লিখুন..."
-                      label="বিষয়বস্তু / নির্দেশনা"
-                      previewClassName={`${inputCls(
-                        !!fieldState.error,
-                        fieldState.isTouched && !fieldState.error,
-                      )} cursor-text min-h-[120px] items-start`}
-                      doneLabel="সম্পন্ন"
-                      hintLabel="ESC চাপুন"
-                    />
-                    <ErrorMsg msg={errors.topics?.message} />
-                  </>
+                  <textarea
+                    rows={5}
+                    placeholder="পড়ার বিষয়বস্তু লিখুন..."
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    className={`${inputCls(
+                      !!fieldState.error,
+                      fieldState.isTouched && !fieldState.error,
+                    )} resize-none leading-relaxed bangla`}
+                  />
                 )}
               />
+              <ErrorMsg msg={errors.topics?.message} />
             </motion.div>
 
             <div className="border-t border-[var(--color-active-border)] pt-2" />
