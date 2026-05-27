@@ -36,6 +36,7 @@ import {
   PRIVILEGED_ROLES,
   STAFF_DASHBOARD_ROLES,
 } from "../utility/constants/role";
+import ActiveSessions from "../pages/Sessions/ActiveSessions";
 
 const Router = () => {
   return (
@@ -48,6 +49,7 @@ const Router = () => {
         <Route path="dailylesson" element={<DailyLesson />} />
         <Route path="weekly-exam" element={<WeeklyExam />} />
         <Route path="thirdeye" element={<ThirdEye />} />
+        <Route path="dashboard/sessions" element={<ActiveSessions />} />
 
         <Route
           path="people"
