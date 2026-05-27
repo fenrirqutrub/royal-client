@@ -22,8 +22,6 @@ const ROLE_COLORS: Record<string, string> = {
   owner: "bg-rose-500/10 text-rose-400 border-rose-500/20",
 };
 
-const ACTIVE_WINDOW_MS = 2 * 60 * 1000; // 2 মিনিটের মধ্যে active থাকলে active now
-
 // ─── Helpers ─────────────────────────────────
 
 function getInitials(name: string | null): string {
@@ -33,34 +31,14 @@ function getInitials(name: string | null): string {
   return parts[0][0].toUpperCase();
 }
 
-function onlineDuration(loginAt: string): string {
-  const diff = Math.floor((Date.now() - new Date(loginAt).getTime()) / 1000);
+function activeDuration(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 5) return "এখনই";
   if (diff < 60) return `${diff}সে`;
   if (diff < 3600) return `${Math.floor(diff / 60)}মি`;
   const h = Math.floor(diff / 3600);
   const m = Math.floor((diff % 3600) / 60);
   return m > 0 ? `${h}ঘ ${m}মি` : `${h}ঘ`;
-}
-
-function lastSeenText(lastActiveAt: string): string {
-  const diff = Math.floor(
-    (Date.now() - new Date(lastActiveAt).getTime()) / 1000,
-  );
-
-  if (diff < 5) return "এখনই";
-  if (diff < 60) return `${diff}সে আগে`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}মি আগে`;
-
-  const h = Math.floor(diff / 3600);
-  const m = Math.floor((diff % 3600) / 60);
-  return m > 0 ? `${h}ঘ ${m}মি আগে` : `${h}ঘ আগে`;
-}
-
-function isActiveNow(s: SessionEntry): boolean {
-  const lastSeen = new Date(s.lastActiveAt || s.loginAt).getTime();
-  if (!lastSeen) return false;
-
-  return s.isOnline && Date.now() - lastSeen <= ACTIVE_WINDOW_MS;
 }
 
 function DeviceIcon({ type }: { type: string | null }) {
@@ -86,10 +64,19 @@ function UserCard({ s, index }: { s: SessionEntry; index: number }) {
       transition={{ delay: index * 0.04 }}
       className="flex items-center gap-3 p-3 rounded-2xl border border-[var(--color-active-border)] bg-[var(--color-bg)]"
     >
-      <div className="w-10 h-10 rounded-xl bg-[var(--color-active-bg)] border border-[var(--color-active-border)] flex items-center justify-center text-sm font-bold text-[var(--color-text)] flex-shrink-0">
-        {getInitials(s.name)}
+      {/* ✅ Avatar with green pulse dot */}
+      <div className="relative flex-shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-[var(--color-active-bg)] border border-[var(--color-active-border)] flex items-center justify-center text-sm font-bold text-[var(--color-text)]">
+          {getInitials(s.name)}
+        </div>
+        {/* Green pulse dot */}
+        <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-green-500 border-2 border-[var(--color-bg)]" />
+        </span>
       </div>
 
+      {/* Name + slug */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-[var(--color-text)] truncate bangla">
           {s.name ?? "—"}
@@ -97,26 +84,26 @@ function UserCard({ s, index }: { s: SessionEntry; index: number }) {
         <p className="text-xs text-[var(--color-gray)] truncate">
           {s.slug ?? ""}
         </p>
-        <p className="text-xs text-[var(--color-gray)] bangla">
-          অনলাইনে: {onlineDuration(s.loginAt)}
-        </p>
       </div>
 
+      {/* Role badge */}
       <span
         className={`text-xs px-2 py-0.5 rounded-lg border font-medium bangla flex-shrink-0 ${roleColor}`}
       >
         {roleLabel}
       </span>
 
+      {/* Device icon */}
       <div className="text-[var(--color-gray)] flex-shrink-0">
         <DeviceIcon type={s.device?.type ?? null} />
       </div>
 
+      {/* Active duration */}
       <div className="text-right flex-shrink-0">
         <p className="text-sm font-semibold text-green-400 bangla">
-          {lastSeenText(s.lastActiveAt)}
+          {activeDuration(s.lastActiveAt || s.loginAt)}
         </p>
-        <p className="text-xs text-[var(--color-gray)] bangla">শেষ সক্রিয়</p>
+        <p className="text-xs text-[var(--color-gray)] bangla">অ্যাক্টিভ</p>
       </div>
     </motion.div>
   );
@@ -127,18 +114,17 @@ function UserCard({ s, index }: { s: SessionEntry; index: number }) {
 const ActiveNow = () => {
   const { sessions, loading, refresh } = useSessions({
     autoRefreshMs: 10_000,
-    onlineOnly: true,
-    limit: 500,
   });
 
-  const onlineUsers = useMemo(
+  // ✅ শুধু isOnline === true — সব role, সব user
+  const activeUsers = useMemo(
     () =>
       sessions
-        .filter(isActiveNow)
+        .filter((s) => s.isOnline === true)
         .sort(
           (a, b) =>
-            new Date(b.lastActiveAt).getTime() -
-            new Date(a.lastActiveAt).getTime(),
+            new Date(b.lastActiveAt || b.loginAt).getTime() -
+            new Date(a.lastActiveAt || a.loginAt).getTime(),
         ),
     [sessions],
   );
@@ -146,15 +132,19 @@ const ActiveNow = () => {
   return (
     <div className="min-h-screen bg-[var(--color-bg)] p-4 md:p-6">
       <div className="max-w-2xl mx-auto space-y-4">
+        {/* Header */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+            </span>
             <h1 className="text-lg font-bold text-[var(--color-text)] bangla">
               এখন অ্যাক্টিভ
             </h1>
             {!loading && (
               <span className="text-xs px-2 py-0.5 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 font-medium bangla">
-                {onlineUsers.length} জন
+                {activeUsers.length} জন
               </span>
             )}
           </div>
@@ -171,6 +161,7 @@ const ActiveNow = () => {
           </button>
         </div>
 
+        {/* List */}
         {loading && !sessions.length ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
             <RefreshCw className="w-5 h-5 text-[var(--color-gray)] animate-spin" />
@@ -180,7 +171,7 @@ const ActiveNow = () => {
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
-            {onlineUsers.length === 0 ? (
+            {activeUsers.length === 0 ? (
               <motion.div
                 key="empty"
                 initial={{ opacity: 0 }}
@@ -194,7 +185,7 @@ const ActiveNow = () => {
               </motion.div>
             ) : (
               <div className="space-y-2">
-                {onlineUsers.map((s, i) => (
+                {activeUsers.map((s, i) => (
                   <UserCard key={s._id} s={s} index={i} />
                 ))}
               </div>
@@ -202,7 +193,8 @@ const ActiveNow = () => {
           </AnimatePresence>
         )}
 
-        {!loading && onlineUsers.length > 0 && (
+        {/* Footer */}
+        {!loading && activeUsers.length > 0 && (
           <p className="text-xs text-[var(--color-gray)] text-center bangla pb-4">
             প্রতি ১০ সেকেন্ডে অটো-রিফ্রেশ
           </p>
