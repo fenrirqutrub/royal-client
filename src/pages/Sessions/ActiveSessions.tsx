@@ -62,21 +62,29 @@ function UserCard({ s, index }: { s: SessionEntry; index: number }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ delay: index * 0.04 }}
-      className="flex items-center gap-3 p-3 rounded-2xl border border-[var(--color-active-border)] bg-[var(--color-bg)]"
+      className="flex items-center gap-3 p-3 rounded-2xl border border-[var(--color-active-border)] bg-[var(--color-bg)] shadow-sm"
     >
-      {/* ✅ Avatar with green pulse dot */}
+      {/* Avatar + active pulse */}
       <div className="relative flex-shrink-0">
-        <div className="w-10 h-10 rounded-xl bg-[var(--color-active-bg)] border border-[var(--color-active-border)] flex items-center justify-center text-sm font-bold text-[var(--color-text)]">
-          {getInitials(s.name)}
+        <div className="w-11 h-11 rounded-xl overflow-hidden bg-[var(--color-active-bg)] border border-[var(--color-active-border)] flex items-center justify-center text-sm font-bold text-[var(--color-text)]">
+          {s.avatar?.url ? (
+            <img
+              src={s.avatar.url}
+              alt={s.name ?? "avatar"}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            getInitials(s.name)
+          )}
         </div>
-        {/* Green pulse dot */}
+
         <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
           <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-green-500 border-2 border-[var(--color-bg)]" />
         </span>
       </div>
 
-      {/* Name + slug */}
+      {/* Name / slug / device */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-[var(--color-text)] truncate bangla">
           {s.name ?? "—"}
@@ -84,19 +92,20 @@ function UserCard({ s, index }: { s: SessionEntry; index: number }) {
         <p className="text-xs text-[var(--color-gray)] truncate">
           {s.slug ?? ""}
         </p>
+
+        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-[var(--color-gray)]">
+          <DeviceIcon type={s.device?.type ?? null} />
+          <span>{s.browser?.name ?? "Unknown browser"}</span>
+          {s.location?.city ? <span>• {s.location.city}</span> : null}
+        </div>
       </div>
 
-      {/* Role badge */}
+      {/* Role */}
       <span
         className={`text-xs px-2 py-0.5 rounded-lg border font-medium bangla flex-shrink-0 ${roleColor}`}
       >
         {roleLabel}
       </span>
-
-      {/* Device icon */}
-      <div className="text-[var(--color-gray)] flex-shrink-0">
-        <DeviceIcon type={s.device?.type ?? null} />
-      </div>
 
       {/* Active duration */}
       <div className="text-right flex-shrink-0">
@@ -113,19 +122,18 @@ function UserCard({ s, index }: { s: SessionEntry; index: number }) {
 
 const ActiveNow = () => {
   const { sessions, loading, refresh } = useSessions({
-    autoRefreshMs: 10_000,
+    onlineOnly: true,
+    autoRefreshMs: 10000,
+    limit: 500,
   });
 
-  // ✅ শুধু isOnline === true — সব role, সব user
   const activeUsers = useMemo(
     () =>
-      sessions
-        .filter((s) => s.isOnline === true)
-        .sort(
-          (a, b) =>
-            new Date(b.lastActiveAt || b.loginAt).getTime() -
-            new Date(a.lastActiveAt || a.loginAt).getTime(),
-        ),
+      [...sessions].sort(
+        (a, b) =>
+          new Date(b.lastActiveAt || b.loginAt).getTime() -
+          new Date(a.lastActiveAt || a.loginAt).getTime(),
+      ),
     [sessions],
   );
 

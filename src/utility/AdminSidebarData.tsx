@@ -1,4 +1,4 @@
-import { type LucideIcon } from "lucide-react";
+import { Fan, type LucideIcon } from "lucide-react";
 import {
   Folder,
   ImageIcon,
@@ -41,7 +41,7 @@ export interface SidebarContentProps {
 export const dashboardNav = (): NavItem[] => [
   { name: "ড্যাসবোর্ড", path: "/dashboard", icon: BookOpen },
   { name: "প্রোফাইল", path: "/dashboard/profile", icon: User },
-  { name: "সেশনস", path: "/dashboard/sessions", icon: User },
+  { name: "Active", path: "/dashboard/sessions", icon: Fan },
 ];
 
 export const studentNav = (): NavItem[] => [

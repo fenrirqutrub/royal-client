@@ -1,6 +1,6 @@
 // src/hooks/useSessions.ts
 import { useState, useEffect, useCallback, useRef } from "react";
-import axiosPublic from "./axiosPublic";
+import axiosSecure from "./axiosSecure";
 
 export interface SessionEntry {
   _id: string;
@@ -8,6 +8,10 @@ export interface SessionEntry {
   slug: string | null;
   name: string | null;
   role: string | null;
+  avatar: {
+    url: string | null;
+    publicId?: string | null;
+  };
   ip: string | null;
   location: {
     city: string | null;
@@ -109,8 +113,8 @@ export const useSessions = (options: UseSessionsOptions = {}) => {
       if (onlineOnly) params.onlineOnly = "true";
 
       const [sessRes, sumRes] = await Promise.all([
-        axiosPublic.get("/api/sessions", { params }),
-        axiosPublic.get("/api/sessions/summary"),
+        axiosSecure.get("/api/sessions", { params }),
+        axiosSecure.get("/api/sessions/summary"),
       ]);
 
       const sessionData: SessionEntry[] = sessRes.data.sessions ?? [];

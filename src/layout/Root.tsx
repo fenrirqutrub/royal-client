@@ -4,9 +4,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import Navbar from "../components/Navbar/Navbar";
 import Footer from "../components/Footer/Footer";
 import axiosPublic from "../hooks/axiosPublic";
+import { useAuth } from "../context/AuthContext";
+import useSessionHeartbeat from "../hooks/useSessionHeartbeat";
 
 const Root = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  useSessionHeartbeat(!!user, 30000);
 
   useEffect(() => {
     queryClient.prefetchQuery({

@@ -1,23 +1,42 @@
-import { useEffect } from "react";
-import axiosPublic from "../hooks/axiosPublic";
+import { useEffect, useCallback } from "react";
+import axiosSecure from "./axiosSecure";
 
-const useSessionHeartbeat = () => {
+const useSessionHeartbeat = (enabled = true, intervalMs = 30000) => {
+  const sendHeartbeat = useCallback(async () => {
+    if (!enabled) return;
+    if (document.visibilityState === "hidden") return;
+    if (!navigator.onLine) return;
+
+    try {
+      await axiosSecure.post("/api/sessions/heartbeat", {
+        activeSeconds: Math.floor(intervalMs / 1000),
+      });
+    } catch (error) {
+      console.error("Heartbeat failed:", error);
+    }
+  }, [enabled, intervalMs]);
+
   useEffect(() => {
-    const sendHeartbeat = async () => {
-      try {
-        await axiosPublic.post("/api/sessions/heartbeat", {
-          activeSeconds: 30,
-        });
-      } catch (error) {
-        console.error("Heartbeat failed:", error);
-      }
-    };
+    if (!enabled) return;
 
     sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 30000);
 
-    return () => clearInterval(interval);
-  }, []);
+    const interval = setInterval(sendHeartbeat, intervalMs);
+
+    const onFocus = () => sendHeartbeat();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") sendHeartbeat();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [enabled, intervalMs, sendHeartbeat]);
 };
 
 export default useSessionHeartbeat;
