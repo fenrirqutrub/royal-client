@@ -80,6 +80,7 @@ export const useSessions = (options: UseSessionsOptions = {}) => {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const computeStats = useCallback((data: SessionEntry[]): SessionStats => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const now = Date.now();
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -100,7 +101,9 @@ export const useSessions = (options: UseSessionsOptions = {}) => {
 
   const fetch = useCallback(async () => {
     try {
+      setLoading(true);
       setError(null);
+
       const params: Record<string, string> = { limit: String(limit) };
       if (role) params.role = role;
       if (onlineOnly) params.onlineOnly = "true";
