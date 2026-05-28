@@ -640,7 +640,6 @@ const MCQExam = () => {
     fetchExams();
   }, []);
 
-  // ✅ এখন — শুধু today + upcoming count করবে
   const examCountMap = useMemo(() => {
     const map: Record<string, number> = {};
     CLASSES.forEach((cls) => {
@@ -648,14 +647,17 @@ const MCQExam = () => {
     });
     exams.forEach((exam) => {
       const s = getExamStatus(exam.examDate);
-      if (s === "today" || s === "upcoming") {
+      const isUpcoming = s === "today" || s === "upcoming";
+      const isPast = s === "past";
+      if (statusFilter === "upcoming" && isUpcoming) {
+        map[exam.studentClass] = (map[exam.studentClass] || 0) + 1;
+      } else if (statusFilter === "finished" && isPast) {
         map[exam.studentClass] = (map[exam.studentClass] || 0) + 1;
       }
     });
     return map;
-  }, [exams]);
+  }, [exams, statusFilter]);
 
-  // ✅ এখন — শুধু data আছে এমন class দেখাবে
   const classFilterItems = useMemo(
     () =>
       CLASSES.filter((cls) => (examCountMap[cls] || 0) > 0).map((cls) => ({
