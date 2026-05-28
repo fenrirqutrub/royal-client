@@ -195,8 +195,6 @@ const DailyLesson = () => {
   // ─── Date param ───────────────────────────────────
   const dateParam = useMemo(() => toDateParam(selectedDate), [selectedDate]);
 
-  // DailyLesson.tsx — শুধু query অংশ পরিবর্তন
-
   const {
     data = [],
     isPending,
@@ -359,15 +357,20 @@ const DailyLesson = () => {
       .map(([className, lessons]) => ({ className, lessons }));
   }, [filteredData]);
 
+  // ✅ এখন — data থেকে শুধু যে class এ data আছে সেগুলো
   const availableClasses = useMemo(() => {
-    const classKeys = Object.keys(CLASS_ORDER).filter(
-      (key) => typeof key === "string" && key.trim() !== "",
+    const seen = new Set<string>();
+    data.forEach((l) => {
+      if (l.class) seen.add(normalizeStudentClass(l.class));
+    });
+    const sorted = Array.from(seen).sort(
+      (a, b) => (CLASS_ORDER[a] ?? 99) - (CLASS_ORDER[b] ?? 99),
     );
     return [
       { id: "all", label: "সকল শ্রেণি" },
-      ...classKeys.map((cls) => ({ id: String(cls), label: String(cls) })),
+      ...sorted.map((cls) => ({ id: cls, label: cls })),
     ];
-  }, []);
+  }, [data]);
 
   const isToday = useMemo(
     () => isSameLocalDay(selectedDate, new Date()),

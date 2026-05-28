@@ -19,6 +19,8 @@ import AnimatedFilterPills from "../../components/common/AnimatedFilterPills";
 import SelectInput from "../../components/common/SelectInput";
 import { toBn } from "../../utility/Formatters";
 import { CLASSES, getStudentClassNumber } from "../../utility/constants/class";
+import { useGuestPreview } from "../../hooks/useGuestPreview";
+import LoginPromptOverlay from "../Admin/Auth/LoginPromptOverlay";
 
 /* ═══════════════════════════════════════════
    Types
@@ -553,7 +555,7 @@ const ClassSection = ({
         </section>
       )}
 
-      {/* No active — only show when filter is "upcoming" */}
+      {/* No active */}
       {!hasActive && statusFilter === "upcoming" && (
         <div className="flex items-center gap-3 rounded-xl border border-dashed border-[var(--color-active-border)] bg-[var(--color-active-bg)] p-4">
           <Clock size={18} className="text-[var(--color-gray)]" />
@@ -611,6 +613,17 @@ const MCQExam = () => {
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [activeClass, setActiveClass] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("upcoming");
+  const { isGuest } = useGuestPreview();
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  // ── Guest select handler ──
+  const handleSelect = (exam: Exam) => {
+    if (isGuest) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    setSelectedExam(exam);
+  };
 
   useEffect(() => {
     const fetchExams = async () => {
@@ -629,34 +642,27 @@ const MCQExam = () => {
 
   const examCountMap = useMemo(() => {
     const map: Record<string, number> = {};
-
     CLASSES.forEach((cls) => {
       map[cls] = 0;
     });
-
     exams.forEach((exam) => {
       map[exam.studentClass] = (map[exam.studentClass] || 0) + 1;
     });
-
     return map;
   }, [exams]);
 
+  // ✅ এখন — শুধু data আছে এমন class দেখাবে
   const classFilterItems = useMemo(
     () =>
-      CLASSES.map((cls) => {
-        const count = examCountMap[cls] || 0;
-
-        return {
-          id: cls,
-          title: cls,
-          className: count === 0 ? "  " : "",
-          label: <span>{cls}</span>,
-        };
-      }),
+      CLASSES.filter((cls) => (examCountMap[cls] || 0) > 0).map((cls) => ({
+        id: cls,
+        title: cls,
+        className: "",
+        label: <span>{cls}</span>,
+      })),
     [examCountMap],
   );
 
-  /* ── filtered by class + status ── */
   const filteredExams = useMemo(() => {
     let result =
       activeClass === "all"
@@ -675,49 +681,32 @@ const MCQExam = () => {
     return result;
   }, [exams, activeClass, statusFilter]);
 
-  /* ── stats for selected filters ── */
   const selectedStats = useMemo(() => {
     let today = 0;
     let upcoming = 0;
     let past = 0;
-
     filteredExams.forEach((e) => {
       const s = getExamStatus(e.examDate);
       if (s === "today") today++;
       else if (s === "upcoming") upcoming++;
       else past++;
     });
-
-    return {
-      today,
-      upcoming,
-      past,
-      total: filteredExams.length,
-    };
+    return { today, upcoming, past, total: filteredExams.length };
   }, [filteredExams]);
 
-  /* ── global stats ── */
   const totalStats = useMemo(() => {
     let today = 0;
     let upcoming = 0;
     let past = 0;
-
     exams.forEach((e) => {
       const s = getExamStatus(e.examDate);
       if (s === "today") today++;
       else if (s === "upcoming") upcoming++;
       else past++;
     });
-
-    return {
-      today,
-      upcoming,
-      past,
-      total: exams.length,
-    };
+    return { today, upcoming, past, total: exams.length };
   }, [exams]);
 
-  /* ── status filter dropdown options ── */
   const statusFilterOptions = useMemo(
     () => [
       {
@@ -734,18 +723,14 @@ const MCQExam = () => {
     [totalStats.today, totalStats.upcoming, totalStats.past],
   );
 
-  /* ── modal keyboard / scroll lock ── */
   useEffect(() => {
     if (!selectedExam) return;
-
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSelectedExam(null);
     };
-
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKey);
-
     return () => {
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", handleKey);
@@ -754,12 +739,11 @@ const MCQExam = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] px-4 py-10 sm:px-6">
-      <div className="mx-auto w-full ">
+      <div className="mx-auto w-full">
         {/* ── Header ── */}
         <div className="mb-6 flex items-start justify-between">
           <div className="flex items-center gap-3">
             <FileQuestionMark size={30} className="text-[var(--color-text)]" />
-
             <div>
               <h1 className="bangla text-xl lg:text-3xl font-bold text-[var(--color-text)]">
                 আজকের MCQ পরীক্ষা
@@ -767,7 +751,7 @@ const MCQExam = () => {
             </div>
           </div>
 
-          <div className="relative mb-6 flex items-start justify-between ">
+          <div className="relative mb-6 flex items-start justify-between">
             {!loading && exams.length > 0 && totalStats.today > 0 && (
               <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 select-none">
                 <span className="bangla text-5xl lg:text-7xl font-bold leading-none text-[var(--color-gray)] opacity-10">
@@ -795,8 +779,8 @@ const MCQExam = () => {
           />
         ) : (
           <>
-            {/* ── Status Filter (SelectInput) ── */}
-            <div className="mb-4">
+            {/* ── Status Filter ── */}
+            <div className="mb-4 relative">
               <SelectInput
                 label="পরীক্ষার ধরন"
                 options={statusFilterOptions}
@@ -804,10 +788,16 @@ const MCQExam = () => {
                 onChange={(val) => setStatusFilter(val as StatusFilter)}
                 placeholder="ফিল্টার নির্বাচন করুন"
               />
+              {isGuest && (
+                <div
+                  className="absolute inset-0 z-10 cursor-pointer"
+                  onClick={() => setShowLoginPrompt(true)}
+                />
+              )}
             </div>
 
             {/* ── Class Filter ── */}
-            <div className="mb-5 overflow-hidden rounded border border-[var(--color-active-border)] p-2">
+            <div className="mb-5 relative overflow-hidden rounded border border-[var(--color-active-border)] p-2">
               <AnimatedFilterPills
                 items={classFilterItems}
                 activeId={activeClass}
@@ -817,6 +807,12 @@ const MCQExam = () => {
                 allLabel={<span>সকল</span>}
                 layoutId="mcq-class-filter"
               />
+              {isGuest && (
+                <div
+                  className="absolute inset-0 z-10 cursor-pointer"
+                  onClick={() => setShowLoginPrompt(true)}
+                />
+              )}
             </div>
 
             {/* ── Selected class label ── */}
@@ -828,12 +824,12 @@ const MCQExam = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 4, scale: 0.96 }}
                   transition={{ duration: 0.18 }}
-                  className="flex shrink-0 justify-center items-center gap-2 rounded border border-[var(--color-active-border)] bg-[var(--color-active-bg)]  py-2 w-full bangla text-sm lg:text-lg font-bold text-[var(--color-gray)] "
+                  className="flex shrink-0 justify-center items-center gap-2 rounded border border-[var(--color-active-border)] bg-[var(--color-active-bg)] py-2 w-full bangla text-sm lg:text-lg font-bold text-[var(--color-gray)]"
                 >
-                  <span className="">
+                  <span>
                     {activeClass === "all" ? "সকল ক্লাস" : activeClass}
                   </span>
-                  <span className="">
+                  <span>
                     • {statusFilter === "upcoming" ? "আসন্ন" : "সম্পন্ন"}{" "}
                     {toBn(selectedStats.total)}টি
                   </span>
@@ -852,7 +848,7 @@ const MCQExam = () => {
               >
                 <ClassSection
                   exams={filteredExams}
-                  onSelect={setSelectedExam}
+                  onSelect={handleSelect}
                   statusFilter={statusFilter}
                 />
               </motion.div>
@@ -869,6 +865,11 @@ const MCQExam = () => {
           />
         )}
       </AnimatePresence>
+
+      <LoginPromptOverlay
+        isOpen={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+      />
     </div>
   );
 };
