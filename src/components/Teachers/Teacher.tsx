@@ -8,7 +8,7 @@ import Skeleton from "../common/Skeleton";
 import type { Screen } from "../../utility/constants/common";
 import { ROLE_CONFIG } from "../../utility/constants/role";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────
 export interface TeacherData {
   handle: string;
   degree: string;
@@ -24,7 +24,7 @@ export interface TeacherData {
   image?: string;
 }
 
-// ── Config ─────────────────────────────────────────────────────────────────────
+// ── Config ────────────────────────────────────────────────
 const CFG: Record<
   Screen,
   {
@@ -70,7 +70,7 @@ const CFG: Record<
   },
 };
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────
 const resolveImg = (t: TeacherData): string => {
   const raw = t.avatar?.url ?? t.image ?? "";
   if (!raw) return "";
@@ -78,7 +78,7 @@ const resolveImg = (t: TeacherData): string => {
   return raw.startsWith("/") ? raw : `/${raw}`;
 };
 
-// ── useScreen ──────────────────────────────────────────────────────────────────
+// ── useScreen ─────────────────────────────────────────────
 const useScreen = (): Screen => {
   const get = (): Screen => {
     const w = window.innerWidth;
@@ -100,7 +100,7 @@ const useScreen = (): Screen => {
   return s;
 };
 
-// ── TeacherCard ────────────────────────────────────────────────────────────────
+// ── TeacherCard ──────────────────────────────────────────
 interface CardProps {
   teacher: TeacherData;
   offset: number;
@@ -125,7 +125,6 @@ const TeacherCard = ({ teacher, offset, cfg, onClick }: CardProps) => {
 
   const showImg = !!imgSrc && !failed;
 
-  // transform values
   const tx = offset * cfg.gap;
   const ry = offset * -cfg.rotY;
   const scale = isCenter ? 1 : Math.max(0.6, 1 - abs * cfg.scaleStep);
@@ -157,10 +156,8 @@ const TeacherCard = ({ teacher, offset, cfg, onClick }: CardProps) => {
         marginLeft: -(cfg.cardW / 2),
         marginTop: -(cfg.cardH / 2),
       }}
-      className="rounded-2xl overflow-hidden shadow-2xl select-none flex flex-col
-                 bg-[var(--color-bg)] border border-[var(--color-active-border)]"
+      className="rounded-2xl overflow-hidden shadow-2xl select-none flex flex-col bg-[var(--color-bg)] border border-[var(--color-active-border)]"
     >
-      {/* Glow for center card */}
       <AnimatePresence>
         {isCenter && (
           <motion.div
@@ -300,7 +297,7 @@ const TeacherCard = ({ teacher, offset, cfg, onClick }: CardProps) => {
   );
 };
 
-// ── Main ───────────────────────────────────────────────────────────────────────
+// ── Main ───────────────────────────────────────────────
 const Teacher = () => {
   const [current, setCurrent] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -341,7 +338,6 @@ const Teacher = () => {
     autoRef.current = setInterval(next, 4000);
   }, [N, next, stopAuto]);
 
-  // reset on data change
   useEffect(() => {
     setCurrent(0);
   }, [N]);
@@ -351,7 +347,6 @@ const Teacher = () => {
     return stopAuto;
   }, [startAuto, stopAuto]);
 
-  // keyboard nav
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") {
@@ -369,7 +364,6 @@ const Teacher = () => {
     return () => window.removeEventListener("keydown", h);
   }, [next, prev, startAuto, stopAuto]);
 
-  // drag / swipe
   const onStart = (x: number) => {
     setDragging(true);
     dragStart.current = x;
