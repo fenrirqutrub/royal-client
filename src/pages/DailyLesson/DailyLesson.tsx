@@ -357,20 +357,31 @@ const DailyLesson = () => {
       .map(([className, lessons]) => ({ className, lessons }));
   }, [filteredData]);
 
-  // ✅ এখন — data থেকে শুধু যে class এ data আছে সেগুলো
   const availableClasses = useMemo(() => {
     const seen = new Set<string>();
-    data.forEach((l) => {
+
+    // teacher filter apply করে তারপর class collect করো
+    const source =
+      selectedTeacher === "all"
+        ? data
+        : data.filter(
+            (l) =>
+              resolveTeacherSlug(l.teacher, l.teacherSlug) === selectedTeacher,
+          );
+
+    source.forEach((l) => {
       if (l.class) seen.add(normalizeStudentClass(l.class));
     });
+
     const sorted = Array.from(seen).sort(
       (a, b) => (CLASS_ORDER[a] ?? 99) - (CLASS_ORDER[b] ?? 99),
     );
+
     return [
       { id: "all", label: "সকল শ্রেণি" },
       ...sorted.map((cls) => ({ id: cls, label: cls })),
     ];
-  }, [data]);
+  }, [data, selectedTeacher]);
 
   const isToday = useMemo(
     () => isSameLocalDay(selectedDate, new Date()),
@@ -393,6 +404,14 @@ const DailyLesson = () => {
   ]);
 
   // ─── Auto reset invalid filters ─────────────────────
+
+  useEffect(() => {
+    if (selectedClass === "all") return;
+    if (!availableClasses.some((c) => c.id === selectedClass)) {
+      setSelectedClass("all");
+    }
+  }, [availableClasses, selectedClass]);
+
   useEffect(() => {
     if (selectedSubject === "all") return;
     if (!subjectOptions.some((o) => o.value === selectedSubject))

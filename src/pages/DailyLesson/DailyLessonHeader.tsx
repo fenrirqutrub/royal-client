@@ -6,13 +6,13 @@ import { BN_DAYS_FULL, BN_MONTHS, toBn } from "../../utility/Formatters";
 import DatePicker from "../../components/common/Datepicker";
 import type { DailyLessonHeaderProps } from "../../types/types";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────
 const safeDate = (date: Date | undefined): Date => {
   if (date instanceof Date && !isNaN(date.getTime())) return date;
   return new Date();
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Component ──────────────────────────────────
 const DailyLessonHeader = ({
   isGuest = false,
   isStaff = false,
