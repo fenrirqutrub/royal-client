@@ -640,13 +640,17 @@ const MCQExam = () => {
     fetchExams();
   }, []);
 
+  // ✅ এখন — শুধু today + upcoming count করবে
   const examCountMap = useMemo(() => {
     const map: Record<string, number> = {};
     CLASSES.forEach((cls) => {
       map[cls] = 0;
     });
     exams.forEach((exam) => {
-      map[exam.studentClass] = (map[exam.studentClass] || 0) + 1;
+      const s = getExamStatus(exam.examDate);
+      if (s === "today" || s === "upcoming") {
+        map[exam.studentClass] = (map[exam.studentClass] || 0) + 1;
+      }
     });
     return map;
   }, [exams]);
