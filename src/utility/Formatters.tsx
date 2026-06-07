@@ -1,3 +1,5 @@
+// src/utility/Formatters.ts
+
 import { motion } from "framer-motion";
 import type { Exam } from "../types/WeeklyExamTypes";
 import type {
@@ -55,6 +57,14 @@ export const toBn = (n: number | string | null | undefined): string => {
 
 export const toEn = (s: string): string =>
   s.replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d)));
+
+// ✅ নতুন: DatePicker-এর জন্য formatDisplay ফাংশন
+export const formatDisplay = (date: Date): string => {
+  if (!date) return "";
+  return `${BN_DAYS_FULL[date.getDay()]}, ${toBn(date.getDate())} ${
+    BN_MONTHS[date.getMonth()]
+  } ${toBn(date.getFullYear())}`;
+};
 
 export const toBnDateStr = (input: DateInput): string => {
   const d = toDate(input);

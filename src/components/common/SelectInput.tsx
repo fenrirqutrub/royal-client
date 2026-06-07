@@ -75,6 +75,7 @@ const SelectInput = ({
   isTouched,
   defaultValue,
   className = "",
+  icon,
 }: SelectInputProps) => {
   const [open, setOpen] = useState(false);
 
@@ -184,6 +185,12 @@ const SelectInput = ({
         ].join(" ")}
       >
         <span className="flex min-w-0 items-center gap-2 truncate text-left">
+          {/* 2. Render static input icon if provided */}
+          {icon && (
+            <span className="shrink-0 text-[var(--color-gray)]">{icon}</span>
+          )}
+
+          {/* Render option icon if exists */}
           {selected?.icon && (
             <span className="shrink-0 text-[var(--color-text-hover)]">
               {selected.icon}

@@ -12,17 +12,18 @@ import {
 import axiosPublic from "../../hooks/axiosPublic";
 import AnimatedFilterPills from "../../components/common/AnimatedFilterPills";
 import SelectInput from "../../components/common/SelectInput";
-import { toBn } from "../../utility/Formatters";
+import { toBn, formatDisplay } from "../../utility/Formatters";
 import { CLASSES } from "../../utility/constants/class";
 import { useGuestPreview } from "../../hooks/useGuestPreview";
 import LoginPromptOverlay from "../Admin/Auth/LoginPromptOverlay";
 import { Link, useNavigate } from "react-router";
-import type { Exam, ExamStatus, StatusFilter } from "../../types/McqExam";
+import type { Exam, ExamStatus } from "../../types/McqExam";
 import { useAuth } from "../../context/AuthContext";
 import { ExamDetailModal } from "./ExamDetailModal";
 import { ClassSection } from "./ClassSection";
 import EmptyState from "../../components/common/Emptystate";
 import { STAFF_DASHBOARD_ROLES } from "../../utility/constants/role";
+import DatePicker from "../../components/common/Datepicker";
 
 /* ═══════════════════════════════════════════
    Helpers
@@ -68,8 +69,16 @@ const MCQExam = () => {
   const [loading, setLoading] = useState(true);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [activeClass, setActiveClass] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("upcoming");
   const [selectedTeacher, setSelectedTeacher] = useState<string>("all");
+
+  // ✅ Past exam filters
+  const [selectedPastDate, setSelectedPastDate] = useState<Date | null>(null);
+
+  // ✅ Toggle between Upcoming & Completed
+  const [viewMode, setViewMode] = useState<"upcoming" | "completed">(
+    "upcoming",
+  );
+
   const { isGuest } = useGuestPreview();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
@@ -85,7 +94,7 @@ const MCQExam = () => {
     setSelectedExam(exam);
   };
 
-  // ── 1. Data fetch (user এর জন্য অপেক্ষা করে না) ──
+  // ── 1. Data fetch ──
   useEffect(() => {
     const fetchExams = async () => {
       try {
@@ -102,9 +111,8 @@ const MCQExam = () => {
     fetchExams();
   }, []);
 
-  // ── 2. exams + user দুটোই ready হলে teacher auto-select ──
+  // ── 2. Auto-select teacher for staff ──
   useEffect(() => {
-    // data নেই বা student/guest হলে skip
     if (!exams.length || !isStaff || !user) return;
 
     const ownEntry = exams.find((e) => {
@@ -133,12 +141,14 @@ const MCQExam = () => {
     setActiveClass("all");
   }, [selectedTeacher]);
 
-  // ── Reset class filter when status changes ──
+  // ── Reset date filter when view mode changes ──
   useEffect(() => {
-    setActiveClass("all");
-  }, [statusFilter]);
+    if (viewMode === "upcoming") {
+      setSelectedPastDate(null);
+    }
+  }, [viewMode]);
 
-  /* ── Teacher options derived from exam posters ── */
+  /* ── Teacher options ── */
   const teacherOptions = useMemo(() => {
     const seen = new Set<string>();
     const options: { value: string; label: string }[] = [
@@ -169,23 +179,75 @@ const MCQExam = () => {
     });
   }, [exams, selectedTeacher, isStaff]);
 
+  /* ── Separate Active (Today + Upcoming) and Past exams ── */
+  const { activeExams, pastExams } = useMemo(() => {
+    const active: Exam[] = [];
+    const past: Exam[] = [];
+
+    teacherFilteredExams.forEach((exam) => {
+      const status = getExamStatus(exam.examDate);
+      if (status === "today" || status === "upcoming") {
+        active.push(exam);
+      } else {
+        past.push(exam);
+      }
+    });
+
+    // Sort active by date (earliest first)
+    active.sort(
+      (a, b) => new Date(a.examDate).getTime() - new Date(b.examDate).getTime(),
+    );
+
+    // Sort past by date (latest first)
+    past.sort(
+      (a, b) => new Date(b.examDate).getTime() - new Date(a.examDate).getTime(),
+    );
+
+    return { activeExams: active, pastExams: past };
+  }, [teacherFilteredExams]);
+
+  /* ── Filter active exams by class ── */
+  const filteredActiveExams = useMemo(() => {
+    if (activeClass === "all") return activeExams;
+    return activeExams.filter((e) => e.studentClass === activeClass);
+  }, [activeExams, activeClass]);
+
+  /* ── Filter past exams by class + date ─ */
+  const filteredPastExams = useMemo(() => {
+    let result = pastExams;
+
+    // Class filter
+    if (activeClass !== "all") {
+      result = result.filter((e) => e.studentClass === activeClass);
+    }
+
+    // Date filter
+    if (selectedPastDate) {
+      result = result.filter((e) => {
+        const examDate = new Date(e.examDate);
+        return (
+          examDate.getDate() === selectedPastDate.getDate() &&
+          examDate.getMonth() === selectedPastDate.getMonth() &&
+          examDate.getFullYear() === selectedPastDate.getFullYear()
+        );
+      });
+    }
+
+    return result;
+  }, [pastExams, activeClass, selectedPastDate]);
+
+  /* ── Class filter items (based on current view) ── */
   const examCountMap = useMemo(() => {
     const map: Record<string, number> = {};
     CLASSES.forEach((cls) => {
       map[cls] = 0;
     });
-    teacherFilteredExams.forEach((exam) => {
-      const s = getExamStatus(exam.examDate);
-      const isUpcoming = s === "today" || s === "upcoming";
-      const isPast = s === "past";
-      if (statusFilter === "upcoming" && isUpcoming) {
-        map[exam.studentClass] = (map[exam.studentClass] || 0) + 1;
-      } else if (statusFilter === "finished" && isPast) {
-        map[exam.studentClass] = (map[exam.studentClass] || 0) + 1;
-      }
+    const sourceExams = viewMode === "upcoming" ? activeExams : pastExams;
+    sourceExams.forEach((exam) => {
+      map[exam.studentClass] = (map[exam.studentClass] || 0) + 1;
     });
     return map;
-  }, [teacherFilteredExams, statusFilter]);
+  }, [activeExams, pastExams, viewMode]);
 
   const classFilterItems = useMemo(
     () =>
@@ -198,74 +260,13 @@ const MCQExam = () => {
     [examCountMap],
   );
 
-  const filteredExams = useMemo(() => {
-    let result =
-      activeClass === "all"
-        ? teacherFilteredExams
-        : teacherFilteredExams.filter((e) => e.studentClass === activeClass);
-
-    if (statusFilter === "upcoming") {
-      result = result.filter((e) => {
-        const s = getExamStatus(e.examDate);
-        return s === "today" || s === "upcoming";
-      });
-    } else if (statusFilter === "finished") {
-      result = result.filter((e) => getExamStatus(e.examDate) === "past");
-    }
-
-    return result;
-  }, [teacherFilteredExams, activeClass, statusFilter]);
-
-  const selectedStats = useMemo(() => {
-    let today = 0;
-    let upcoming = 0;
-    let past = 0;
-    filteredExams.forEach((e) => {
-      const s = getExamStatus(e.examDate);
-      if (s === "today") today++;
-      else if (s === "upcoming") upcoming++;
-      else past++;
-    });
-    return { today, upcoming, past, total: filteredExams.length };
-  }, [filteredExams]);
-
-  const totalStats = useMemo(() => {
-    let today = 0;
-    let upcoming = 0;
-    let past = 0;
-    exams.forEach((e) => {
-      const s = getExamStatus(e.examDate);
-      if (s === "today") today++;
-      else if (s === "upcoming") upcoming++;
-      else past++;
-    });
-    return { today, upcoming, past, total: exams.length };
-  }, [exams]);
-
-  const statusFilterOptions = useMemo(
-    () => [
-      {
-        value: "upcoming",
-        label: `আসন্ন পরীক্ষা (${toBn(totalStats.today + totalStats.upcoming)})`,
-        icon: <Clock size={14} />,
-      },
-      {
-        value: "finished",
-        label: `সম্পন্ন পরীক্ষা (${toBn(totalStats.past)})`,
-        icon: <CheckCircle2 size={14} />,
-      },
-    ],
-    [totalStats.today, totalStats.upcoming, totalStats.past],
-  );
-
-  // ── Classes that have exams (for "all" view) ──
-  const classesWithExams = useMemo(
-    () =>
-      CLASSES.filter((cls) =>
-        filteredExams.some((e) => e.studentClass === cls),
-      ),
-    [filteredExams],
-  );
+  const classesWithExams = useMemo(() => {
+    const sourceExams =
+      viewMode === "upcoming" ? filteredActiveExams : filteredPastExams;
+    return CLASSES.filter((cls) =>
+      sourceExams.some((e) => e.studentClass === cls),
+    );
+  }, [filteredActiveExams, filteredPastExams, viewMode]);
 
   useEffect(() => {
     if (!selectedExam) return;
@@ -281,6 +282,10 @@ const MCQExam = () => {
     };
   }, [selectedExam]);
 
+  // Current view exams
+  const currentExams =
+    viewMode === "upcoming" ? filteredActiveExams : filteredPastExams;
+
   return (
     <div className="min-h-screen bg-[var(--color-bg)] px-4 py-10 sm:px-6">
       <div className="mx-auto w-full">
@@ -290,19 +295,9 @@ const MCQExam = () => {
             <FileQuestionMark size={30} className="text-[var(--color-text)]" />
             <div>
               <h1 className="bangla text-xl lg:text-3xl font-bold text-[var(--color-text)]">
-                আজকের MCQ পরীক্ষা
+                MCQ পরীক্ষা
               </h1>
             </div>
-          </div>
-
-          <div className="relative mb-6 flex items-start justify-between">
-            {!loading && exams.length > 0 && totalStats.today > 0 && (
-              <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 select-none">
-                <span className="bangla text-5xl lg:text-7xl font-bold leading-none text-[var(--color-gray)] opacity-10">
-                  {toBn(totalStats.today)}/{toBn(totalStats.total)}
-                </span>
-              </div>
-            )}
           </div>
 
           <div>
@@ -334,44 +329,95 @@ const MCQExam = () => {
           />
         ) : (
           <>
-            {/* ── Filter row ── */}
-            <div
-              className={`mb-4 grid gap-3 ${isStaff ? "sm:grid-cols-2" : ""}`}
-            >
-              {/* Status filter */}
-              <div className="relative">
-                <SelectInput
-                  label="পরীক্ষার ধরন"
-                  options={statusFilterOptions}
-                  value={statusFilter}
-                  onChange={(val) => setStatusFilter(val as StatusFilter)}
-                  placeholder="ফিল্টার নির্বাচন করুন"
-                />
-                {isGuest && (
-                  <div
-                    className="absolute inset-0 z-10 cursor-pointer"
-                    onClick={() => setShowLoginPrompt(true)}
-                  />
-                )}
-              </div>
+            {/* ── ✅ Flexible Row Layout ── */}
+            <div className="mb-4">
+              {/* Desktop: One Row | Mobile: Stacked */}
+              <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 lg:gap-4">
+                {/* Toggle Buttons - Centered on mobile, left on desktop */}
+                <div className="flex items-center justify-center lg:justify-start gap-2 lg:flex-shrink-0">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setViewMode("upcoming")}
+                    className={`bangla flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all flex-shrink-0 ${
+                      viewMode === "upcoming"
+                        ? "bg-[var(--color-text)] text-[var(--color-bg)] shadow-md"
+                        : "border border-[var(--color-active-border)] bg-[var(--color-active-bg)] text-[var(--color-text)] hover:border-[var(--color-text)]/30"
+                    }`}
+                  >
+                    <Clock size={16} />
+                    আসন্ন পরীক্ষা
+                    <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                      {toBn(activeExams.length)}
+                    </span>
+                  </motion.button>
 
-              {/* Teacher filter — শুধু staff দেখবে */}
-              {isStaff && (
-                <div className="relative">
-                  <SelectInput
-                    label="শিক্ষক"
-                    options={teacherOptions}
-                    value={selectedTeacher}
-                    onChange={setSelectedTeacher}
-                    disabled={teacherOptions.length <= 1}
-                    placeholder="শিক্ষক নির্বাচন করুন"
-                    icon={<User size={13} />}
-                  />
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setViewMode("completed")}
+                    className={`bangla flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all flex-shrink-0 ${
+                      viewMode === "completed"
+                        ? "bg-[var(--color-text)] text-[var(--color-bg)] shadow-md"
+                        : "border border-[var(--color-active-border)] bg-[var(--color-active-bg)] text-[var(--color-text)] hover:border-[var(--color-text)]/30"
+                    }`}
+                  >
+                    <CheckCircle2 size={16} />
+                    সম্পন্ন পরীক্ষা
+                    <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                      {toBn(pastExams.length)}
+                    </span>
+                  </motion.button>
                 </div>
-              )}
+
+                {/* Filters - Full width on mobile, flexible on desktop */}
+                <div
+                  className={`flex-1 grid gap-3 lg:gap-4 ${isStaff ? "lg:grid-cols-2" : "lg:grid-cols-1"}`}
+                >
+                  {/* Teacher filter — শুধু staff দেখবে */}
+                  {isStaff && (
+                    <div className="relative min-w-0">
+                      <SelectInput
+                        label="শিক্ষক"
+                        options={teacherOptions}
+                        value={selectedTeacher}
+                        onChange={setSelectedTeacher}
+                        disabled={teacherOptions.length <= 1}
+                        placeholder="শিক্ষক নির্বাচন করুন"
+                        icon={<User size={13} />}
+                      />
+                    </div>
+                  )}
+
+                  {/* ✅ DatePicker — শুধু Completed view এ দেখাবে */}
+                  {viewMode === "completed" && (
+                    <div className="relative min-w-0">
+                      <DatePicker
+                        label="তারিখ নির্বাচন করুন"
+                        value={
+                          selectedPastDate
+                            ? formatDisplay(selectedPastDate)
+                            : ""
+                        }
+                        onChange={() => {}}
+                        onDateChange={(date) => setSelectedPastDate(date)}
+                        selectedDate={selectedPastDate}
+                        placeholder="যে দিনের পরীক্ষা দেখতে চান"
+                        maxDate={new Date()}
+                      />
+                      {isGuest && (
+                        <div
+                          className="absolute inset-0 z-10 cursor-pointer"
+                          onClick={() => setShowLoginPrompt(true)}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* ── Class Filter ── */}
+            {/* ─ Class Filter ── */}
             <div className="mb-5 relative overflow-hidden rounded border border-[var(--color-active-border)] p-2">
               <AnimatedFilterPills
                 items={classFilterItems}
@@ -394,7 +440,7 @@ const MCQExam = () => {
             <div className="mb-5 flex justify-center items-center gap-3">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={`${activeClass}-${statusFilter}-${selectedTeacher}`}
+                  key={`${activeClass}-${selectedTeacher}-${selectedPastDate?.toDateString()}-${viewMode}`}
                   initial={{ opacity: 0, y: -4, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 4, scale: 0.96 }}
@@ -405,7 +451,6 @@ const MCQExam = () => {
                     {activeClass === "all" ? "সকল ক্লাস" : activeClass}
                   </span>
 
-                  {/* Staff + নির্দিষ্ট teacher select থাকলে badge এ দেখাবে */}
                   {isStaff && selectedTeacher !== "all" && (
                     <>
                       <span className="opacity-40">•</span>
@@ -420,75 +465,151 @@ const MCQExam = () => {
                     </>
                   )}
 
+                  {viewMode === "completed" && selectedPastDate && (
+                    <>
+                      <span className="opacity-40">•</span>
+                      <span className="flex items-center gap-1">
+                        <CalendarDays size={13} className="opacity-60" />
+                        {formatDisplay(selectedPastDate)}
+                      </span>
+                    </>
+                  )}
+
                   <span className="opacity-40">•</span>
                   <span>
-                    {statusFilter === "upcoming" ? "আসন্ন" : "সম্পন্ন"}{" "}
-                    {toBn(selectedStats.total)}টি
+                    {viewMode === "upcoming" ? "আসন্ন" : "সম্পন্ন"}{" "}
+                    {toBn(currentExams.length)}টি
                   </span>
                 </motion.div>
               </AnimatePresence>
             </div>
 
-            {/* ── Content ── */}
+            {/* ── EXAMS CONTENT ── */}
             <AnimatePresence mode="wait">
               <motion.div
-                key={`${activeClass}-${statusFilter}-${selectedTeacher}`}
+                key={`${viewMode}-${activeClass}-${selectedTeacher}-${selectedPastDate?.toDateString()}`}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.22 }}
               >
-                {activeClass === "all" ? (
-                  // ── Show each class separately ──
-                  classesWithExams.length === 0 ? (
-                    <EmptyState
-                      icon={
-                        <CalendarDays className="w-10 h-10 text-[var(--color-gray)]" />
-                      }
-                      title={
-                        statusFilter === "upcoming"
-                          ? "কোনো আসন্ন পরীক্ষা নেই"
-                          : "কোনো সম্পন্ন পরীক্ষা নেই"
-                      }
-                      message="পরবর্তীতে পরীক্ষা যোগ হলে এখানে দেখা যাবে"
-                    />
-                  ) : (
-                    <div className="space-y-8">
-                      {classesWithExams.map((cls) => {
-                        const classExams = filteredExams.filter(
-                          (e) => e.studentClass === cls,
-                        );
-                        return (
-                          <div key={cls}>
-                            {/* ── Class Header ── */}
-                            <div className="mb-3 flex items-center gap-3">
-                              <span className="bangla font-bold text-base lg:text-xl text-[var(--color-text)]">
-                                {cls}
-                              </span>
-                              <span className="bangla text-xs text-[var(--color-gray)] border border-[var(--color-active-border)] bg-[var(--color-active-bg)] rounded-full px-3 py-1">
-                                {toBn(classExams.length)}টি
-                              </span>
-                              <div className="flex-1 h-px bg-[var(--color-active-border)]" />
-                            </div>
+                {currentExams.length > 0 ? (
+                  activeClass === "all" ? (
+                    classesWithExams.length === 0 ? (
+                      <EmptyState
+                        icon={
+                          viewMode === "upcoming" ? (
+                            <Clock className="w-10 h-10 text-[var(--color-gray)]" />
+                          ) : (
+                            <CheckCircle2 className="w-10 h-10 text-[var(--color-gray)]" />
+                          )
+                        }
+                        title={
+                          viewMode === "upcoming"
+                            ? "কোনো আসন্ন পরীক্ষা নেই"
+                            : selectedPastDate
+                              ? "এই তারিখে কোনো পরীক্ষা নেই"
+                              : "কোনো সম্পন্ন পরীক্ষা নেই"
+                        }
+                        message={
+                          selectedPastDate
+                            ? "অন্য তারিখ বেছে নিন অথবা ক্লিয়ার বাটন চাপুন"
+                            : "পরবর্তীতে পরীক্ষা যোগ হলে এখানে দেখা যাবে"
+                        }
+                      />
+                    ) : (
+                      <div className="space-y-8">
+                        {classesWithExams.map((cls) => {
+                          const classExams = currentExams.filter(
+                            (e) => e.studentClass === cls,
+                          );
+                          return (
+                            <div key={cls}>
+                              <div className="mb-3 items-center gap-3 flex shrink-0 justify-center rounded border border-[var(--color-active-border)] bg-[var(--color-active-bg)] py-2 w-full bangla text-sm lg:text-lg font-bold text-[var(--color-gray)]">
+                                <span className="bangla font-bold text-base lg:text-xl text-[var(--color-text)]">
+                                  {cls}
+                                </span>
+                                <span className="bangla text-xs text-[var(--color-gray)] border border-[var(--color-active-border)] bg-[var(--color-active-bg)] rounded-full px-3 py-1">
+                                  {toBn(classExams.length)}টি
+                                </span>
+                              </div>
 
-                            {/* ── ClassSection for this class ── */}
-                            <ClassSection
-                              exams={classExams}
-                              onSelect={handleSelect}
-                              statusFilter={statusFilter}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                              <ClassSection
+                                exams={classExams}
+                                onSelect={handleSelect}
+                                type={viewMode}
+                                selectedDate={
+                                  viewMode === "completed"
+                                    ? selectedPastDate
+                                    : null
+                                }
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )
+                  ) : (
+                    <ClassSection
+                      exams={currentExams}
+                      onSelect={handleSelect}
+                      type={viewMode}
+                      selectedDate={
+                        viewMode === "completed" ? selectedPastDate : null
+                      }
+                    />
                   )
                 ) : (
-                  // ── Show single class ──
-                  <ClassSection
-                    exams={filteredExams}
-                    onSelect={handleSelect}
-                    statusFilter={statusFilter}
-                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 rounded-xl border border-dashed border-[var(--color-active-border)] bg-[var(--color-active-bg)] p-8"
+                  >
+                    {viewMode === "upcoming" ? (
+                      <>
+                        <Clock size={24} className="text-[var(--color-gray)]" />
+                        <div>
+                          <p className="bangla text-base font-bold text-[var(--color-text)]">
+                            কোনো আসন্ন পরীক্ষা নেই
+                          </p>
+                          <p className="bangla text-sm text-[var(--color-gray)] mt-1">
+                            সম্পন্ন পরীক্ষা দেখতে উপরের বাটন চাপুন
+                          </p>
+                        </div>
+                      </>
+                    ) : selectedPastDate ? (
+                      <>
+                        <CalendarDays
+                          size={24}
+                          className="text-[var(--color-gray)]"
+                        />
+                        <div>
+                          <p className="bangla text-base font-bold text-[var(--color-text)]">
+                            {formatDisplay(selectedPastDate)} তারিখে কোনো
+                            পরীক্ষা নেই
+                          </p>
+                          <p className="bangla text-sm text-[var(--color-gray)] mt-1">
+                            অন্য তারিখ বেছে নিন অথবা ক্লিয়ার বাটন চাপুন
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2
+                          size={24}
+                          className="text-[var(--color-gray)]"
+                        />
+                        <div>
+                          <p className="bangla text-base font-bold text-[var(--color-text)]">
+                            কোনো সম্পন্ন পরীক্ষা নেই
+                          </p>
+                          <p className="bangla text-sm text-[var(--color-gray)] mt-1">
+                            আসন্ন পরীক্ষা দেখতে উপরের বাটন চাপুন
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </motion.div>
                 )}
               </motion.div>
             </AnimatePresence>

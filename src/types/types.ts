@@ -33,6 +33,7 @@ export interface SelectInputProps {
   isTouched?: boolean;
   defaultValue?: string;
   className?: string;
+  icon?: ReactNode;
 }
 
 export interface DropdownPortalProps {

@@ -1,5 +1,5 @@
-import { CalendarDays } from "lucide-react";
 import type { Exam } from "../../types/McqExam";
+import { getStudentClassNumber } from "../../utility/constants/class";
 import { formatBnDate, formatBnWeekday, toBn } from "../../utility/Formatters";
 import { motion } from "framer-motion";
 
@@ -35,8 +35,11 @@ export const UpcomingExamCard = ({
       onClick={() => onSelect(exam)}
       className="group flex w-full items-center gap-3.5 rounded-xl border border-[var(--color-active-border)] bg-[var(--color-bg)] p-3.5 text-left transition-all hover:border-[var(--color-text)]/20 hover:bg-[var(--color-active-bg)] hover:shadow-sm"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--color-active-border)] bg-[var(--color-active-bg)]">
-        <CalendarDays size={16} className="text-[var(--color-text)]" />
+      {/* ── Class Number Box (আইকনের বদলে ক্লাস নাম্বার) ── */}
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-[var(--color-active-border)] bg-[var(--color-active-bg)]">
+        <span className="bangla text-xl font-bold text-[var(--color-text)]">
+          {getStudentClassNumber(exam.studentClass)}
+        </span>
       </div>
 
       <div className="min-w-0 flex-1">

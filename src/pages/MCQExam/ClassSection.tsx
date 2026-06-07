@@ -2,21 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import type { Exam, StatusFilter } from "../../types/McqExam";
-import { getExamStatus } from "./MCQExam";
-import { SectionHeader } from "./SectionHeader";
+import { AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import type { Exam } from "../../types/McqExam";
 import { TodayExamCard } from "./TodayExamCard";
 import { UpcomingExamCard } from "./UpcomingExamCard";
 import { PastExamRow } from "./PastExamRow";
-import { toBn } from "../../utility/Formatters";
-import EmptyState from "../../components/common/Emptystate";
+import { toBn, formatDisplay } from "../../utility/Formatters";
 
 const PAST_PER_PAGE = 10;
 
@@ -35,7 +26,7 @@ const Pagination = ({
       whileTap={{ scale: 0.95 }}
       disabled={currentPage === 1}
       onClick={() => onPageChange(currentPage - 1)}
-      className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-active-border)] bg-[var(--color-active-bg)] text-[var(--color-text)] transition-opacity disabled:opacity-30"
+      className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-active-border)] bg-[var(--color-active-bg)] text-[var(--color-text)] transition-opacity disabled:opacity-30 hover:bg-[var(--color-bg)]"
     >
       <ChevronLeft size={14} />
     </motion.button>
@@ -48,7 +39,7 @@ const Pagination = ({
       whileTap={{ scale: 0.95 }}
       disabled={currentPage === totalPages}
       onClick={() => onPageChange(currentPage + 1)}
-      className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-active-border)] bg-[var(--color-active-bg)] text-[var(--color-text)] transition-opacity disabled:opacity-30"
+      className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-active-border)] bg-[var(--color-active-bg)] text-[var(--color-text)] transition-opacity disabled:opacity-30 hover:bg-[var(--color-bg)]"
     >
       <ChevronRight size={14} />
     </motion.button>
@@ -59,17 +50,19 @@ const Pagination = ({
 export const ClassSection = ({
   exams,
   onSelect,
-  statusFilter,
+  type,
+  selectedDate,
 }: {
   exams: Exam[];
   onSelect: (e: Exam) => void;
-  statusFilter: StatusFilter;
+  type: "upcoming" | "completed";
+  selectedDate?: Date | null;
 }) => {
   const [pastPage, setPastPage] = useState(1);
 
   useEffect(() => {
     setPastPage(1);
-  }, [exams]);
+  }, [exams, selectedDate]);
 
   const { todayExams, upcomingExams, pastExams } = useMemo(() => {
     const today: Exam[] = [];
@@ -77,10 +70,26 @@ export const ClassSection = ({
     const past: Exam[] = [];
 
     exams.forEach((exam) => {
-      const status = getExamStatus(exam.examDate);
-      if (status === "today") today.push(exam);
-      else if (status === "upcoming") upcoming.push(exam);
-      else past.push(exam);
+      const now = new Date();
+      const examDate = new Date(exam.examDate);
+      const todayStart = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
+      const examDay = new Date(
+        examDate.getFullYear(),
+        examDate.getMonth(),
+        examDate.getDate(),
+      );
+
+      if (examDay.getTime() === todayStart.getTime()) {
+        today.push(exam);
+      } else if (examDay > todayStart) {
+        upcoming.push(exam);
+      } else {
+        past.push(exam);
+      }
     });
 
     today.sort(
@@ -93,10 +102,25 @@ export const ClassSection = ({
       (a, b) => new Date(b.examDate).getTime() - new Date(a.examDate).getTime(),
     );
 
-    return { todayExams: today, upcomingExams: upcoming, pastExams: past };
-  }, [exams]);
+    // Date filter for past exams
+    let filteredPast = past;
+    if (selectedDate && type === "completed") {
+      filteredPast = past.filter((exam) => {
+        const examDate = new Date(exam.examDate);
+        return (
+          examDate.getDate() === selectedDate.getDate() &&
+          examDate.getMonth() === selectedDate.getMonth() &&
+          examDate.getFullYear() === selectedDate.getFullYear()
+        );
+      });
+    }
 
-  const hasActive = todayExams.length > 0 || upcomingExams.length > 0;
+    return {
+      todayExams: today,
+      upcomingExams: upcoming,
+      pastExams: filteredPast,
+    };
+  }, [exams, selectedDate, type]);
 
   const pastTotalPages = Math.ceil(pastExams.length / PAST_PER_PAGE) || 1;
   const visiblePast = pastExams.slice(
@@ -104,34 +128,20 @@ export const ClassSection = ({
     pastPage * PAST_PER_PAGE,
   );
 
-  if (exams.length === 0) {
+  if (type === "upcoming") {
     return (
-      <EmptyState
-        icon={<AlertCircle className="w-10 h-10 text-[var(--color-gray)]" />}
-        title={
-          statusFilter === "upcoming"
-            ? "কোনো আসন্ন পরীক্ষা নেই"
-            : "কোনো সম্পন্ন পরীক্ষা নেই"
-        }
-        message="পরবর্তীতে পরীক্ষা যোগ হলে এখানে দেখা যাবে"
-      />
-    );
-  }
+      <div className="space-y-4">
+        {/* Today */}
+        {todayExams.length > 0 && (
+          <div className="space-y-3">
+            {todayExams.map((exam) => (
+              <TodayExamCard key={exam._id} exam={exam} onSelect={onSelect} />
+            ))}
+          </div>
+        )}
 
-  return (
-    <div className="space-y-6">
-      {/* Today */}
-      {todayExams.length > 0 && (
-        <section>
-          {todayExams.map((exam) => (
-            <TodayExamCard key={exam._id} exam={exam} onSelect={onSelect} />
-          ))}
-        </section>
-      )}
-
-      {/* Upcoming */}
-      {upcomingExams.length > 0 && (
-        <section>
+        {/* Upcoming */}
+        {upcomingExams.length > 0 && (
           <div className="grid gap-2">
             {upcomingExams.map((exam, idx) => (
               <UpcomingExamCard
@@ -142,29 +152,17 @@ export const ClassSection = ({
               />
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </div>
+    );
+  }
 
-      {/* No active */}
-      {!hasActive && statusFilter === "upcoming" && (
-        <div className="flex items-center gap-3 rounded-xl border border-dashed border-[var(--color-active-border)] bg-[var(--color-active-bg)] p-4">
-          <Clock size={18} className="text-[var(--color-gray)]" />
-          <p className="bangla text-sm text-[var(--color-gray)]">
-            বর্তমানে কোনো আসন্ন পরীক্ষা নেই
-          </p>
-        </div>
-      )}
-
-      {/* Past / Finished */}
-      {pastExams.length > 0 && (
-        <section>
-          <SectionHeader
-            icon={CheckCircle2}
-            title="সম্পন্ন পরীক্ষা"
-            count={pastExams.length}
-          />
-
-          <div className="rounded-2xl border border-[var(--color-active-border)] bg-[var(--color-active-bg)] p-1.5">
+  // Past/Completed exams
+  return (
+    <div>
+      {pastExams.length > 0 ? (
+        <>
+          <div className="rounded-2xl border border-[var(--color-active-border)] bg-[var(--color-active-bg)] overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.div
                 key={pastPage}
@@ -188,7 +186,20 @@ export const ClassSection = ({
               onPageChange={setPastPage}
             />
           )}
-        </section>
+        </>
+      ) : (
+        selectedDate && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 rounded-xl border border-dashed border-[var(--color-active-border)] bg-[var(--color-active-bg)] p-4"
+          >
+            <AlertCircle size={18} className="text-[var(--color-gray)]" />
+            <p className="bangla text-sm text-[var(--color-gray)]">
+              {formatDisplay(selectedDate)} তারিখে কোনো পরীক্ষা নেই
+            </p>
+          </motion.div>
+        )
       )}
     </div>
   );
