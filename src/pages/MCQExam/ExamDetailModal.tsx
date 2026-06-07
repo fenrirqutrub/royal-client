@@ -19,7 +19,7 @@ import { getAvatarUrl } from "./MCQExam";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 
-/* ── helpers ── */
+/* ── helpers ─ */
 const getDaysUntil = (examDate: string): number => {
   const now = new Date();
   const date = new Date(examDate);
@@ -103,7 +103,6 @@ const DeleteConfirmSheet = ({
 interface ExamDetailModalProps {
   exam: Exam;
   onClose: () => void;
-  /** current user role — if omitted or "student", edit/delete are hidden */
   userRole?: string;
   onEdit?: (exam: Exam) => void;
   onDelete?: (exam: Exam) => Promise<void>;
@@ -259,28 +258,46 @@ export const ExamDetailModal = ({
           </div>
 
           <div className="p-5 pt-3">
-            {/* Poster card */}
-            <div className="mb-5 flex flex-col justify-center items-center gap-3 p-3">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={posterName}
-                  className="h-32 w-32 shrink-0 rounded-full border border-[var(--color-active-border)] object-cover shadow-sm"
+            {/* ✅ Poster card - Updated Avatar Section */}
+            <div className="mb-6 flex flex-col justify-center items-center gap-4 p-4">
+              {/* Avatar Container with Ring Effect */}
+              <div className="relative">
+                {/* Outer Ring Animation */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[var(--color-text)]/20 to-transparent blur-xl scale-110" />
+
+                {/* Avatar */}
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={posterName}
+                    className="h-40 w-40 shrink-0 rounded-full border-4 border-[var(--color-active-border)] object-cover shadow-lg"
+                    style={{ aspectRatio: "1/1" }}
+                  />
+                ) : (
+                  <div className="flex h-40 w-40 shrink-0 items-center justify-center rounded-full border-4 border-[var(--color-active-border)] bg-gradient-to-br from-[var(--color-active-bg)] to-[var(--color-bg)] shadow-lg">
+                    <User
+                      size={48}
+                      className="text-[var(--color-gray)] opacity-60"
+                    />
+                  </div>
+                )}
+
+                {/* Status Dot (Optional) */}
+                <div
+                  className={`absolute bottom-2 right-2 h-5 w-5 rounded-full border-4 border-[var(--color-bg)] ${sc.dotColor}`}
                 />
-              ) : (
-                <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-full border border-[var(--color-active-border)] bg-[var(--color-bg)]">
-                  <User size={20} className="text-[var(--color-gray)]" />
-                </div>
-              )}
-              <div className="">
-                <p className="bangla text-sm font-bold text-[var(--color-text)] truncate">
+              </div>
+
+              {/* Name & Info */}
+              <div className="text-center">
+                <p className="bangla text-lg font-bold text-[var(--color-text)] truncate max-w-[200px]">
                   {posterName}
                 </p>
-                <p className="bangla text-[11px] text-[var(--color-gray)]">
+                <p className="bangla text-[12px] text-[var(--color-gray)] mt-1">
                   পরীক্ষা যোগ করেছেন
                 </p>
                 {exam.createdAt && (
-                  <p className="bangla text-[10px] text-[var(--color-gray)]/70">
+                  <p className="bangla text-[11px] text-[var(--color-gray)]/70 mt-1.5">
                     {formatBnDate(exam.createdAt)} •{" "}
                     {formatTime(exam.createdAt)}
                   </p>
