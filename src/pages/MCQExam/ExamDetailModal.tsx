@@ -260,19 +260,19 @@ export const ExamDetailModal = ({
 
           <div className="p-5 pt-3">
             {/* Poster card */}
-            <div className="mb-5 flex items-center gap-3 rounded-2xl border border-[var(--color-active-border)] bg-[var(--color-active-bg)] p-3">
+            <div className="mb-5 flex flex-col justify-center items-center gap-3 p-3">
               {avatarUrl ? (
                 <img
                   src={avatarUrl}
                   alt={posterName}
-                  className="h-12 w-12 shrink-0 rounded-xl border border-[var(--color-active-border)] object-cover shadow-sm"
+                  className="h-32 w-32 shrink-0 rounded-full border border-[var(--color-active-border)] object-cover shadow-sm"
                 />
               ) : (
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--color-active-border)] bg-[var(--color-bg)]">
+                <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-full border border-[var(--color-active-border)] bg-[var(--color-bg)]">
                   <User size={20} className="text-[var(--color-gray)]" />
                 </div>
               )}
-              <div className="min-w-0 flex-1">
+              <div className="">
                 <p className="bangla text-sm font-bold text-[var(--color-text)] truncate">
                   {posterName}
                 </p>
