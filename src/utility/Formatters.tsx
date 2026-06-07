@@ -213,3 +213,12 @@ export const stripHtml = (html: string) => {
   tmp.innerHTML = html;
   return tmp.textContent ?? tmp.innerText ?? "";
 };
+
+export const formatBnWeekday = (iso: string) =>
+  new Date(iso).toLocaleDateString("bn-BD", { weekday: "long" });
+
+export const formatTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("bn-BD", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
