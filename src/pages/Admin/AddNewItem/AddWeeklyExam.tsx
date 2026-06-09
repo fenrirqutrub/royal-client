@@ -34,10 +34,10 @@ import { CLASS_OPTIONS } from "../../../utility/constants/class";
 import { getSubjects } from "../../../utility/constants/subject";
 import ExpandableTextarea from "./ExpandableTextarea";
 
-// ─── Types ─────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────
 type NumberType = "chapterNumber" | "pageNumber";
 
-// ─── Validation helpers ────────────────────────────────────
+// ─── Validation helpers ───────────────────
 const validatePositiveNumber = (
   raw: string,
   fieldLabel: string,

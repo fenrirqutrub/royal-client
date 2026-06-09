@@ -123,6 +123,21 @@ export const ADVANCED_SUBJECTS: SelectOption[] = [
     label: "ব্যবসায় উদ্যোগ",
     icon: ICON_MONEY,
   },
+  {
+    value: "ইসলামের ইতিহাস",
+    label: "ইসলামের ইতিহাস",
+    icon: ICON_MONEY,
+  },
+  {
+    value: "আকাইদ ও ফিকহ",
+    label: "আকাইদ ও ফিকহ",
+    icon: ICON_MONEY,
+  },
+  {
+    value: "হাদিস শরিফ",
+    label: "হাদিস শরিফ",
+    icon: ICON_MONEY,
+  },
 ];
 
 // ─────────────────────────────────────────────

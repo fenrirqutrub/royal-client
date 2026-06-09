@@ -16,7 +16,7 @@ import type {
 import { CLASS_OPTIONS } from "../../utility/constants/class";
 import { getSubjects } from "../../utility/constants/subject";
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────
 const MARK_OPTIONS = [
   { value: "10", label: "১০" },
   { value: "15", label: "১৫" },
@@ -38,7 +38,7 @@ const NUMBER_TYPE_OPTIONS = [
   { value: "pageNumber", label: "পৃষ্ঠা নম্বর" },
 ];
 
-// ─── Style helpers ────────────────────────────────────────────────────────────
+// ─── Style helpers ────────────────────────────────────────
 const inputCls = (isError: boolean, isValidTouched = false) =>
   `w-full px-4 py-3 rounded-xl border text-sm transition-all duration-200
    focus:outline-none focus:ring-2 focus:border-transparent
@@ -54,7 +54,7 @@ const inputCls = (isError: boolean, isValidTouched = false) =>
 const labelCls =
   "block text-xs font-semibold tracking-wide uppercase text-[var(--color-gray)] mb-1.5";
 
-// ─── Animation Variants ───────────────────────────────────────────────────────
+// ─── Animation Variants ──────────────────────────────────
 const overlayVariants: Variants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },
@@ -83,7 +83,7 @@ const imagePreviewVariants: Variants = {
   exit: { opacity: 0, scale: 0.86 },
 };
 
-// ─── Small Components ─────────────────────────────────────────────────────────
+// ─── Small Components ────────────────────────────────────
 const RequiredStar = () => (
   <span className="text-rose-500 normal-case tracking-normal font-normal ml-0.5">
     *
@@ -105,7 +105,7 @@ const ErrMsg = ({ msg }: { msg?: string }) => (
   </AnimatePresence>
 );
 
-// ─── Image Uploader ───────────────────────────────────────────────────────────
+// ─── Image Uploader ───────────────────────────────────────────
 const ImageUploader = ({
   previews,
   onPickFiles,
