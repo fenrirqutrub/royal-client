@@ -5,7 +5,6 @@ import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { Trash2, X, Loader2, ImagePlus, Images } from "lucide-react";
-import axiosPublic from "../../hooks/axiosPublic";
 import SelectInput from "../../components/common/SelectInput";
 import { uploadMultipleToCloudinary } from "../../hooks/useCloudinaryUpload";
 import type { TeacherOption } from "../../types/types";
@@ -15,6 +14,8 @@ import type {
 } from "../../types/WeeklyExamTypes";
 import { CLASS_OPTIONS } from "../../utility/constants/class";
 import { getSubjects } from "../../utility/constants/subject";
+import axiosPublic from "../../hooks/axiosPublic";
+import axiosSecure from "../../hooks/axiosSecure";
 
 // ─── Constants ───────────────────────────────────────────
 const MARK_OPTIONS = [
@@ -445,7 +446,7 @@ export const EditModal = ({
         images: [...existingImages, ...uploadedNewImages],
       };
 
-      return axiosPublic.put(`/api/weekly-exams/${record._id}`, payload);
+      return axiosSecure.put(`/api/weekly-exams/${record._id}`, payload);
     },
     onSuccess: () => {
       toast.success("সফলভাবে আপডেট হয়েছে!");
