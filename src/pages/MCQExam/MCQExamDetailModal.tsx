@@ -15,11 +15,11 @@ import {
 import type { Exam } from "../../types/McqExam";
 import { formatBnDate } from "../../utility/Formatters";
 
-interface ExamDetailModalProps {
+interface MCQExamDetailModalProps {
   exam: Exam;
   onClose: () => void;
-  onEdit?: (exam: Exam) => void;
-  onDelete?: (exam: Exam) => Promise<void>;
+  onEdit: (exam: Exam) => void;
+  onDelete: (exam: Exam) => Promise<void>;
   userRole?: string;
 }
 
@@ -29,7 +29,7 @@ export const MCQExamDetailModal = ({
   onEdit,
   onDelete,
   userRole,
-}: ExamDetailModalProps) => {
+}: MCQExamDetailModalProps) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -37,7 +37,6 @@ export const MCQExamDetailModal = ({
   const isToday =
     new Date(exam.examDate).toDateString() === new Date().toDateString();
 
-  // ✅ Prevent background scroll
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -51,29 +50,30 @@ export const MCQExamDetailModal = ({
     try {
       await onDelete(exam);
       onClose();
+    } catch (error) {
+      console.error("Delete failed:", error);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // ✅ Fixed avatar URL getter with proper type checking
+  const handleEdit = () => {
+    onEdit(exam);
+  };
+
   const getAvatarUrl = (): string | null => {
     if (!exam.postedBy?.avatar) return null;
-
-    // If avatar is a string, return it directly
     if (typeof exam.postedBy.avatar === "string") {
       return exam.postedBy.avatar;
     }
-
-    // If avatar is an object, try to get the url property
     if (
       typeof exam.postedBy.avatar === "object" &&
       exam.postedBy.avatar !== null
     ) {
-      const avatarObj = exam.postedBy.avatar as any; // Type assertion
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const avatarObj = exam.postedBy.avatar as any;
       return avatarObj.url || null;
     }
-
     return null;
   };
 
@@ -96,18 +96,16 @@ export const MCQExamDetailModal = ({
         exit={{ opacity: 0, scale: 0.9, y: 40 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className="fixed inset-0 z-[101] flex flex-col overflow-hidden bg-[var(--color-bg)] border border-[var(--color-active-border)]/50 shadow-2xl"
-        style={{
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }}
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {/* ✅ Close Button - Fixed Position */}
+        {/* Close Button */}
         <motion.button
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           whileHover={{ scale: 1.1, rotate: 90 }}
           whileTap={{ scale: 0.9 }}
           onClick={onClose}
+          disabled={isDeleting}
           className="absolute right-4 top-4 z-10 rounded-full bg-[var(--color-bg)] p-2 text-[var(--color-gray)] shadow-lg ring-2 ring-[var(--color-active-border)] transition-colors hover:bg-red-500/10 hover:text-red-500 hover:ring-red-500/30"
         >
           <X size={20} />
@@ -115,18 +113,12 @@ export const MCQExamDetailModal = ({
 
         <div
           className="flex-1 overflow-y-auto px-4 py-6"
-          style={{
-            scrollbarWidth: "none",
-            msOverflowStyle: "none",
-          }}
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          <style>{`
-            .modal-content::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
+          <style>{`.modal-content::-webkit-scrollbar { display: none; }`}</style>
 
           <div className="modal-content mx-auto max-w-xl space-y-4">
+            {/* Avatar */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -197,7 +189,6 @@ export const MCQExamDetailModal = ({
               <h2 className="bangla mb-2 text-2xl font-bold text-[var(--color-text)]">
                 {exam.subject}
               </h2>
-
               <div className="flex items-center justify-center gap-2">
                 <span className="bangla flex items-center gap-1.5 rounded-full border border-[var(--color-text)] bg-[var(--color-text)]/10 px-3 py-1 text-sm font-bold text-[var(--color-text)]">
                   <BookOpen size={12} />
@@ -254,7 +245,7 @@ export const MCQExamDetailModal = ({
           </div>
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer Actions - Staff Only */}
         {isStaff && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -266,24 +257,24 @@ export const MCQExamDetailModal = ({
               <motion.button
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => onEdit?.(exam)}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-text)] py-3 text-sm font-bold text-[var(--color-bg)] shadow-lg transition-all hover:shadow-xl"
+                onClick={handleEdit}
+                disabled={isDeleting}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-text)] py-3 text-sm font-bold text-[var(--color-bg)] shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
               >
                 <Pencil size={16} />
                 <span className="bangla">সম্পাদনা</span>
               </motion.button>
 
-              {onDelete && (
-                <motion.button
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="flex items-center justify-center gap-2 rounded-lg border border-red-500 bg-red-500/10 px-6 py-3 text-sm font-bold text-red-500 shadow-lg transition-all hover:bg-red-500 hover:text-white hover:shadow-xl"
-                >
-                  <Trash2 size={16} />
-                  <span className="bangla">মুছুন</span>
-                </motion.button>
-              )}
+              <motion.button
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isDeleting}
+                className="flex items-center justify-center gap-2 rounded-lg border border-red-500 bg-red-500/10 px-6 py-3 text-sm font-bold text-red-500 shadow-lg transition-all hover:bg-red-500 hover:text-white hover:shadow-xl disabled:opacity-50"
+              >
+                <Trash2 size={16} />
+                <span className="bangla">মুছুন</span>
+              </motion.button>
             </div>
           </motion.div>
         )}
@@ -338,7 +329,6 @@ const DeleteConfirmOverlay = ({
         >
           <AlertTriangle size={28} className="text-red-500" />
         </motion.div>
-
         <h3 className="bangla text-xl font-bold text-[var(--color-text)]">
           নিশ্চিত করুন
         </h3>
