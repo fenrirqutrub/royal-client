@@ -1,6 +1,6 @@
-// MCQExam.tsx - Main component with compact spacing
+// MCQExam.tsx
 import { useState, useMemo, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Calendar, CheckCircle, Clock, Sparkles } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../../context/AuthContext";
@@ -8,34 +8,57 @@ import axiosPublic from "../../hooks/axiosPublic";
 import type { Exam } from "../../types/McqExam";
 import { MCQExamDetailModal } from "./ExamDetailModal";
 import { STAFF_DASHBOARD_ROLES } from "../../utility/constants/role";
+import { CLASSES } from "../../utility/constants/class";
 import { toBn } from "../../utility/Formatters";
 import toast from "react-hot-toast";
-import { MCQFilterBar } from "./MCQFilterBar";
 import { MCQExamCard } from "./MCQExamCard";
+import AnimatedFilterPills from "../../components/common/AnimatedFilterPills";
+import ErrorState from "../../components/common/ErrorState";
+import Skeleton from "../../components/common/Skeleton";
+import EmptyState from "../../components/common/Emptystate";
+import DatePicker from "../../components/common/Datepicker";
 
+/* ──────────────────────────────── Types ──────────────────────────────── */
+type ViewType = "today" | "upcoming" | "completed";
+
+interface Filters {
+  view: ViewType;
+  class: string;
+  teacher: string;
+  date: Date | null;
+  dateDisplay: string;
+}
+
+/* ─────────────── Component ──────────────────── */
 const MCQExam = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-  const [filters, setFilters] = useState({
-    view: "upcoming" as "upcoming" | "past",
+  const [filters, setFilters] = useState<Filters>({
+    view: "today",
     class: "all",
     teacher: "all",
-    date: null as Date | null,
+    date: null,
+    dateDisplay: "",
   });
 
-  const isStaff = user && STAFF_DASHBOARD_ROLES.includes(user.role);
+  const isStaff = !!user && STAFF_DASHBOARD_ROLES.includes(user.role);
 
+  /* ─── Fetch ─── */
   useEffect(() => {
     const fetchExams = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const res = await axiosPublic.get("/api/mcq-exams");
         setExams(res.data?.data || []);
-      } catch (error) {
-        console.error("Fetch error:", error);
+      } catch (err) {
+        console.error("Fetch error:", err);
+        setError("ডেটা লোড করতে সমস্যা হয়েছে");
         toast.error("ডেটা লোড করতে সমস্যা হয়েছে");
       } finally {
         setLoading(false);
@@ -44,7 +67,8 @@ const MCQExam = () => {
     fetchExams();
   }, []);
 
-  const { today, upcoming, past } = useMemo(() => {
+  /* ─── Categorize by date ─── */
+  const categorizedExams = useMemo(() => {
     const now = new Date();
     const todayStart = new Date(
       now.getFullYear(),
@@ -60,82 +84,195 @@ const MCQExam = () => {
       59,
     );
 
-    const result = {
-      today: [] as Exam[],
-      upcoming: [] as Exam[],
-      past: [] as Exam[],
+    const result: Record<ViewType, Exam[]> = {
+      today: [],
+      upcoming: [],
+      completed: [],
     };
 
     exams.forEach((exam) => {
       const examDate = new Date(exam.examDate);
-      if (examDate >= todayStart && examDate <= todayEnd) {
+      if (examDate >= todayStart && examDate <= todayEnd)
         result.today.push(exam);
-      } else if (examDate > todayEnd) {
-        result.upcoming.push(exam);
-      } else {
-        result.past.push(exam);
-      }
+      else if (examDate > todayEnd) result.upcoming.push(exam);
+      else result.completed.push(exam);
     });
+
+    (Object.values(result) as Exam[][]).forEach((list) =>
+      list.sort(
+        (a, b) =>
+          new Date(a.examDate).getTime() - new Date(b.examDate).getTime(),
+      ),
+    );
 
     return result;
   }, [exams]);
 
+  /* ─── Derived filter options ─── */
+  const uniqueClasses = useMemo(() => {
+    const viewExams = categorizedExams[filters.view];
+    const seen = new Set(viewExams.map((e) => e.studentClass).filter(Boolean));
+    return CLASSES.filter((c) => seen.has(c));
+  }, [categorizedExams, filters.view]);
+
+  const uniqueTeachers = useMemo(() => {
+    if (!isStaff) return [];
+    const map = new Map<string, string>();
+    exams.forEach((e) => {
+      const id = e.postedBy?._id || e.postedBy?.userId;
+      const name = e.postedBy?.name || "অজ্ঞাত";
+      if (id) map.set(id, name);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [exams, isStaff]);
+
+  /* ─── Filter ─── */
   const filteredExams = useMemo(() => {
-    let result = filters.view === "upcoming" ? [...today, ...upcoming] : past;
+    let result = categorizedExams[filters.view];
 
     if (filters.class !== "all") {
-      result = result.filter((e) => e.studentClass === filters.class);
+      result = result.filter((exam) => exam.studentClass === filters.class);
     }
 
     if (isStaff && filters.teacher !== "all") {
-      result = result.filter((e) => {
-        const id = e.postedBy?._id || e.postedBy?.userId || e.postedBy?.name;
-        return id === filters.teacher;
+      result = result.filter((exam) => {
+        const teacherId = exam.postedBy?._id || exam.postedBy?.userId;
+        return teacherId === filters.teacher;
       });
     }
 
-    if (filters.date && filters.view === "past") {
-      result = result.filter((e) => {
-        const d = new Date(e.examDate);
-        return d.toDateString() === filters.date!.toDateString();
+    if (filters.date && filters.view === "completed") {
+      result = result.filter((exam) => {
+        const examDate = new Date(exam.examDate);
+        return examDate.toDateString() === filters.date!.toDateString();
       });
     }
 
     return result;
-  }, [filters, today, upcoming, past, isStaff]);
+  }, [categorizedExams, filters, isStaff]);
 
+  /* ─── Group by class using CLASSES order ─── */
+  const groupedByClass = useMemo(() => {
+    const groups: Record<string, Exam[]> = {};
+    filteredExams.forEach((exam) => {
+      const key = exam.studentClass || "অন্যান্য";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(exam);
+    });
+
+    const classList = CLASSES as readonly string[];
+    return Object.entries(groups).sort(([a], [b]) => {
+      const iA = classList.indexOf(a),
+        iB = classList.indexOf(b);
+      if (iA === -1 && iB === -1) return a.localeCompare(b);
+      if (iA === -1) return 1;
+      if (iB === -1) return -1;
+      return iA - iB;
+    });
+  }, [filteredExams]);
+
+  /* ─── Handlers ─── */
   const handleDelete = async (exam: Exam) => {
     try {
       await axiosPublic.delete(`/api/mcq-exams/${exam._id}`);
       setExams((prev) => prev.filter((e) => e._id !== exam._id));
       toast.success("পরীক্ষা মুছে ফেলা হয়েছে");
-    } catch (error) {
+    } catch {
       toast.error("মুছতে সমস্যা হয়েছে");
-      throw error;
     }
   };
 
-  const handleEdit = (exam: Exam) => {
+  const handleEdit = (exam: Exam) =>
     navigate(`/dashboard/edit-mcq-exam/${exam._id}`);
+  const handleRetry = () => window.location.reload();
+
+  /* ─── View pill items with counts ─── */
+  const viewPillItems = useMemo(
+    () => [
+      {
+        id: "today",
+        label: (
+          <span className="flex items-center gap-1.5">
+            <Calendar size={14} />
+            আজকের ({toBn(categorizedExams.today.length)})
+          </span>
+        ),
+      },
+      {
+        id: "upcoming",
+        label: (
+          <span className="flex items-center gap-1.5">
+            <Clock size={14} />
+            আসন্ন ({toBn(categorizedExams.upcoming.length)})
+          </span>
+        ),
+      },
+      {
+        id: "completed",
+        label: (
+          <span className="flex items-center gap-1.5">
+            <CheckCircle size={14} />
+            সম্পন্ন ({toBn(categorizedExams.completed.length)})
+          </span>
+        ),
+      },
+    ],
+    [categorizedExams],
+  );
+
+  /* ─── Class pill items ─── */
+  const classPillItems = useMemo(
+    () => uniqueClasses.map((c) => ({ id: c, label: c })),
+    [uniqueClasses],
+  );
+
+  /* ─── Teacher pill items ─── */
+  const teacherPillItems = useMemo(
+    () => uniqueTeachers.map((t) => ({ id: t.id, label: t.name })),
+    [uniqueTeachers],
+  );
+
+  /* ─── Reset sub-filters when view changes ─── */
+  const handleViewChange = (id: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      view: id as ViewType,
+      class: "all",
+      teacher: "all",
+      date: null,
+      dateDisplay: "",
+    }));
   };
 
+  /* ─── Empty state message map ─── */
+  const emptyStateMap: Record<
+    ViewType,
+    { title: string; icon: React.ReactNode }
+  > = {
+    today: {
+      title: "আজ কোনো পরীক্ষা নেই",
+      icon: <Calendar size={40} className="text-[var(--color-gray)]" />,
+    },
+    upcoming: {
+      title: "কোনো আসন্ন পরীক্ষা নেই",
+      icon: <Clock size={40} className="text-[var(--color-gray)]" />,
+    },
+    completed: {
+      title: "কোনো সম্পন্ন পরীক্ষা নেই",
+      icon: <CheckCircle size={40} className="text-[var(--color-gray)]" />,
+    },
+  };
+
+  /* ──────────────────────────── Render ──────────────────────────── */
   return (
     <div className="min-h-screen bg-[var(--color-bg)] px-4 py-6">
       <div className="mx-auto max-w-4xl">
-        {/* ✅ Header - Compact */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 flex items-center justify-between"
-        >
+        {/* ═══════ Header ═══════ */}
+        <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <motion.div
-              whileHover={{ rotate: 180 }}
-              transition={{ duration: 0.3 }}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-text)] to-[var(--color-text)]/80"
-            >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-text)]">
               <Sparkles size={20} className="text-[var(--color-bg)]" />
-            </motion.div>
+            </div>
             <div>
               <h1 className="bangla text-xl font-bold text-[var(--color-text)]">
                 MCQ পরীক্ষা
@@ -145,76 +282,153 @@ const MCQExam = () => {
               </p>
             </div>
           </div>
-
           {isStaff && (
             <Link to="/dashboard/add-mcq-exam">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 rounded-lg bg-[var(--color-text)] px-4 py-2 text-sm font-bold text-[var(--color-bg)]"
-              >
+              <button className="flex items-center gap-2 rounded-lg bg-[var(--color-text)] px-4 py-2 text-sm font-bold text-[var(--color-bg)]">
                 <Plus size={16} />
                 <span className="bangla hidden sm:inline">নতুন পরীক্ষা</span>
-              </motion.button>
+              </button>
             </Link>
           )}
-        </motion.div>
+        </div>
 
-        {/* ✅ Stats Cards - Compact */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-4 grid gap-3 sm:grid-cols-3"
-        >
-          <StatCard
-            icon={Calendar}
-            label="আজকের"
-            count={today.length}
-            color="bg-green-500"
-          />
-          <StatCard
-            icon={Clock}
-            label="আসন্ন"
-            count={upcoming.length}
-            color="bg-blue-500"
-          />
-          <StatCard
-            icon={CheckCircle}
-            label="সম্পন্ন"
-            count={past.length}
-            color="bg-[var(--color-gray)]"
-          />
-        </motion.div>
+        {/* ═══════ Filters Section ═══════ */}
+        {!loading && !error && (
+          <div className="mb-6 space-y-3">
+            <section className="flex flex-col lg:flex-row justify-center lg:justify-between  flex-wrap gap-3">
+              {/* ── View Pills (today / upcoming / completed) ── */}
+              <AnimatedFilterPills
+                items={viewPillItems}
+                activeId={filters.view}
+                onChange={handleViewChange}
+                showAll={false}
+                layoutId="view-filter"
+                wrapperClassName=""
+              />
 
-        {/* ✅ Filter Bar */}
-        <MCQFilterBar
-          filters={filters}
-          onChange={setFilters}
-          exams={exams}
-          isStaff={!!isStaff}
-        />
+              {/* ── Class Pills ── */}
+              {uniqueClasses.length > 0 && (
+                <AnimatedFilterPills
+                  items={classPillItems}
+                  activeId={filters.class}
+                  onChange={(id) =>
+                    setFilters((prev) => ({ ...prev, class: id }))
+                  }
+                  showAll
+                  allId="all"
+                  allLabel="সকল শ্রেণি"
+                  layoutId="class-filter"
+                />
+              )}
+            </section>
 
-        {/* ✅ Exams List - Compact spacing */}
+            {/* ── Teacher Pills (staff only) ── */}
+            {isStaff && uniqueTeachers.length > 0 && (
+              <AnimatedFilterPills
+                items={teacherPillItems}
+                activeId={filters.teacher}
+                onChange={(id) =>
+                  setFilters((prev) => ({ ...prev, teacher: id }))
+                }
+                showAll
+                allId="all"
+                allLabel="সকল শিক্ষক"
+                layoutId="teacher-filter"
+                wrapperClassName="rounded-xl border border-[var(--color-active-border)] bg-[var(--color-active-bg)] p-2"
+              />
+            )}
+
+            {/* ── Date filter using DatePicker (completed view only) ── */}
+            <AnimatePresence>
+              {filters.view === "completed" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                >
+                  <DatePicker
+                    value={filters.dateDisplay}
+                    onChange={(display) =>
+                      setFilters((prev) => ({ ...prev, dateDisplay: display }))
+                    }
+                    onDateChange={(date) =>
+                      setFilters((prev) => ({ ...prev, date }))
+                    }
+                    selectedDate={filters.date}
+                    placeholder="তারিখ দিয়ে ফিল্টার করুন"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* ═══════ Content ═══════ */}
         <AnimatePresence mode="wait">
-          {loading ? (
-            <LoadingState key="loading" />
-          ) : filteredExams.length === 0 ? (
-            <EmptyState key="empty" view={filters.view} />
-          ) : (
+          {/* ── Loading ── */}
+          {loading && (
             <motion.div
-              key="list"
+              key="loading"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-2"
             >
-              {filteredExams.map((exam, idx) => (
-                <MCQExamCard
-                  key={exam._id}
-                  exam={exam}
-                  index={idx}
-                  onClick={() => setSelectedExam(exam)}
+              <Skeleton variant="daily-lesson" />
+            </motion.div>
+          )}
+
+          {/* ── Error ── */}
+          {!loading && error && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              className="mt-4 rounded-xl border border-red-200 bg-red-50/50 dark:border-red-800/50 dark:bg-red-950/20"
+            >
+              <ErrorState message={error} />
+              <div className="flex justify-center pb-6">
+                <button
+                  onClick={handleRetry}
+                  className="rounded-lg bg-[var(--color-text)] px-5 py-2 text-sm font-bold text-[var(--color-bg)] transition-transform hover:scale-105"
+                >
+                  আবার চেষ্টা করুন
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Empty ── */}
+          {!loading && !error && filteredExams.length === 0 && (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <EmptyState
+                title={emptyStateMap[filters.view].title}
+                icon={emptyStateMap[filters.view].icon}
+              />
+            </motion.div>
+          )}
+
+          {/* ── Data ── */}
+          {!loading && !error && filteredExams.length > 0 && (
+            <motion.div
+              key="grouped-list"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-6"
+            >
+              {groupedByClass.map(([className, classExams], groupIndex) => (
+                <ClassGroupSection
+                  key={className}
+                  className={className}
+                  exams={classExams}
+                  index={groupIndex}
+                  onExamClick={setSelectedExam}
                 />
               ))}
             </motion.div>
@@ -222,7 +436,7 @@ const MCQExam = () => {
         </AnimatePresence>
       </div>
 
-      {/* ✅ Modal */}
+      {/* ═══════ Detail Modal ═══════ */}
       <AnimatePresence>
         {selectedExam && (
           <MCQExamDetailModal
@@ -238,59 +452,51 @@ const MCQExam = () => {
   );
 };
 
-const StatCard = ({ icon: Icon, label, count, color }: any) => (
+/* ══════════════════════════════════════════════════════════════
+   ClassGroupSection
+   ══════════════════════════════════════════════════════════════ */
+const ClassGroupSection = ({
+  className,
+  exams,
+  index,
+  onExamClick,
+}: {
+  className: string;
+  exams: Exam[];
+  index: number;
+  onExamClick: (exam: Exam) => void;
+}) => (
   <motion.div
-    whileHover={{ y: -2 }}
-    className="rounded-xl border border-[var(--color-active-border)] bg-[var(--color-active-bg)] p-3"
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: index * 0.08 }}
+    className="space-y-3"
   >
-    <div className="flex items-center gap-2">
-      <div className={`rounded-lg ${color} p-2`}>
-        <Icon size={16} className="text-white" />
+    <motion.div
+      whileHover={{ scale: 1.01 }}
+      className="relative overflow-hidden rounded-xl border border-[var(--color-active-border)] bg-[var(--color-active-bg)] shadow-sm"
+    >
+      <div className="flex items-center justify-center gap-4 px-4 py-3">
+        <h2 className="bangla text-lg font-bold text-[var(--color-text)]">
+          {className}
+        </h2>
+        <span className="text-[var(--color-gray)]">|</span>
+        <span className="bangla text-sm font-medium text-[var(--color-gray)]">
+          {toBn(exams.length)}টি পরীক্ষা
+        </span>
       </div>
-      <div>
-        <p className="bangla text-lg font-bold text-[var(--color-text)]">
-          {toBn(count)}
-        </p>
-        <p className="bangla text-xs text-[var(--color-gray)]">{label}</p>
-      </div>
-    </div>
-  </motion.div>
-);
+    </motion.div>
 
-const LoadingState = () => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    className="space-y-2"
-  >
-    {[1, 2, 3].map((i) => (
-      <div
-        key={i}
-        className="h-16 animate-pulse rounded-xl bg-[var(--color-active-bg)]"
-      />
-    ))}
-  </motion.div>
-);
-
-const EmptyState = ({ view }: { view: string }) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.9 }}
-    animate={{ opacity: 1, scale: 1 }}
-    className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--color-active-border)] bg-[var(--color-active-bg)] py-12"
-  >
-    <div className="mb-3 rounded-full bg-[var(--color-bg)] p-4">
-      {view === "upcoming" ? (
-        <Clock size={24} className="text-[var(--color-gray)]" />
-      ) : (
-        <CheckCircle size={24} className="text-[var(--color-gray)]" />
-      )}
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {exams.map((exam, i) => (
+        <MCQExamCard
+          key={exam._id}
+          exam={exam}
+          index={i}
+          onClick={() => onExamClick(exam)}
+        />
+      ))}
     </div>
-    <p className="bangla mb-1 text-lg font-bold text-[var(--color-text)]">
-      কোনো পরীক্ষা পাওয়া যায়নি
-    </p>
-    <p className="bangla text-sm text-[var(--color-gray)]">
-      ফিল্টার পরিবর্তন করুন
-    </p>
   </motion.div>
 );
 

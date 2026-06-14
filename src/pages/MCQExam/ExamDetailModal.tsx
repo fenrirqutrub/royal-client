@@ -56,10 +56,25 @@ export const MCQExamDetailModal = ({
     }
   };
 
-  const getAvatarUrl = () => {
+  // ✅ Fixed avatar URL getter with proper type checking
+  const getAvatarUrl = (): string | null => {
     if (!exam.postedBy?.avatar) return null;
-    if (typeof exam.postedBy.avatar === "string") return exam.postedBy.avatar;
-    return exam.postedBy.avatar.url || null;
+
+    // If avatar is a string, return it directly
+    if (typeof exam.postedBy.avatar === "string") {
+      return exam.postedBy.avatar;
+    }
+
+    // If avatar is an object, try to get the url property
+    if (
+      typeof exam.postedBy.avatar === "object" &&
+      exam.postedBy.avatar !== null
+    ) {
+      const avatarObj = exam.postedBy.avatar as any; // Type assertion
+      return avatarObj.url || null;
+    }
+
+    return null;
   };
 
   const avatarUrl = getAvatarUrl();
@@ -158,7 +173,7 @@ export const MCQExamDetailModal = ({
               </div>
             </motion.div>
 
-            {/* ✅ Teacher Name - Compact */}
+            {/* Teacher Name */}
             {exam.postedBy?.name && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -172,13 +187,14 @@ export const MCQExamDetailModal = ({
               </motion.div>
             )}
 
+            {/* Subject & Class */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
               className="text-center"
             >
-              <h2 className="bangla text-2xl font-bold text-[var(--color-text)]">
+              <h2 className="bangla mb-2 text-2xl font-bold text-[var(--color-text)]">
                 {exam.subject}
               </h2>
 
@@ -190,7 +206,7 @@ export const MCQExamDetailModal = ({
               </div>
             </motion.div>
 
-            {/* ✅ Exam Date Card - Compact */}
+            {/* Exam Date */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -212,6 +228,7 @@ export const MCQExamDetailModal = ({
               </div>
             </motion.div>
 
+            {/* Description */}
             {exam.description?.trim() && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -237,7 +254,7 @@ export const MCQExamDetailModal = ({
           </div>
         </div>
 
-        {/* ✅ Footer Actions - Compact */}
+        {/* Footer Actions */}
         {isStaff && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -271,7 +288,7 @@ export const MCQExamDetailModal = ({
           </motion.div>
         )}
 
-        {/* ✅ Delete Confirmation Overlay */}
+        {/* Delete Confirmation Overlay */}
         <AnimatePresence>
           {showDeleteConfirm && (
             <DeleteConfirmOverlay
@@ -287,7 +304,7 @@ export const MCQExamDetailModal = ({
   );
 };
 
-// ✅ Delete Confirmation - Compact
+// Delete Confirmation Component
 const DeleteConfirmOverlay = ({
   examName,
   isDeleting,
