@@ -115,8 +115,6 @@ export const MCQExamCard = ({
     isPast,
   } = getExamDayLabel(exam.examDate);
 
-  const showPulse = isToday || isTomorrow || isPast;
-
   // ── Copy state ──
   const [copied, setCopied] = useState(false);
 
@@ -279,17 +277,7 @@ export const MCQExamCard = ({
               }`}
             >
               <ChevronLeft className="h-4 w-4" />
-              {showPulse && (
-                <span
-                  className={`h-1.5 w-1.5 animate-pulse rounded-full ${
-                    isToday
-                      ? "bg-green-500"
-                      : isTomorrow
-                        ? "bg-red-500"
-                        : "bg-amber-500"
-                  }`}
-                />
-              )}
+
               <span>{dayLabel}</span>
               <ChevronRight className="h-4 w-4" />
             </motion.div>
