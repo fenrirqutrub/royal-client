@@ -16,7 +16,6 @@ import {
   Loader2,
   Mail,
   BookOpen,
-  Hash,
   School,
   PhoneCall,
 } from "lucide-react";
@@ -297,13 +296,12 @@ const GeoAddressFields = ({
           <ValidatedInput
             state={fs("landmark")}
             iconLeft={MapPin}
-            label="পরিচিত স্থান *"
-            placeholder="মসজিদ / বাজার / স্কুলের কাছে — বাংলায় লিখুন"
+            label="পরিচিত স্থান"
+            placeholder="মসজিদ / বাজার / স্কুলের কাছে — বাংলায় লিখুন (ঐচ্ছিক)"
             error={errors.landmark?.message}
             blockEnglish
             {...register("landmark", {
-              required: "পরিচিত স্থান লিখুন",
-              validate: banglaOnly("পরিচিত স্থান"),
+              validate: (v) => !v || banglaOnly("পরিচিত স্থান")(v),
             })}
           />
         </>
@@ -419,31 +417,18 @@ const Signup = () => {
     const s: string[] = ["who"];
 
     if (isStudent === false) {
-      s.push(
-        "staff-phone-check",
-        "parents-name",
-        "dob-gender",
-        "religion",
-        "address",
-      );
+      s.push("staff-phone-check", "parents-name", "dob-gender", "address");
       if (permanentSame === false) s.push("permanent-address");
       s.push("education-q");
       if (educationComplete === true) s.push("degree");
       if (educationComplete === false) s.push("current-year");
-      s.push("email", "emergency-contact");
+      s.push("email");
     } else if (isStudent === true) {
-      s.push(
-        "name",
-        "parents-name",
-        "dob-gender",
-        "religion",
-        "phone",
-        "address",
-      );
+      s.push("name", "parents-name", "dob-gender", "phone", "address");
       if (permanentSame === false) s.push("permanent-address");
       s.push("student-class");
       if (needsSubject) s.push("student-subject");
-      s.push("roll-school", "email", "emergency-contact");
+      s.push("roll-school", "email");
     }
 
     s.push("avatar", "password");
@@ -509,7 +494,7 @@ const Signup = () => {
         break;
       case "dob-gender":
         nextActionRef.current = () => {
-          if (dobIso && gender !== null) goNext();
+          if (dobIso && gender !== null && religion !== null) goNext();
         };
         break;
       case "religion":
@@ -557,11 +542,10 @@ const Signup = () => {
         nextActionRef.current = () => triggerAndGo(["currentYear", "subject"]);
         break;
       case "email":
-        nextActionRef.current = () => triggerAndGo(["email"]);
+        nextActionRef.current = () =>
+          triggerAndGo(["email", "emergencyContact"]);
         break;
-      case "emergency-contact":
-        nextActionRef.current = () => triggerAndGo(["emergencyContact"]);
-        break;
+
       case "avatar":
         nextActionRef.current = () => {
           if (avatarFile) goNext();
@@ -618,7 +602,7 @@ const Signup = () => {
         fd.append("studentClass", normalizeStudentClass(selectedClass));
 
         if (needsSubject) fd.append("studentSubject", selectedSubject);
-        fd.append("roll", toAsciiDigits(data.roll ?? ""));
+
         fd.append("schoolName", data.schoolName ?? "");
       } else {
         fd.append("role", staffInfo!.role);
@@ -806,17 +790,19 @@ const Signup = () => {
           </StepShell>
         );
 
+      // steps array থেকে "religion" সরাও দুই জায়গায়
+
       case "dob-gender": {
         const genderOpts = isStudent
           ? STUDENT_GENDER_OPTIONS
           : STAFF_GENDER_OPTIONS;
-
         return (
           <StepShell
-            title="জন্ম তারিখ ও লিঙ্গ"
-            subtitle="সঠিক তথ্য দেওয়া বাধ্যতামূলক"
+            title="ব্যক্তিগত তথ্য"
+            subtitle="জন্ম তারিখ, লিঙ্গ ও ধর্ম — বাধ্যতামূলক"
           >
             <div className="space-y-5">
+              {/* Date of Birth */}
               <div>
                 <p className="text-xs font-semibold mb-1.5 bangla text-[var(--color-gray)]">
                   জন্ম তারিখ <span className="text-red-400">*</span>
@@ -836,6 +822,8 @@ const Signup = () => {
                   message="জন্ম তারিখ বাধ্যতামূলক"
                 />
               </div>
+
+              {/* Gender */}
               <div>
                 <p className="text-xs font-semibold mb-2 bangla text-[var(--color-gray)]">
                   {isStudent ? "ছেলে নাকি মেয়ে?" : "লিঙ্গ"}{" "}
@@ -857,10 +845,33 @@ const Signup = () => {
                   message="লিঙ্গ নির্বাচন করুন"
                 />
               </div>
+
+              {/* Religion */}
+              <div>
+                <p className="text-xs font-semibold mb-2 bangla text-[var(--color-gray)]">
+                  ধর্ম <span className="text-red-400">*</span>
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {RELIGIONS.map((r) => (
+                    <ReligionBtn
+                      key={r.value}
+                      selected={religion === r.value}
+                      onClick={() => setReligion(r.value as Religion)}
+                      icon={r.icon}
+                      label={r.value}
+                    />
+                  ))}
+                </div>
+                <RequiredWarning
+                  show={religion === null}
+                  message="ধর্ম নির্বাচন বাধ্যতামূলক"
+                />
+              </div>
             </div>
+
             <NavRow
               onBack={goBack}
-              disabled={!dobIso || gender === null}
+              disabled={!dobIso || gender === null || religion === null}
               onNext={goNext}
             />
           </StepShell>
@@ -1051,38 +1062,25 @@ const Signup = () => {
       case "roll-school":
         return (
           <StepShell
-            title="বিদ্যালয়ের তথ্য"
-            subtitle="রোল নম্বর ও বিদ্যালয়ের নাম — বাধ্যতামূলক"
+            title="বিদ্যালয়ের নাম"
+            subtitle="বাংলায় লিখুন — বাধ্যতামূলক"
           >
-            <div className="space-y-3">
-              <ValidatedInput
-                autoFocus
-                numericOnly
-                state={fs("roll")}
-                iconLeft={Hash}
-                label="রোল নম্বর *"
-                placeholder="আপনার রোল নম্বর"
-                error={errors.roll?.message}
-                {...register("roll", {
-                  required: "রোল নম্বর দেওয়া বাধ্যতামূলক",
-                })}
-              />
-              <ValidatedInput
-                state={fs("schoolName")}
-                iconLeft={School}
-                label="বিদ্যালয়ের নাম *"
-                placeholder="বিদ্যালয়ের পূর্ণ নাম বাংলায়"
-                error={errors.schoolName?.message}
-                blockEnglish
-                {...register("schoolName", {
-                  required: "বিদ্যালয়ের নাম দেওয়া বাধ্যতামূলক",
-                  validate: banglaOnly("বিদ্যালয়ের নাম"),
-                })}
-              />
-            </div>
+            <ValidatedInput
+              autoFocus
+              state={fs("schoolName")}
+              iconLeft={School}
+              label="বিদ্যালয়ের নাম *"
+              placeholder="বিদ্যালয়ের পূর্ণ নাম বাংলায়"
+              error={errors.schoolName?.message}
+              blockEnglish
+              {...register("schoolName", {
+                required: "বিদ্যালয়ের নাম দেওয়া বাধ্যতামূলক",
+                validate: banglaOnly("বিদ্যালয়ের নাম"),
+              })}
+            />
             <NavRow
               onBack={goBack}
-              onNext={() => triggerAndGo(["roll", "schoolName"])}
+              onNext={() => triggerAndGo(["schoolName"])}
             />
           </StepShell>
         );
@@ -1224,35 +1222,53 @@ const Signup = () => {
       case "email":
         return (
           <StepShell
-            title="ইমেইল ঠিকানা"
-            subtitle="বাধ্যতামূলক — ভুলে গেলে পাসওয়ার্ড পুনরুদ্ধারে লাগবে"
+            title="যোগাযোগ তথ্য"
+            subtitle="ইমেইল ও জরুরি নম্বর — উভয়ই ঐচ্ছিক"
           >
-            <ValidatedInput
-              autoFocus
-              type="email"
-              banglaDigits={false}
-              blockEnglish={false}
-              state={fs("email")}
-              iconLeft={Mail}
-              placeholder="example@email.com"
-              error={errors.email?.message}
-              {...register("email", {
-                required: "ইমেইল ঠিকানা দেওয়া বাধ্যতামূলক",
-                pattern: {
-                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                  message: "সঠিক ইমেইল ঠিকানা দিন",
-                },
-              })}
+            <div className="space-y-3">
+              <ValidatedInput
+                autoFocus
+                type="email"
+                banglaDigits={false}
+                blockEnglish={false}
+                state={fs("email")}
+                iconLeft={Mail}
+                placeholder="example@email.com (ঐচ্ছিক)"
+                error={errors.email?.message}
+                {...register("email", {
+                  validate: (v) =>
+                    !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
+                      ? true
+                      : "সঠিক ইমেইল ঠিকানা দিন",
+                })}
+              />
+              <ValidatedInput
+                type="tel"
+                numericOnly
+                state={fs("emergencyContact")}
+                iconLeft={PhoneCall}
+                label="জরুরি যোগাযোগ নম্বর"
+                placeholder="০১XXXXXXXXX (ঐচ্ছিক)"
+                error={errors.emergencyContact?.message}
+                {...register("emergencyContact", {
+                  validate: (v) =>
+                    !v || validateBdPhone(toAsciiDigits(v)) === true
+                      ? true
+                      : "সঠিক বাংলাদেশি নম্বর দিন",
+                })}
+              />
+            </div>
+            <NavRow
+              onBack={goBack}
+              onNext={() => triggerAndGo(["email", "emergencyContact"])}
             />
-            <NavRow onBack={goBack} onNext={() => triggerAndGo(["email"])} />
           </StepShell>
         );
-
       case "emergency-contact":
         return (
           <StepShell
             title="জরুরি যোগাযোগ নম্বর"
-            subtitle="অভিভাবক বা নিকটজনের বাংলাদেশি মোবাইল নম্বর — বাধ্যতামূলক"
+            subtitle="অভিভাবকের নম্বর — ঐচ্ছিক"
           >
             <ValidatedInput
               autoFocus
@@ -1260,11 +1276,10 @@ const Signup = () => {
               numericOnly
               state={fs("emergencyContact")}
               iconLeft={PhoneCall}
-              placeholder="০১XXXXXXXXX"
+              placeholder="০১XXXXXXXXX (ঐচ্ছিক)"
               error={errors.emergencyContact?.message}
               {...register("emergencyContact", {
-                required: "জরুরি যোগাযোগ নম্বর দেওয়া বাধ্যতামূলক",
-                validate: validateBdPhone,
+                validate: (v) => !v || validateBdPhone(toAsciiDigits(v)), // optional
               })}
             />
             <NavRow
