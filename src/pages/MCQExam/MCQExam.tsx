@@ -1,7 +1,13 @@
 // MCQExam.tsx
 import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Calendar, CheckCircle, Clock, Sparkles } from "lucide-react";
+import {
+  Plus,
+  Calendar,
+  CheckCircle,
+  Clock,
+  FileQuestionMark,
+} from "lucide-react";
 import { Link } from "react-router"; // ← navigate remove
 import { useAuth } from "../../context/AuthContext";
 import axiosPublic from "../../hooks/axiosPublic";
@@ -261,8 +267,8 @@ const MCQExam = () => {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-text)]">
-              <Sparkles size={20} className="text-[var(--color-bg)]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded bg-[var(--color-text)]">
+              <FileQuestionMark size={28} className="text-[var(--color-bg)]" />
             </div>
             <div>
               <h1 className="bangla text-xl font-bold text-[var(--color-text)]">
