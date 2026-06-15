@@ -7,13 +7,14 @@ import {
   CheckCircle,
   Clock,
   FileQuestionMark,
+  Sun,
 } from "lucide-react";
-import { Link } from "react-router"; // ← navigate remove
+import { Link } from "react-router";
 import { useAuth } from "../../context/AuthContext";
 import axiosPublic from "../../hooks/axiosPublic";
 import type { Exam } from "../../types/McqExam";
 import { MCQExamDetailModal } from "./MCQExamDetailModal";
-import { MCQExamEditModal } from "./MCQExamEditModal"; // ← নতুন import
+import { MCQExamEditModal } from "./MCQExamEditModal";
 import { STAFF_DASHBOARD_ROLES } from "../../utility/constants/role";
 import { CLASSES } from "../../utility/constants/class";
 import { toBn } from "../../utility/Formatters";
@@ -25,7 +26,12 @@ import Skeleton from "../../components/common/Skeleton";
 import EmptyState from "../../components/common/Emptystate";
 import DatePicker from "../../components/common/Datepicker";
 
-type ViewType = "today" | "upcoming" | "completed";
+// ─── View type ───────────────────────────────────────────────────────────────
+// "today"     → আজকের (রাত ১২:০০ AM – দুপুর ১২:০০ PM)
+// "tomorrow"  → আগামীকাল (সবসময় দেখা যায়)
+// "upcoming"  → ২+ দিন পরের exams
+// "completed" → গতকাল বা আগের exams
+type ViewType = "today" | "tomorrow" | "upcoming" | "completed";
 
 interface Filters {
   view: ViewType;
@@ -35,17 +41,30 @@ interface Filters {
   dateDisplay: string;
 }
 
+// ─── Time helpers ─────────────────────────────────────────────────────────────
+
+/** রাত ১২:০০ AM – দুপুর ১২:০০ PM এর মধ্যে আছে কিনা */
+const isInTodayWindow = (): boolean => {
+  const h = new Date().getHours();
+  return h >= 0 && h < 12;
+};
+
+/** Default view: সকালে "today", দুপুরের পর "tomorrow" */
+const defaultView = (): ViewType => (isInTodayWindow() ? "today" : "tomorrow");
+
 const MCQExam = () => {
   const { user } = useAuth();
-  // const navigate = useNavigate();  // ← আর লাগবে না
+
+  // ─── Real-time time window tracking ────────────────────────────────────────
+  const [showTodayTab, setShowTodayTab] = useState<boolean>(isInTodayWindow);
 
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-  const [editingExam, setEditingExam] = useState<Exam | null>(null); // ← নতুন state
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [filters, setFilters] = useState<Filters>({
-    view: "today",
+    view: defaultView(),
     class: "all",
     teacher: "all",
     date: null,
@@ -54,7 +73,33 @@ const MCQExam = () => {
 
   const isStaff = !!user && STAFF_DASHBOARD_ROLES.includes(user.role);
 
-  // ─── Fetch ───
+  // ─── Real-time interval: প্রতি মিনিটে চেক ──────────────────────────────────
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const nowInWindow = isInTodayWindow();
+
+      setShowTodayTab(nowInWindow);
+
+      // দুপুর ১২টায় user "today" তে থাকলে "tomorrow" তে shift করো
+      setFilters((prev) => {
+        if (!nowInWindow && prev.view === "today") {
+          return {
+            ...prev,
+            view: "tomorrow",
+            class: "all",
+            teacher: "all",
+            date: null,
+            dateDisplay: "",
+          };
+        }
+        return prev;
+      });
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // ─── Fetch ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchExams = async () => {
       try {
@@ -73,13 +118,16 @@ const MCQExam = () => {
     fetchExams();
   }, []);
 
-  // ─── Categorize by date ───
-  const categorizedExams = useMemo(() => {
+  // ─── Date boundary helpers ─────────────────────────────────────────────────
+  const dateBounds = useMemo(() => {
     const now = new Date();
     const todayStart = new Date(
       now.getFullYear(),
       now.getMonth(),
       now.getDate(),
+      0,
+      0,
+      0,
     );
     const todayEnd = new Date(
       now.getFullYear(),
@@ -90,18 +138,36 @@ const MCQExam = () => {
       59,
     );
 
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+    const tomorrowEnd = new Date(todayEnd);
+    tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+
+    return { todayStart, todayEnd, tomorrowStart, tomorrowEnd };
+  }, []);
+
+  // ─── Categorize ────────────────────────────────────────────────────────────
+  const categorizedExams = useMemo(() => {
+    const { todayStart, todayEnd, tomorrowStart, tomorrowEnd } = dateBounds;
+
     const result: Record<ViewType, Exam[]> = {
       today: [],
+      tomorrow: [],
       upcoming: [],
       completed: [],
     };
 
     exams.forEach((exam) => {
-      const examDate = new Date(exam.examDate);
-      if (examDate >= todayStart && examDate <= todayEnd)
+      const d = new Date(exam.examDate);
+      if (d >= todayStart && d <= todayEnd) {
         result.today.push(exam);
-      else if (examDate > todayEnd) result.upcoming.push(exam);
-      else result.completed.push(exam);
+      } else if (d >= tomorrowStart && d <= tomorrowEnd) {
+        result.tomorrow.push(exam);
+      } else if (d > tomorrowEnd) {
+        result.upcoming.push(exam);
+      } else {
+        result.completed.push(exam);
+      }
     });
 
     (Object.values(result) as Exam[][]).forEach((list) =>
@@ -112,16 +178,16 @@ const MCQExam = () => {
     );
 
     return result;
-  }, [exams]);
+  }, [exams, dateBounds]);
 
-  // ─── Derived filter options ───
+  // ─── Derived filter options ────────────────────────────────────────────────
   const uniqueClasses = useMemo(() => {
     const viewExams = categorizedExams[filters.view];
     const seen = new Set(viewExams.map((e) => e.studentClass).filter(Boolean));
     return CLASSES.filter((c) => seen.has(c));
   }, [categorizedExams, filters.view]);
 
-  // ─── Filter ───
+  // ─── Filter ────────────────────────────────────────────────────────────────
   const filteredExams = useMemo(() => {
     let result = categorizedExams[filters.view];
     if (filters.class !== "all") {
@@ -142,7 +208,7 @@ const MCQExam = () => {
     return result;
   }, [categorizedExams, filters, isStaff]);
 
-  // ─── Group by class ───
+  // ─── Group by class ────────────────────────────────────────────────────────
   const groupedByClass = useMemo(() => {
     const groups: Record<string, Exam[]> = {};
     filteredExams.forEach((exam) => {
@@ -161,7 +227,7 @@ const MCQExam = () => {
     });
   }, [filteredExams]);
 
-  // ─── Handlers ───
+  // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleDelete = async (exam: Exam) => {
     try {
       await axiosPublic.delete(`/api/mcq-exams/${exam._id}`);
@@ -172,20 +238,17 @@ const MCQExam = () => {
     }
   };
 
-  // ✅ এখন edit modal খুলবে, navigate করবে না
   const handleEdit = (exam: Exam) => {
-    setSelectedExam(null); // detail modal বন্ধ
-    setEditingExam(exam); // edit modal খোল
+    setSelectedExam(null);
+    setEditingExam(exam);
   };
 
-  // ✅ Update handler — API call + local state update
   const handleUpdate = async (updatedExam: Partial<Exam> & { _id: string }) => {
     const res = await axiosPublic.put(
       `/api/mcq-exams/${updatedExam._id}`,
       updatedExam,
     );
     const fresh = res.data?.data || res.data;
-
     setExams((prev) =>
       prev.map((e) => (e._id === updatedExam._id ? { ...e, ...fresh } : e)),
     );
@@ -194,53 +257,70 @@ const MCQExam = () => {
 
   const handleRetry = () => window.location.reload();
 
-  // ─── View pill items ───
-  const viewPillItems = useMemo(
-    () => [
-      {
-        id: "today",
-        label: (
-          <span className="flex items-center gap-1.5">
-            <Calendar size={14} /> আজকের ({toBn(categorizedExams.today.length)})
-          </span>
-        ),
-      },
-      {
-        id: "upcoming",
-        label: (
-          <span className="flex items-center gap-1.5">
-            <Clock size={14} /> আসন্ন ({toBn(categorizedExams.upcoming.length)})
-          </span>
-        ),
-      },
-      {
-        id: "completed",
-        label: (
-          <span className="flex items-center gap-1.5">
-            <CheckCircle size={14} /> সম্পন্ন (
-            {toBn(categorizedExams.completed.length)})
-          </span>
-        ),
-      },
-    ],
-    [categorizedExams],
-  );
-
-  const classPillItems = useMemo(
-    () => uniqueClasses.map((c) => ({ id: c, label: c })),
-    [uniqueClasses],
-  );
-
   const handleViewChange = (id: string) => {
-    setFilters((prev) => ({
-      ...prev,
+    setFilters({
       view: id as ViewType,
       class: "all",
       teacher: "all",
       date: null,
       dateDisplay: "",
-    }));
+    });
   };
+
+  // ─── View pill items (time-aware) ──────────────────────────────────────────
+  const viewPillItems = useMemo(() => {
+    const items: { id: string; label: React.ReactNode }[] = [];
+
+    // রাত ১২:০০ AM – দুপুর ১২:০০ PM → "আজকের" দেখাবে
+    if (showTodayTab) {
+      items.push({
+        id: "today",
+        label: (
+          <span className="flex items-center gap-1.5">
+            <Sun size={14} /> আজকের ({toBn(categorizedExams.today.length)})
+          </span>
+        ),
+      });
+    }
+
+    // "আগামীকাল" সবসময় দেখাবে
+    items.push({
+      id: "tomorrow",
+      label: (
+        <span className="flex items-center gap-1.5">
+          <Calendar size={14} /> আগামীকাল (
+          {toBn(categorizedExams.tomorrow.length)})
+        </span>
+      ),
+    });
+
+    items.push({
+      id: "upcoming",
+      label: (
+        <span className="flex items-center gap-1.5">
+          <Clock size={14} /> upcoming ({toBn(categorizedExams.upcoming.length)}
+          )
+        </span>
+      ),
+    });
+
+    items.push({
+      id: "completed",
+      label: (
+        <span className="flex items-center gap-1.5">
+          <CheckCircle size={14} /> completed (
+          {toBn(categorizedExams.completed.length)})
+        </span>
+      ),
+    });
+
+    return items;
+  }, [categorizedExams, showTodayTab]);
+
+  const classPillItems = useMemo(
+    () => uniqueClasses.map((c) => ({ id: c, label: c })),
+    [uniqueClasses],
+  );
 
   const emptyStateMap: Record<
     ViewType,
@@ -248,6 +328,10 @@ const MCQExam = () => {
   > = {
     today: {
       title: "আজ কোনো পরীক্ষা নেই",
+      icon: <Sun size={40} className="text-[var(--color-gray)]" />,
+    },
+    tomorrow: {
+      title: "আগামীকাল কোনো পরীক্ষা নেই",
       icon: <Calendar size={40} className="text-[var(--color-gray)]" />,
     },
     upcoming: {
@@ -260,7 +344,7 @@ const MCQExam = () => {
     },
   };
 
-  // ──────────────────── Render ────────────────────
+  // ──────────────────── Render ────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[var(--color-bg)] px-4 py-6">
       <div className="mx-auto max-w-4xl">
@@ -314,6 +398,7 @@ const MCQExam = () => {
                 />
               )}
             </section>
+
             <AnimatePresence>
               {filters.view === "completed" && (
                 <motion.div
@@ -350,6 +435,7 @@ const MCQExam = () => {
               <Skeleton variant="daily-lesson" />
             </motion.div>
           )}
+
           {!loading && error && (
             <motion.div
               key="error"
@@ -369,6 +455,7 @@ const MCQExam = () => {
               </div>
             </motion.div>
           )}
+
           {!loading && !error && filteredExams.length === 0 && (
             <motion.div
               key="empty"
@@ -382,6 +469,7 @@ const MCQExam = () => {
               />
             </motion.div>
           )}
+
           {!loading && !error && filteredExams.length > 0 && (
             <motion.div
               key="grouped-list"
@@ -431,8 +519,7 @@ const MCQExam = () => {
   );
 };
 
-// ... ClassGroupSection আগের মতোই থাকবে
-
+// ─── ClassGroupSection ────────────────────────────────────────────────────────
 const ClassGroupSection = ({
   className,
   exams,
