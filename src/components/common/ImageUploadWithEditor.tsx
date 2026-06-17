@@ -81,7 +81,6 @@ const ReviewModal = ({
   const editedCount = items.filter((i) => i.edited && !i.skipped).length;
   const skippedCount = items.filter((i) => i.skipped).length;
 
-  // Scroll thumbnail strip to keep active in view
   useEffect(() => {
     const strip = stripRef.current;
     if (!strip) return;
@@ -138,7 +137,6 @@ const ReviewModal = ({
           </span>
         </div>
 
-        {/* ── Select All Button ── */}
         <button
           type="button"
           onClick={handleSelectAll}
@@ -357,16 +355,14 @@ const ReviewModal = ({
 const ImageUploadWithEditor = ({
   images,
   onChange,
-  maxImages = 10,
+  maxImages = 50,
 }: ImageUploadWithEditorProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Review flow state
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
-  // Re-edit state (for already-confirmed images)
   const [reEditIndex, setReEditIndex] = useState<number | null>(null);
   const [reEditFile, setReEditFile] = useState<File | null>(null);
 
@@ -396,7 +392,6 @@ const ImageUploadWithEditor = ({
     setActiveIdx(0);
   };
 
-  // Cleanup pending object URLs on unmount
   useEffect(() => {
     return () => {
       pending.forEach((p) => {
@@ -407,27 +402,22 @@ const ImageUploadWithEditor = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Navigate in review ─────────────────────────────────
   const handleNavigate = useCallback((idx: number) => {
     setActiveIdx(idx);
   }, []);
 
-  // ── Skip (add as-is without editing) ──────────────────
   const handleSkip = useCallback((idx: number) => {
     setPending((prev) => {
       const next = [...prev];
       const item = next[idx];
-
       if (item.skipped) {
         next[idx] = { ...item, skipped: false, edited: null };
         return next;
       }
-
       next[idx] = { ...item, skipped: true, edited: null };
       return next;
     });
 
-    // Auto-advance to next unprocessed
     setPending((prev) => {
       const nextUnprocessed = prev.findIndex(
         (p, i) => i > idx && !p.edited && !p.skipped,
@@ -437,7 +427,6 @@ const ImageUploadWithEditor = ({
     });
   }, []);
 
-  // ── Remove from pending ────────────────────────────────
   const handleRemove = useCallback((idx: number) => {
     setPending((prev) => {
       const next = [...prev];
@@ -451,16 +440,13 @@ const ImageUploadWithEditor = ({
     });
   }, []);
 
-  // ── Open editor from review ────────────────────────────
   const handleEditFromReview = useCallback((idx: number) => {
     setEditingIdx(idx);
   }, []);
 
-  // ── Editor confirm (from review flow) ─────────────────
   const handleEditorConfirm = useCallback(
     (blob: Blob, previewUrl: string) => {
       if (reEditIndex !== null && reEditFile !== null) {
-        // Re-editing an already-confirmed image
         const updated = [...images];
         URL.revokeObjectURL(updated[reEditIndex].previewUrl);
         updated[reEditIndex] = {
@@ -494,7 +480,6 @@ const ImageUploadWithEditor = ({
 
       setEditingIdx(null);
 
-      // Auto-advance to next unprocessed
       setPending((prev) => {
         const nextUnprocessed = prev.findIndex(
           (p, i) => i > editingIdx && !p.edited && !p.skipped,
@@ -506,7 +491,6 @@ const ImageUploadWithEditor = ({
     [editingIdx, reEditIndex, reEditFile, images, onChange],
   );
 
-  // ── Editor cancel ──────────────────────────────────────
   const handleEditorCancel = useCallback(() => {
     setEditingIdx(null);
     setReEditIndex(null);
@@ -518,18 +502,15 @@ const ImageUploadWithEditor = ({
 
     for (const item of pending) {
       if (item.edited && !item.skipped) {
-        // manually edited — editor থেকে আসা blob already processed
         results.push(item.edited);
       } else {
-        // skipped বা unprocessed — convert করো
         try {
-          const converted = await convertToModernFormats(item.file); // ✅ object
-          const blob = converted.preferredBlob; // ✅ blob নাও
+          const converted = await convertToModernFormats(item.file);
+          const blob = converted.preferredBlob;
           const url = URL.createObjectURL(blob);
           results.push({ blob, previewUrl: url, originalName: item.file.name });
           URL.revokeObjectURL(item.previewUrl);
         } catch {
-          // fallback: original file
           const url = URL.createObjectURL(item.file);
           results.push({
             blob: item.file,
@@ -545,7 +526,6 @@ const ImageUploadWithEditor = ({
     setActiveIdx(0);
   }, [pending, images, onChange]);
 
-  // ── Cancel review ──────────────────────────────────────
   const handleCancelReview = useCallback(() => {
     pending.forEach((p) => {
       URL.revokeObjectURL(p.previewUrl);
@@ -555,7 +535,6 @@ const ImageUploadWithEditor = ({
     setActiveIdx(0);
   }, [pending]);
 
-  // ── Re-edit confirmed image ────────────────────────────
   const handleReEdit = useCallback(
     (index: number) => {
       const img = images[index];
@@ -568,7 +547,6 @@ const ImageUploadWithEditor = ({
     [images],
   );
 
-  // ── Remove confirmed image ─────────────────────────────
   const handleRemoveConfirmed = useCallback(
     (index: number) => {
       URL.revokeObjectURL(images[index].previewUrl);
@@ -579,7 +557,6 @@ const ImageUploadWithEditor = ({
 
   const isFull = images.length >= maxImages;
 
-  // ── Editor file ────────────────────────────────────────
   const editorFile =
     reEditFile ??
     (editingIdx !== null ? (pending[editingIdx]?.file ?? null) : null);
@@ -645,8 +622,6 @@ const ImageUploadWithEditor = ({
                   className="w-full h-full object-cover"
                 />
 
-                {/* ── Always Visible Actions (Floating Corners) ── */}
-                {/* Delete Button (Top Right) */}
                 <motion.button
                   type="button"
                   onClick={() => handleRemoveConfirmed(i)}
@@ -657,7 +632,6 @@ const ImageUploadWithEditor = ({
                   <X className="w-3.5 h-3.5" />
                 </motion.button>
 
-                {/* Edit Button (Bottom Right) */}
                 <motion.button
                   type="button"
                   onClick={() => handleReEdit(i)}
@@ -668,12 +642,10 @@ const ImageUploadWithEditor = ({
                   <Pencil className="w-3.5 h-3.5" />
                 </motion.button>
 
-                {/* Index badge */}
                 <div className="absolute top-1.5 left-1.5 px-2 py-0.5 bg-black/70 backdrop-blur-sm rounded-md flex items-center justify-center text-white text-[11px] font-bold border border-white/10 pointer-events-none">
                   {i + 1}
                 </div>
 
-                {/* Size badge */}
                 <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-white/80 text-[10px] border border-white/10 pointer-events-none font-mono">
                   {(img.blob.size / 1024).toFixed(0)}KB
                 </div>

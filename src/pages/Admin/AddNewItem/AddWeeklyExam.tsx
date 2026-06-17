@@ -1038,7 +1038,7 @@ const AddWeeklyExam = () => {
                 <ImageUploadWithEditor
                   images={editedImages}
                   onChange={setEditedImages}
-                  maxImages={10}
+                  maxImages={50}
                   allowSkipEdit={true}
                 />
               </AnimatedCard>

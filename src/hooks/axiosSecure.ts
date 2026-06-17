@@ -4,7 +4,7 @@ import { TOKEN_KEY } from "./axiosPublic";
 
 const axiosSecure = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  timeout: 8_000,
+  timeout: 120_000,
   withCredentials: true,
   headers: { "X-Requested-With": "XMLHttpRequest" },
 });
