@@ -33,6 +33,7 @@ import type {
 import { CLASS_OPTIONS } from "../../../utility/constants/class";
 import { getSubjects } from "../../../utility/constants/subject";
 import ExpandableTextarea from "./ExpandableTextarea";
+import axiosSecure from "../../../hooks/axiosSecure";
 
 // ─── Types ───────────────────────────────────
 type NumberType = "chapterNumber" | "pageNumber";
@@ -547,7 +548,7 @@ const AddWeeklyExam = () => {
         images: uploadedImages,
       };
 
-      const res = await axiosPublic.post("/api/weekly-exams", payload);
+      const res = await axiosSecure.post("/api/weekly-exams", payload);
       return res.data;
     },
     onSuccess: () => {
